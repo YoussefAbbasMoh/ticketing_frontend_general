@@ -1,0 +1,50 @@
+{
+  "short_name": "ABSAI TMS",
+  "name": "ABSAI Ticket Management System",
+  "description": "Manage your projects and tickets efficiently with real-time notifications",
+  "icons": [
+    {
+      "src": "absai-logo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0e1121",
+  "background_color": "#0e1121",
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Ticket",
+      "short_name": "New Ticket",
+      "description": "Create a new ticket",
+      "url": "/project/new-ticket",
+      "icons": [{ "src": "absai-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Open chat",
+      "url": "/chat",
+      "icons": [{ "src": "absai-logo.png", "sizes": "96x96" }]
+    }
+  ],
+  "prefer_related_applications": false
+}

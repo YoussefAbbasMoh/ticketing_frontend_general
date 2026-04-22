@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://tickets.absai.dev/back/api';
+const API_BASE_URL = 'https://ticketing-backend-general.vercel.app/api';
 
 // Create axios instance
 const api = axios.create({
@@ -88,7 +88,14 @@ loginApi.interceptors.request.use(
 
 // Auth API - use loginApi for login to avoid 401 redirect
 export const authAPI = {
-  login: (email, password) => loginApi.post('/auth/login', { email, password }),
+  login: (email, password, companyId) =>
+    loginApi.post('/auth/login', {
+      email,
+      password,
+      ...(companyId ? { companyId } : {}),
+    }),
+  switchCompany: (companyId) => api.post('/auth/switch-company', { companyId }),
+  registerCompany: (payload) => loginApi.post('/auth/register-company', payload),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   verifyOTP: (email, otp, newPassword) =>
     api.post('/auth/verify-otp', { email, otp, newPassword }),

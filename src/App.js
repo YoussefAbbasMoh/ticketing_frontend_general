@@ -12,6 +12,7 @@ import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './components/auth/Login';
 import ForgotPassword from './components/auth/ForgotPassword';
+import RegisterCompany from './components/auth/RegisterCompany';
 import Home from './components/home/Home';
 import ProjectDetails from './components/project/ProjectDetails';
 import NewTicket from './components/ticket/NewTicket';
@@ -26,6 +27,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/register-company" element={user ? <Navigate to="/" replace /> : <RegisterCompany />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPassword />} />
 
       <Route path="/" element={

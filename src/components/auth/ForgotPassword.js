@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { authAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../ui/Spinner';
 import Alert from '../ui/Alert';
+import { getStoredLanguage, t } from '../../i18n';
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(0);
@@ -15,6 +16,7 @@ const ForgotPassword = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState(getStoredLanguage());
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -67,9 +69,15 @@ const ForgotPassword = () => {
   };
 
   const steps = [
-    { number: 1, title: 'Enter Email', description: 'Receive OTP' },
-    { number: 2, title: 'Verify & Reset', description: 'Set new password' }
+    { number: 1, title: t(lang, 'enterEmail'), description: t(lang, 'receiveOtp') },
+    { number: 2, title: t(lang, 'verifyAndReset'), description: t(lang, 'setNewPassword') }
   ];
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
@@ -96,9 +104,9 @@ const ForgotPassword = () => {
               </svg>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Reset Password</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'resetPassword')}</h1>
           <p className="text-gray-400">
-            {step === 0 ? 'Enter your email to receive OTP - ABSAI' : 'Enter OTP and set new password - ABSAI'}
+            {step === 0 ? t(lang, 'resetPasswordSubtitleEmail') : t(lang, 'resetPasswordSubtitleOtp')}
           </p>
         </div>
 
@@ -192,7 +200,7 @@ const ForgotPassword = () => {
               /* Step 1: Email Input */
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                  Email Address
+                  {t(lang, 'emailAddress')}
                 </label>
                 <input
                   id="email"
@@ -215,7 +223,7 @@ const ForgotPassword = () => {
               <>
                 <div>
                   <label htmlFor="otp" className="block text-sm font-medium text-gray-300 mb-2">
-                    One-Time Password (OTP)
+                  OTP
                   </label>
                   <input
                     id="otp"
@@ -236,7 +244,7 @@ const ForgotPassword = () => {
 
                 <div>
                   <label htmlFor="newPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                    New Password
+                    {t(lang, 'password')}
                   </label>
                   <input
                     id="newPassword"
@@ -253,7 +261,7 @@ const ForgotPassword = () => {
 
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                    Confirm New Password
+                    {t(lang, 'confirmPassword')}
                   </label>
                   <input
                     id="confirmPassword"
@@ -279,10 +287,10 @@ const ForgotPassword = () => {
               {loading ? (
                 <>
                   <Spinner size="sm" />
-                  <span className="ml-2">Processing...</span>
+                  <span className="ml-2">{t(lang, 'processing')}</span>
                 </>
               ) : (
-                step === 0 ? 'Send OTP' : 'Reset Password'
+                step === 0 ? t(lang, 'sendOtp') : t(lang, 'resetPassword')
               )}
             </button>
           </form>
@@ -296,14 +304,14 @@ const ForgotPassword = () => {
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Back to Login
+              {t(lang, 'backToLogin')}
             </button>
           </div>
         </div>
 
         {/* Footer */}
         <div className="mt-6 text-center text-gray-500 text-sm">
-          <p>Need help? Contact your system administrator.</p>
+          <p>{t(lang, 'needHelpContactAdmin')}</p>
         </div>
       </div>
     </div>

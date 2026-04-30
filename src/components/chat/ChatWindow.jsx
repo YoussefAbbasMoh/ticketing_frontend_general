@@ -6,10 +6,12 @@ import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
 import Spinner from '../ui/Spinner';
+import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 
 const ChatWindow = ({ conversation, onBack }) => {
   const { user } = useAuth();
   const { messages, sendMessage, sendFileMessage, loadMessages, markAsRead } = useChat();
+  const { uploadFile, uploadVideo } = useBunnyUpload();
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -177,8 +179,30 @@ const ChatWindow = ({ conversation, onBack }) => {
     if (!conversation?._id) return;
 
     try {
-      // Use context's sendFileMessage which updates local state immediately
-      await sendFileMessage(conversation._id, type, file, replyTo?._id);
+      // Voice remains on legacy multipart path.
+      if (type === 'voice') {
+        await sendFileMessage(conversation._id, type, file, replyTo?._id);
+      } else {
+        // Upload directly to Bunny from frontend.
+        const uploadResult = type === 'video'
+          ? await uploadVideo(file)
+          : await uploadFile(file, `chat/${conversation._id}`);
+
+        // Send only URL + metadata to backend API.
+        await chatAPI.sendFileMessageByUrl(
+          conversation._id,
+          type,
+          uploadResult.url,
+          uploadResult.fileName || file.name || 'attachment',
+          file?.size || null,
+          file?.type || null,
+          replyTo?._id || null,
+        );
+
+        // Reload messages so the uploaded media appears immediately.
+        await loadMessages(conversation._id);
+      }
+
       setReplyTo(null);
       // Wait for file message to be added, then scroll
       setTimeout(() => {
@@ -190,6 +214,7 @@ const ChatWindow = ({ conversation, onBack }) => {
       }, 100);
     } catch (error) {
       console.error('Send file error:', error);
+      alert(error?.message || 'Failed to send file. Please try again.');
     }
   };
 

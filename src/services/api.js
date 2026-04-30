@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://ticketing-backend-general.vercel.app/api';
+const getApiBaseUrl = () => {
+  if (import.meta?.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+/*   const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:9091/api';
+  } */
+  return 'https://ticketing-backend-general.vercel.app/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance
 const api = axios.create({
@@ -14,9 +25,11 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers['x-lang'] = preferredLang;
     return config;
   },
   (error) => {
@@ -28,7 +41,18 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const message = String(error.response?.data?.message || '').toLowerCase();
+    const isAuthMessage =
+      message.includes('invalid token') ||
+      message.includes('expired token') ||
+      message.includes('access token required') ||
+      message.includes('invalid or expired token') ||
+      message.includes('رمز الدخول غير صالح') ||
+      message.includes('رمز الدخول') ||
+      message.includes('token');
+
+    if (status === 401 || (status === 403 && isAuthMessage)) {
       // CRITICAL: Check if we're on login page FIRST - if so, NEVER redirect
       const currentPath = window.location.pathname.toLowerCase();
       if (currentPath.includes('login')) {
@@ -76,9 +100,11 @@ const loginApi = axios.create({
 loginApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
+    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    config.headers['x-lang'] = preferredLang;
     return config;
   },
   (error) => {
@@ -104,6 +130,7 @@ export const authAPI = {
 // User API
 export const userAPI = {
   addAccount: (userData) => api.post('/users/add-account', userData),
+  acceptInvite: (token, password) => loginApi.post('/users/accept-invite', { token, password }),
   deleteAccount: (userId) => api.delete(`/users/delete-account/${userId}`),
   changePassword: (currentPassword, newPassword) =>
     api.put('/users/change-password', { currentPassword, newPassword }),
@@ -193,6 +220,17 @@ export const chatAPI = {
       },
     });
   },
+  // Use this when the frontend uploads directly to CDN and only sends the final URL.
+  sendFileMessageByUrl: (conversationId, type, fileUrl, fileName, fileSize = null, mimeType = null, replyTo = null) =>
+    api.post('/chat/message/file', {
+      conversationId,
+      type,
+      fileUrl,
+      fileName,
+      fileSize,
+      mimeType,
+      replyTo,
+    }),
   getUsers: () => api.get('/chat/users'),
   getProjectConversation: (projectId) => api.get(`/chat/project/${projectId}`),
   createProjectConversations: () => api.post('/chat/admin/create-project-conversations'),
@@ -293,6 +331,21 @@ export const attendanceAPI = {
   },
 };
 
+// Subscription API
+export const subscriptionAPI = {
+  getPlans: () => {
+    const lang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    return api.get('/subscriptions/plans', {
+      params: { lang },
+      headers: { 'x-lang': lang },
+    });
+  },
+  getMySubscription: () => api.get('/subscriptions/me'),
+  createPaymobCheckout: (payload) => api.post('/subscriptions/paymob/checkout', payload),
+  confirmPaymobPayment: (payload) => api.post('/subscriptions/paymob/confirm', payload),
+  cancelPaymobSubscription: (payload = {}) => api.post('/subscriptions/paymob/cancel', payload),
+};
+
 // Utility function to get full image URL from relative path
 export function getImageUrl(imagePath) {
   if (!imagePath) return '';
@@ -305,6 +358,16 @@ export function getImageUrl(imagePath) {
   // If it's a blob URL, return as is
   if (imagePath.startsWith('blob:')) {
     return imagePath;
+  }
+
+  // Bunny chat files are often stored as relative paths like /chat/...
+  // Build them against Bunny public CDN base instead of backend host.
+  const bunnyPublicBase = String(import.meta?.env?.VITE_BUNNY_STORAGE_PUBLIC_BASE_URL || '').replace(/\/+$/, '');
+  if (imagePath.startsWith('/chat/') || imagePath.startsWith('chat/')) {
+    const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    if (bunnyPublicBase) {
+      return `${bunnyPublicBase}${normalizedPath}`;
+    }
   }
 
   // If it's a base64 data URL, return as is (for backward compatibility during migration)
@@ -323,12 +386,12 @@ export function getImageUrl(imagePath) {
       return `https://tickets.absai.dev/back${imagePath}`;
     } else {
       // In development, use local backend
-      return `http://localhost:9090${imagePath}`;
+      return `http://localhost:9091${imagePath}`;
     }
   }
 
   // Otherwise, construct the full URL with backend prefix
-  const baseUrl = isProduction ? 'https://tickets.absai.dev/back' : 'http://localhost:9090';
+  const baseUrl = isProduction ? 'https://tickets.absai.dev/back' : 'http://localhost:9091';
   // Remove leading slash if present to avoid double slashes
   const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
   return `${baseUrl}/${cleanPath}`;

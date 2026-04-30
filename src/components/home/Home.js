@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { projectAPI, ticketAPI } from '../../services/api';
+import { projectAPI, ticketAPI, subscriptionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
 import AttendanceWidget from '../attendance/AttendanceWidget';
@@ -11,6 +11,104 @@ import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage } from '../../i18n';
+
+const TEXT = {
+  en: {
+    welcomeBack: 'Welcome back',
+    welcomeFallback: 'there',
+    happeningToday: "Here's what's happening with your projects today",
+    chat: 'Chat',
+    newProject: 'New Project',
+    loadingProjects: 'Loading your projects...',
+    activeTickets: 'Active Tickets',
+    ticketsNeedAttention: 'Tickets that require your attention',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    loadingTickets: 'Loading tickets...',
+    allClear: 'All Clear!',
+    noActiveTickets: 'You have no active tickets at the moment',
+    greatJob: 'Great job staying on top of things!',
+    from: 'From',
+    to: 'To',
+    totalProjects: 'Total Projects',
+    active: 'Active',
+    completed: 'Completed',
+    onHold: 'On Hold',
+    searchProjectsPlaceholder: 'Search projects by name...',
+    foundProjects: 'Found {{count}} {{label}} matching "{{query}}"',
+    projectSingle: 'project',
+    projectPlural: 'projects',
+    noProjectsFound: 'No projects found',
+    noProjectsYet: 'No projects yet',
+    noProjectsMatch: 'No projects match "{{query}}". Try a different search term.',
+    createFirstProjectHint: 'Get started by creating your first project',
+    noAssignedProjects: "You don't have any assigned projects yet",
+    createFirstProject: 'Create Your First Project',
+    unknown: 'Unknown',
+    untitledProject: 'Untitled Project',
+    overdue: 'Overdue',
+    urgent: 'Urgent',
+    onTrack: 'On Track',
+    dueToday: 'Due today',
+    oneDayLeft: '1 day left',
+    daysLeft: '{{days}} days left',
+    daysPassed: '{{days}} days passed',
+    membersSuffix: 'member',
+    membersSuffixPlural: 'members',
+    details: 'Details',
+    assignUsers: 'Assign Users',
+    openProjectChatError: 'Error opening project chat. Please try again.',
+    addNewProject: 'Add New Project'
+  },
+  ar: {
+    welcomeBack: 'مرحبًا بعودتك',
+    welcomeFallback: 'صديقي',
+    happeningToday: 'إليك ما يحدث في مشاريعك اليوم',
+    chat: 'الدردشة',
+    newProject: 'مشروع جديد',
+    loadingProjects: 'جارٍ تحميل المشاريع...',
+    activeTickets: 'التذاكر النشطة',
+    ticketsNeedAttention: 'تذاكر تحتاج انتباهك',
+    collapse: 'طي',
+    expand: 'توسيع',
+    loadingTickets: 'جارٍ تحميل التذاكر...',
+    allClear: 'ممتاز!',
+    noActiveTickets: 'لا توجد تذاكر نشطة حاليًا',
+    greatJob: 'رائع! أنت متابع الأمور بشكل ممتاز',
+    from: 'من',
+    to: 'إلى',
+    totalProjects: 'إجمالي المشاريع',
+    active: 'نشط',
+    completed: 'مكتمل',
+    onHold: 'معلّق',
+    searchProjectsPlaceholder: 'ابحث عن مشروع بالاسم...',
+    foundProjects: 'تم العثور على {{count}} {{label}} مطابق لـ "{{query}}"',
+    projectSingle: 'مشروع',
+    projectPlural: 'مشاريع',
+    noProjectsFound: 'لا توجد مشاريع مطابقة',
+    noProjectsYet: 'لا توجد مشاريع بعد',
+    noProjectsMatch: 'لا توجد مشاريع مطابقة لـ "{{query}}". جرب عبارة أخرى.',
+    createFirstProjectHint: 'ابدأ بإنشاء أول مشروع لك',
+    noAssignedProjects: 'لا توجد مشاريع مسندة إليك حاليًا',
+    createFirstProject: 'أنشئ مشروعك الأول',
+    unknown: 'غير معروف',
+    untitledProject: 'مشروع بدون اسم',
+    overdue: 'متأخر',
+    urgent: 'عاجل',
+    onTrack: 'ضمن الخطة',
+    dueToday: 'مستحق اليوم',
+    oneDayLeft: 'يوم واحد متبقٍ',
+    daysLeft: 'متبقي {{days}} يوم',
+    daysPassed: 'مرّ {{days}} يوم',
+    membersSuffix: 'عضو',
+    membersSuffixPlural: 'أعضاء',
+    details: 'التفاصيل',
+    assignUsers: 'تعيين المستخدمين',
+    openProjectChatError: 'حدث خطأ أثناء فتح دردشة المشروع. حاول مرة أخرى.',
+    addNewProject: 'إضافة مشروع جديد'
+  }
+};
 
 const Home = () => {
   const [projects, setProjects] = useState([]);
@@ -24,14 +122,53 @@ const Home = () => {
   const [loadingTickets, setLoadingTickets] = useState(false);
   const [expandedTickets, setExpandedTickets] = useState({});
   const [ticketsSectionExpanded, setTicketsSectionExpanded] = useState(false);
+  const [subscriptionNotice, setSubscriptionNotice] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('');
+  const [lang, setLang] = useState(getStoredLanguage());
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const { getProjectConversation } = useChat();
+  const activeCompanyId = user?.activeCompanyId ? String(user.activeCompanyId) : '';
+  const activeCompanyName =
+    (user?.companies || []).find((entry) => {
+      const raw = entry?.companyId ?? entry?.company?._id ?? entry?.company;
+      return raw != null && String(raw) === activeCompanyId;
+    })?.company?.name || '';
+  const tx = (key, vars = {}) => {
+    const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    return Object.entries(vars).reduce(
+      (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+      template
+    );
+  };
+  const welcomeLabel = user?.name || tx('welcomeFallback');
+  const welcomeCompanySuffix = activeCompanyName ? ` @ ${activeCompanyName}` : '';
 
   useEffect(() => {
     fetchProjects();
     fetchActiveTickets();
+    fetchSubscriptionNotice();
   }, []);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
+  const fetchSubscriptionNotice = async () => {
+    try {
+      const response = await subscriptionAPI.getMySubscription();
+      const notice = response?.data?.notice || '';
+      const status = response?.data?.status || '';
+      setSubscriptionNotice(notice);
+      setSubscriptionStatus(status);
+    } catch (apiError) {
+      console.error('Error fetching subscription notice:', apiError);
+      setSubscriptionNotice('');
+      setSubscriptionStatus('');
+    }
+  };
 
   const fetchProjects = async () => {
     try {
@@ -145,16 +282,16 @@ const Home = () => {
   };
 
   const getRemainingDaysText = (days) => {
-    if (days < 0) return `${Math.abs(days)} days passed`;
-    if (days === 0) return 'Due today';
-    if (days === 1) return '1 day left';
-    return `${days} days left`;
+    if (days < 0) return tx('daysPassed', { days: Math.abs(days) });
+    if (days === 0) return tx('dueToday');
+    if (days === 1) return tx('oneDayLeft');
+    return tx('daysLeft', { days });
   };
 
   const getRemainingDaysBadge = (days) => {
-    if (days < 0) return { text: 'Overdue', color: 'error' };
-    if (days <= 7) return { text: 'Urgent', color: 'warning' };
-    return { text: 'On Track', color: 'success' };
+    if (days < 0) return { text: tx('overdue'), color: 'error' };
+    if (days <= 7) return { text: tx('urgent'), color: 'warning' };
+    return { text: tx('onTrack'), color: 'success' };
   };
 
   const getProjectStats = () => {
@@ -218,23 +355,23 @@ const Home = () => {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen gap-4">
         <Spinner size="xl" color="secondary" />
-        <p className="text-gray-600">Loading your projects...</p>
+        <p className="text-gray-600">{tx('loadingProjects')}</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-16">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 max-w-7xl">
         {/* Header Section */}
         <div className="mb-8">
           <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent mb-2">
-                Welcome back, {user?.name}! 👋
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent mb-2">
+                {tx('welcomeBack')}, {welcomeLabel}{welcomeCompanySuffix}! 👋
               </h1>
-              <p className="text-xl text-gray-600">
-                Here's what's happening with your projects today
+              <p className="text-lg sm:text-xl text-gray-600">
+                {tx('happeningToday')}
               </p>
             </div>
             {isAdmin() && (
@@ -250,7 +387,7 @@ const Home = () => {
                     </svg>
                   }
                 >
-                  Chat
+                  {tx('chat')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -263,7 +400,7 @@ const Home = () => {
                     </svg>
                   }
                 >
-                  New Project
+                  {tx('newProject')}
                 </Button>
               </div>
             )}
@@ -274,6 +411,14 @@ const Home = () => {
           <div className="mb-6">
             <Alert variant="error" onClose={() => setError('')}>
               {error}
+            </Alert>
+          </div>
+        )}
+
+        {subscriptionNotice && (
+          <div className="mb-6">
+            <Alert variant={subscriptionStatus === 'expired' ? 'warning' : 'info'}>
+              {subscriptionNotice}
             </Alert>
           </div>
         )}
@@ -297,10 +442,10 @@ const Home = () => {
                 </div>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
-                    Active Tickets
+                    {tx('activeTickets')}
                   </h2>
                   <p className="text-gray-600 text-xs sm:text-sm mt-1 font-medium">
-                    Tickets that require your attention
+                    {tx('ticketsNeedAttention')}
                   </p>
                 </div>
               </div>
@@ -320,7 +465,7 @@ const Home = () => {
                 {/* Expand/Collapse Button */}
                 <button
                   className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 hover:from-blue-200 hover:to-purple-200 transition-all duration-300 shadow-md hover:shadow-lg flex-shrink-0"
-                  title={ticketsSectionExpanded ? "Collapse" : "Expand"}
+                  title={ticketsSectionExpanded ? tx('collapse') : tx('expand')}
                 >
                   <svg
                     className={`w-5 h-5 sm:w-6 sm:h-6 text-blue-600 transition-transform duration-300 ${ticketsSectionExpanded ? 'rotate-180' : ''}`}
@@ -345,7 +490,7 @@ const Home = () => {
                 <div className="flex justify-center items-center py-12 sm:py-16">
                   <div className="text-center">
                     <Spinner size="xl" color="secondary" />
-                    <p className="text-gray-600 mt-4 font-medium text-sm sm:text-base">Loading tickets...</p>
+                    <p className="text-gray-600 mt-4 font-medium text-sm sm:text-base">{tx('loadingTickets')}</p>
                   </div>
                 </div>
               ) : activeTickets.length === 0 ? (
@@ -355,9 +500,9 @@ const Home = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-3">All Clear!</h3>
-                  <p className="text-gray-600 text-base sm:text-lg px-4">You have no active tickets at the moment</p>
-                  <p className="text-gray-500 mt-2 text-sm sm:text-base">Great job staying on top of things! 🎉</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-3">{tx('allClear')}</h3>
+                  <p className="text-gray-600 text-base sm:text-lg px-4">{tx('noActiveTickets')}</p>
+                  <p className="text-gray-500 mt-2 text-sm sm:text-base">{tx('greatJob')} 🎉</p>
                 </div>
               ) : (
                 <div className="space-y-3 sm:space-y-4 mt-2 sm:mt-4">
@@ -396,7 +541,7 @@ const Home = () => {
                                 </h3>
                               </div>
                               <Badge variant={getTicketStatusColor(ticket.status)} size="sm" className="shadow-sm flex-shrink-0">
-                                {ticket.status || 'Unknown'}
+                                {ticket.status || tx('unknown')}
                               </Badge>
                             </div>
 
@@ -430,7 +575,7 @@ const Home = () => {
                                 </span>
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500 font-medium">From</p>
+                                <p className="text-xs text-gray-500 font-medium">{tx('from')}</p>
                                 <p className="text-xs sm:text-sm text-gray-800 font-semibold truncate max-w-[100px] sm:max-w-none">{ticket.requested_from}</p>
                               </div>
                             </div>
@@ -446,7 +591,7 @@ const Home = () => {
                                 </span>
                               </div>
                               <div>
-                                <p className="text-xs text-gray-500 font-medium">To</p>
+                                <p className="text-xs text-gray-500 font-medium">{tx('to')}</p>
                                 <p className="text-xs sm:text-sm text-gray-800 font-semibold truncate max-w-[100px] sm:max-w-none">{ticket.requested_to}</p>
                               </div>
                             </div>
@@ -488,7 +633,7 @@ const Home = () => {
               <Card.Content className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-purple-100 text-sm mb-2">Total Projects</p>
+                    <p className="text-purple-100 text-sm mb-2">{tx('totalProjects')}</p>
                     <p className="text-4xl font-bold">{stats.total}</p>
                   </div>
                   <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
@@ -505,7 +650,7 @@ const Home = () => {
               <Card.Content className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-600 text-sm mb-2">Active</p>
+                    <p className="text-gray-600 text-sm mb-2">{tx('active')}</p>
                     <p className="text-4xl font-bold text-green-600">{stats.active}</p>
                   </div>
                   <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
@@ -522,7 +667,7 @@ const Home = () => {
               <Card.Content className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-600 text-sm mb-2">Completed</p>
+                    <p className="text-gray-600 text-sm mb-2">{tx('completed')}</p>
                     <p className="text-4xl font-bold text-blue-600">{stats.completed}</p>
                   </div>
                   <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
@@ -539,7 +684,7 @@ const Home = () => {
               <Card.Content className="p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-600 text-sm mb-2">On Hold</p>
+                    <p className="text-gray-600 text-sm mb-2">{tx('onHold')}</p>
                     <p className="text-4xl font-bold text-orange-600">{stats.onHold}</p>
                   </div>
                   <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center">
@@ -564,7 +709,7 @@ const Home = () => {
               </div>
               <input
                 type="text"
-                placeholder="Search projects by name..."
+                placeholder={tx('searchProjectsPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200 text-base"
@@ -582,7 +727,11 @@ const Home = () => {
             </div>
             {searchQuery && (
               <p className="mt-2 text-sm text-gray-600">
-                Found {filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''} matching "{searchQuery}"
+                {tx('foundProjects', {
+                  count: filteredProjects.length,
+                  label: filteredProjects.length === 1 ? tx('projectSingle') : tx('projectPlural'),
+                  query: searchQuery,
+                })}
               </p>
             )}
           </div>
@@ -597,14 +746,14 @@ const Home = () => {
               </svg>
             </div>
             <h3 className="text-2xl font-semibold text-gray-800 mb-2">
-              {searchQuery ? 'No projects found' : 'No projects yet'}
+              {searchQuery ? tx('noProjectsFound') : tx('noProjectsYet')}
             </h3>
             <p className="text-gray-600 mb-6">
               {searchQuery
-                ? `No projects match "${searchQuery}". Try a different search term.`
+                ? tx('noProjectsMatch', { query: searchQuery })
                 : isAdmin()
-                  ? "Get started by creating your first project"
-                  : "You don't have any assigned projects yet"}
+                  ? tx('createFirstProjectHint')
+                  : tx('noAssignedProjects')}
             </p>
             {isAdmin() && !searchQuery && (
               <Button
@@ -617,7 +766,7 @@ const Home = () => {
                   </svg>
                 }
               >
-                Create Your First Project
+                {tx('createFirstProject')}
               </Button>
             )}
           </div>
@@ -640,13 +789,13 @@ const Home = () => {
                     {/* Header with Status and Admin Actions */}
                     <div className="flex justify-between items-start mb-4">
                       <Badge variant={getStatusColor(project.status)} size="md">
-                        {project.status || 'Unknown'}
+                        {project.status || tx('unknown')}
                       </Badge>
                       {isAdmin() && (
                         <button
                           onClick={(e) => handleAssignUsers(project, e)}
                           className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-600 transition-colors"
-                          title="Assign Users"
+                          title={tx('assignUsers') || 'Assign Users'}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -657,7 +806,7 @@ const Home = () => {
 
                     {/* Project Name */}
                     <h3 className="text-xl font-bold text-gray-800 mb-4 line-clamp-2 min-h-[3.5rem]">
-                      {project.project_name || 'Untitled Project'}
+                      {project.project_name || tx('untitledProject')}
                     </h3>
 
                     <div className="h-px bg-gray-200 mb-4"></div>
@@ -709,7 +858,7 @@ const Home = () => {
                           )}
                         </div>
                         <span className="text-sm text-gray-600 font-medium">
-                          {project.assigned_users.length} member{project.assigned_users.length !== 1 ? 's' : ''}
+                          {project.assigned_users.length} {project.assigned_users.length !== 1 ? tx('membersSuffixPlural') : tx('membersSuffix')}
                         </span>
                       </div>
                     )}
@@ -727,7 +876,7 @@ const Home = () => {
                             navigate('/chat');
                           } catch (error) {
                             console.error('Error opening project chat:', error);
-                            alert('Error opening project chat. Please try again.');
+                            alert(tx('openProjectChatError'));
                           }
                         }}
                         className="shadow-none hover:shadow-md border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
@@ -737,7 +886,7 @@ const Home = () => {
                           </svg>
                         }
                       >
-                        Chat
+                        {tx('chat')}
                       </Button>
                       <Button
                         variant="secondary"
@@ -753,7 +902,7 @@ const Home = () => {
                         }
                         className="shadow-none hover:shadow-md"
                       >
-                        Details
+                        {tx('details')}
                       </Button>
                     </div>
                   </Card.Footer>
@@ -786,7 +935,7 @@ const Home = () => {
           <button
             onClick={handleAddProject}
             className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-secondary to-secondary-700 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center"
-            title="Add New Project"
+            title={tx('addNewProject')}
           >
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

@@ -13,11 +13,14 @@ import {
 import { Menu as MenuIcon } from '@mui/icons-material';
 import NotificationBell from '../notifications/NotificationBell';
 import { useAuth } from '../../contexts/AuthContext';
+import { getStoredLanguage, setStoredLanguage, t } from '../../i18n';
 
 const AppBar = ({ onMenuClick }) => {
   const { user, switchActiveCompany } = useAuth();
   const [switchingCompany, setSwitchingCompany] = useState(false);
   const [switchError, setSwitchError] = useState('');
+  const [lang, setLang] = useState(getStoredLanguage());
+  const isRtl = lang === 'ar';
 
   const normalizedCompanies = useMemo(() => {
     const list = user?.companies || [];
@@ -71,20 +74,71 @@ const AppBar = ({ onMenuClick }) => {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       }}
     >
-      <Toolbar>
+      <Toolbar sx={{ direction: isRtl ? 'rtl' : 'ltr' }}>
         <IconButton
-          edge="start"
+          edge={isRtl ? 'end' : 'start'}
           color="inherit"
           aria-label="menu"
           onClick={onMenuClick}
-          sx={{ mr: 2 }}
+          sx={isRtl ? { ml: 2 } : { mr: 2 }}
         >
           <MenuIcon />
         </IconButton>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Ticket Management System
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1, textAlign: isRtl ? 'right' : 'left' }}>
+          {t(lang, 'appTitle')}
         </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexDirection: isRtl ? 'row-reverse' : 'row' }}>
+          {!isRtl && (
+            <Box sx={{ minWidth: 100 }}>
+              <FormControl fullWidth size="small">
+                <Select
+                  value={lang}
+                  onChange={(e) => {
+                    const nextLang = e.target.value;
+                    setLang(nextLang);
+                    setStoredLanguage(nextLang);
+                  }}
+                  sx={{
+                    color: 'white',
+                    direction: isRtl ? 'rtl' : 'ltr',
+                    backgroundColor: 'rgba(255,255,255,0.08)',
+                    '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.35)' },
+                    '.MuiSvgIcon-root': { color: 'white' },
+                  }}
+                >
+                  <MenuItem value="ar">AR</MenuItem>
+                  <MenuItem value="en">EN</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
+          )}
+          <NotificationBell lang={lang} />
+          {isRtl && (
+            <Box sx={{ minWidth: 100 }}>
+            <FormControl fullWidth size="small">
+              <Select
+                value={lang}
+                onChange={(e) => {
+                  const nextLang = e.target.value;
+                  setLang(nextLang);
+                  setStoredLanguage(nextLang);
+                }}
+                sx={{
+                  color: 'white',
+                  direction: isRtl ? 'rtl' : 'ltr',
+                  backgroundColor: 'rgba(255,255,255,0.08)',
+                  '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
+                  '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.35)' },
+                  '.MuiSvgIcon-root': { color: 'white' },
+                }}
+              >
+                <MenuItem value="ar">AR</MenuItem>
+                <MenuItem value="en">EN</MenuItem>
+              </Select>
+            </FormControl>
+            </Box>
+          )}
           {normalizedCompanies.length > 1 && (
             <Box sx={{ minWidth: 220 }}>
               <FormControl fullWidth size="small" disabled={switchingCompany}>
@@ -94,6 +148,7 @@ const AppBar = ({ onMenuClick }) => {
                   displayEmpty
                   sx={{
                     color: 'white',
+                    direction: isRtl ? 'rtl' : 'ltr',
                     backgroundColor: 'rgba(255,255,255,0.08)',
                     '.MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.2)' },
                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: 'rgba(255,255,255,0.35)' },
@@ -115,7 +170,6 @@ const AppBar = ({ onMenuClick }) => {
             </Box>
           )}
           {switchingCompany && <CircularProgress size={18} sx={{ color: 'white' }} />}
-          <NotificationBell />
         </Box>
       </Toolbar>
     </MuiAppBar>

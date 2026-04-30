@@ -4,6 +4,42 @@ import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage } from '../../i18n';
+
+const TEXT = {
+    en: {
+        failedCheckIn: 'Failed to check in',
+        failedCheckOut: 'Failed to check out',
+        checkedIn: 'Checked In',
+        checkedOut: 'Checked out',
+        notCheckedIn: 'Not Checked In',
+        duration: 'Duration',
+        lastSession: 'Last session',
+        checkOut: 'Check Out',
+        checkInAgain: 'Check In Again',
+        checkInNow: 'Check In Now',
+        in: 'In:',
+        out: 'Out:',
+        hour: 'h',
+        minute: 'm',
+    },
+    ar: {
+        failedCheckIn: 'فشل تسجيل الحضور',
+        failedCheckOut: 'فشل تسجيل الانصراف',
+        checkedIn: 'تم تسجيل الحضور',
+        checkedOut: 'تم تسجيل الانصراف',
+        notCheckedIn: 'لم يتم تسجيل الحضور',
+        duration: 'المدة',
+        lastSession: 'آخر جلسة',
+        checkOut: 'تسجيل انصراف',
+        checkInAgain: 'تسجيل حضور مرة أخرى',
+        checkInNow: 'تسجيل حضور الآن',
+        in: 'دخول:',
+        out: 'خروج:',
+        hour: 'س',
+        minute: 'د',
+    },
+};
 
 /** Sessions whose check-in falls on the user's local calendar day (matches the date shown in the UI). */
 const getLocalDayBounds = () => {
@@ -42,6 +78,8 @@ const AttendanceWidget = () => {
     const [hasCompletedSessionToday, setHasCompletedSessionToday] = useState(false);
     const [error, setError] = useState('');
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [lang, setLang] = useState(getStoredLanguage());
+    const tx = (key) => TEXT[lang]?.[key] || TEXT.en[key] || key;
 
     /** Ignore out-of-order responses when multiple fetches overlap (Strict Mode, refresh, bfcache). */
     const fetchGenRef = useRef(0);
@@ -90,13 +128,19 @@ const AttendanceWidget = () => {
         };
     }, [fetchStatus]);
 
+    useEffect(() => {
+        const onLanguageChanged = () => setLang(getStoredLanguage());
+        window.addEventListener('language-changed', onLanguageChanged);
+        return () => window.removeEventListener('language-changed', onLanguageChanged);
+    }, []);
+
     const handleCheckIn = async () => {
         try {
             setLoading(true);
             await attendanceAPI.checkIn();
             await fetchStatus();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to check in');
+            setError(err.response?.data?.message || tx('failedCheckIn'));
             setLoading(false);
         }
     };
@@ -107,7 +151,7 @@ const AttendanceWidget = () => {
             await attendanceAPI.checkOut();
             await fetchStatus();
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to check out');
+            setError(err.response?.data?.message || tx('failedCheckOut'));
             setLoading(false);
         }
     };
@@ -125,7 +169,7 @@ const AttendanceWidget = () => {
         const diffMins = Math.floor(diffMs / 60000);
         const hours = Math.floor(diffMins / 60);
         const mins = diffMins % 60;
-        return `${hours}h ${mins}m`;
+        return `${hours}${tx('hour')} ${mins}${tx('minute')}`;
     };
 
     const calculateDuration = () => {
@@ -135,7 +179,7 @@ const AttendanceWidget = () => {
         if (lastClosedToday) {
             return formatDurationFromSession(lastClosedToday, new Date(lastClosedToday.checkOut));
         }
-        return '0h 0m';
+        return `0${tx('hour')} 0${tx('minute')}`;
     };
 
     const showDurationBlock = attendance || lastClosedToday;
@@ -150,7 +194,11 @@ const AttendanceWidget = () => {
         );
     }
 
-    const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    const todayDate = new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric'
+    });
 
     return (
         <Card className="mb-8 shadow-lg border-l-4 border-l-indigo-500 overflow-hidden">
@@ -167,10 +215,10 @@ const AttendanceWidget = () => {
                             <p className="text-gray-500 text-sm font-medium">{todayDate}</p>
                             <h3 className="text-xl font-bold text-gray-800">
                                 {attendance
-                                    ? 'Checked In'
+                                    ? tx('checkedIn')
                                     : hasCompletedSessionToday
-                                        ? 'Checked out'
-                                        : 'Not Checked In'}
+                                        ? tx('checkedOut')
+                                        : tx('notCheckedIn')}
                             </h3>
                         </div>
                     </div>
@@ -182,7 +230,7 @@ const AttendanceWidget = () => {
                                 {calculateDuration()}
                             </span>
                             <span className="text-xs text-gray-400 uppercase tracking-wide">
-                                {attendance ? 'Duration' : 'Last session'}
+                                {attendance ? tx('duration') : tx('lastSession')}
                             </span>
                         </div>
                     )}
@@ -195,7 +243,7 @@ const AttendanceWidget = () => {
                                 disabled={loading}
                                 className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white shadow-md transform hover:-translate-y-0.5"
                             >
-                                Check Out
+                                {tx('checkOut')}
                             </Button>
                         ) : (
                             <Button
@@ -203,7 +251,7 @@ const AttendanceWidget = () => {
                                 disabled={loading}
                                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-md transform hover:-translate-y-0.5"
                             >
-                                {hasCompletedSessionToday ? 'Check In Again' : 'Check In Now'}
+                                {hasCompletedSessionToday ? tx('checkInAgain') : tx('checkInNow')}
                             </Button>
                         )}
                     </div>
@@ -212,7 +260,7 @@ const AttendanceWidget = () => {
                 {(attendance || lastClosedToday) && (
                     <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between text-sm text-gray-600">
                         <div>
-                            <span className="font-semibold mr-2">In:</span>
+                            <span className="font-semibold mr-2">{tx('in')}</span>
                             {formatTime(
                                 attendance
                                     ? attendance.continuousCheckIn || attendance.checkIn
@@ -221,7 +269,7 @@ const AttendanceWidget = () => {
                         </div>
                         {(attendance || lastClosedToday).checkOut && (
                             <div>
-                                <span className="font-semibold mr-2">Out:</span>
+                                <span className="font-semibold mr-2">{tx('out')}</span>
                                 {formatTime((attendance || lastClosedToday).checkOut)}
                             </div>
                         )}

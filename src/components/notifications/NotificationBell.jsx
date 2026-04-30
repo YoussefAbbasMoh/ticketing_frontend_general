@@ -1,12 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
+import { getStoredLanguage } from '../../i18n';
 
-const NotificationBell = () => {
+const TEXT = {
+  en: {
+    notifications: 'Notifications',
+    markAllRead: 'Mark all read',
+    noNotifications: 'No notifications',
+    ticket: 'Ticket',
+    justNow: 'Just now',
+    minutesShort: 'm',
+    hoursShort: 'h',
+    daysSuffix: 'd ago',
+  },
+  ar: {
+    notifications: 'الإشعارات',
+    markAllRead: 'تحديد الكل كمقروء',
+    noNotifications: 'لا توجد إشعارات',
+    ticket: 'التذكرة',
+    justNow: 'الآن',
+    minutesShort: 'د',
+    hoursShort: 'س',
+    daysSuffix: 'يوم',
+  },
+};
+
+const NotificationBell = ({ lang: propLang }) => {
   const { notifications, unreadCount, markAsRead, removeNotification, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const lang = propLang || getStoredLanguage();
+  const isRtl = lang === 'ar';
+  const tx = (key) => TEXT[lang]?.[key] || TEXT.en[key] || key;
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -39,10 +66,10 @@ const NotificationBell = () => {
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
 
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    if (minutes > 0) return `${minutes}m ago`;
-    return 'Just now';
+    if (days > 0) return isRtl ? `منذ ${days} ${tx('daysSuffix')}` : `${days}${tx('daysSuffix')}`;
+    if (hours > 0) return isRtl ? `منذ ${hours}${tx('hoursShort')}` : `${hours}${tx('hoursShort')} ago`;
+    if (minutes > 0) return isRtl ? `منذ ${minutes}${tx('minutesShort')}` : `${minutes}${tx('minutesShort')} ago`;
+    return tx('justNow');
   };
 
   return (
@@ -50,7 +77,7 @@ const NotificationBell = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-600 hover:text-secondary transition-colors"
-        aria-label="Notifications"
+        aria-label={tx('notifications')}
       >
         <svg
           className="w-6 h-6"
@@ -73,16 +100,21 @@ const NotificationBell = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 md:w-96 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+        <div
+          className={`absolute mt-2 w-80 md:w-96 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col ${
+            isRtl ? 'left-0 text-right' : 'right-0 text-left'
+          }`}
+          dir={isRtl ? 'rtl' : 'ltr'}
+        >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-secondary to-secondary-700">
-            <h3 className="text-lg font-semibold text-white">Notifications</h3>
+            <h3 className="text-lg font-semibold text-white">{tx('notifications')}</h3>
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
                   className="text-xs text-white hover:text-gray-200 underline"
                 >
-                  Mark all read
+                  {tx('markAllRead')}
                 </button>
               )}
               <button
@@ -112,7 +144,7 @@ const NotificationBell = () => {
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
                   />
                 </svg>
-                <p>No notifications</p>
+                <p>{tx('noNotifications')}</p>
               </div>
             ) : (
               notifications.map((notification) => (
@@ -149,7 +181,7 @@ const NotificationBell = () => {
                       <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
                       {notification.ticket && (
                         <p className="text-xs text-gray-500">
-                          Ticket: {notification.ticket.ticket} | {notification.ticket.project}
+                          {tx('ticket')}: {notification.ticket.ticket} | {notification.ticket.project}
                         </p>
                       )}
                       <p className="text-xs text-gray-400 mt-1">

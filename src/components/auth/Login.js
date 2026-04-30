@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage, t } from '../../i18n';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -17,6 +18,7 @@ const Login = () => {
   const [companyActionLoading, setCompanyActionLoading] = useState(false);
   const [companyActionError, setCompanyActionError] = useState('');
   const [pendingLoginData, setPendingLoginData] = useState(null);
+  const [lang, setLang] = useState(getStoredLanguage());
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -149,6 +151,12 @@ const Login = () => {
     }
   };
 
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -174,8 +182,8 @@ const Login = () => {
               </svg>
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-gray-400">Sign in to your account - ABSAI</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'welcomeBack')}</h1>
+          <p className="text-gray-400">{t(lang, 'signInSubtitle')}</p>
         </div>  
 
         {/* Login Card */}
@@ -207,7 +215,7 @@ const Login = () => {
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
+                {t(lang, 'emailAddress')}
               </label>
               <input
                 id="email"
@@ -220,14 +228,14 @@ const Login = () => {
                 autoFocus
                 disabled={loading}
                 className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="Enter your email"
+                placeholder={t(lang, 'emailAddress')}
               />
             </div>
 
             {/* Password Input */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
+                {t(lang, 'password')}
               </label>
               <input
                 id="password"
@@ -239,14 +247,14 @@ const Login = () => {
                 autoComplete="current-password"
                 disabled={loading}
                 className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                placeholder="Enter your password"
+                placeholder={t(lang, 'password')}
               />
             </div>
 
             {companyChoices && companyChoices.length > 0 && (
               <div>
                 <label htmlFor="companyId" className="block text-sm font-medium text-gray-300 mb-2">
-                  Company
+                  {t(lang, 'company')}
                 </label>
                 <select
                   id="companyId"
@@ -287,10 +295,10 @@ const Login = () => {
               {loading ? (
                 <>
                   <Spinner size="sm" />
-                  <span className="ml-2">Signing in...</span>
+                  <span className="ml-2">{t(lang, 'signingIn')}</span>
                 </>
               ) : (
-                'Sign In'
+                t(lang, 'signIn')
               )}
             </button>
           </form>
@@ -303,7 +311,7 @@ const Login = () => {
               disabled={loading}
               className="text-secondary-400 hover:text-secondary-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Forgot your password?
+              {t(lang, 'forgotPassword')}
             </button>
             <div className="mt-3">
               <button
@@ -312,7 +320,7 @@ const Login = () => {
                 disabled={loading}
                 className="text-gray-300 hover:text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                New company? Create your workspace
+                {t(lang, 'newCompanyCreateWorkspace')}
               </button>
             </div>
           </div>
@@ -327,9 +335,9 @@ const Login = () => {
       {companyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <div className="w-full max-w-lg rounded-2xl border border-primary-600 bg-primary-800 p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-white">Choose Workspace</h2>
+            <h2 className="text-xl font-bold text-white">{t(lang, 'chooseWorkspace')}</h2>
             <p className="mt-1 text-sm text-gray-400">
-              This account belongs to multiple companies. Select one to continue.
+              {t(lang, 'multiCompanySelect')}
             </p>
 
             <div className="mt-4 space-y-2 max-h-64 overflow-auto pr-1">
@@ -359,9 +367,9 @@ const Login = () => {
             <div className="mt-5 rounded-xl border border-primary-600 bg-primary-700 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">Need a new company?</p>
+                  <p className="text-sm font-semibold text-white">{t(lang, 'needNewCompany')}</p>
                   <p className="text-xs text-gray-400">
-                    Open company registration flow and create your next workspace.
+                    {t(lang, 'openRegistrationHelp')}
                   </p>
                 </div>
                 <button
@@ -397,7 +405,7 @@ const Login = () => {
                 className="rounded-lg border border-primary-500 px-4 py-2 text-sm text-gray-200 hover:bg-primary-700"
                 disabled={companyActionLoading}
               >
-                Back
+                {t(lang, 'back')}
               </button>
               <button
                 type="button"
@@ -405,7 +413,7 @@ const Login = () => {
                 disabled={!selectedCompanyId || companyActionLoading}
                 className="rounded-lg bg-secondary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-secondary-600 disabled:opacity-50"
               >
-                {companyActionLoading ? 'Please wait...' : 'Continue'}
+                {companyActionLoading ? t(lang, 'pleaseWait') : t(lang, 'continue')}
               </button>
             </div>
           </div>

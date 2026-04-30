@@ -1,14 +1,95 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { chatAPI } from '../../services/api';
+import { chatAPI, getImageUrl } from '../../services/api';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage } from '../../i18n';
+
+const TEXT = {
+  en: {
+    noMessagesYet: 'No messages yet',
+    youPrefix: 'You: ',
+    message: 'Message',
+    photo: '📷 Photo',
+    video: '🎥 Video',
+    voiceMessage: '🎤 Voice message',
+    file: 'File',
+    justNow: 'Just now',
+    yesterday: 'Yesterday',
+    messages: 'Messages',
+    projectProcessed: 'Project conversations processed:\nCreated: {{created}}\nUpdated: {{updated}}\nExisting: {{existing}}',
+    createProjectError: 'Error creating project conversations. Check console for details.',
+    createProjectConversations: 'Create missing project conversations',
+    newConversation: 'New conversation',
+    startNewConversation: 'Start new conversation',
+    searchConversations: 'Search conversations...',
+    clearSearch: 'Clear search',
+    conversation: 'conversation',
+    conversations: 'conversations',
+    found: 'found',
+    loadingConversations: 'Loading conversations...',
+    noConversationsFound: 'No conversations found',
+    tryDifferentKeyword: 'Try searching with a different keyword',
+    noConversationsYet: 'No conversations yet',
+    chatWithTeam: 'Start chatting with your colleagues and collaborators',
+    startConversation: 'Start a conversation',
+    projectGroup: 'Project Group',
+    unknownUser: 'Unknown User',
+    group: 'Group',
+  },
+  ar: {
+    noMessagesYet: 'لا توجد رسائل بعد',
+    youPrefix: 'أنت: ',
+    message: 'رسالة',
+    photo: '📷 صورة',
+    video: '🎥 فيديو',
+    voiceMessage: '🎤 رسالة صوتية',
+    file: 'ملف',
+    justNow: 'الآن',
+    yesterday: 'أمس',
+    messages: 'الرسائل',
+    projectProcessed: 'تمت معالجة محادثات المشاريع:\nتم الإنشاء: {{created}}\nتم التحديث: {{updated}}\nموجودة مسبقًا: {{existing}}',
+    createProjectError: 'حدث خطأ أثناء إنشاء محادثات المشاريع. راجع الـ console.',
+    createProjectConversations: 'إنشاء محادثات المشاريع الناقصة',
+    newConversation: 'محادثة جديدة',
+    startNewConversation: 'ابدأ محادثة جديدة',
+    searchConversations: 'ابحث في المحادثات...',
+    clearSearch: 'مسح البحث',
+    conversation: 'محادثة',
+    conversations: 'محادثات',
+    found: 'نتيجة',
+    loadingConversations: 'جارٍ تحميل المحادثات...',
+    noConversationsFound: 'لا توجد محادثات مطابقة',
+    tryDifferentKeyword: 'جرّب كلمة بحث مختلفة',
+    noConversationsYet: 'لا توجد محادثات بعد',
+    chatWithTeam: 'ابدأ الدردشة مع زملائك والمتعاونين',
+    startConversation: 'ابدأ محادثة',
+    projectGroup: 'مجموعة المشروع',
+    unknownUser: 'مستخدم غير معروف',
+    group: 'مجموعة',
+  },
+};
 
 const ChatList = ({ onSelectConversation, onCreateNew }) => {
   const { user, isAdmin } = useAuth();
   const { conversations, loading, activeConversation, loadConversations } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
   const [creatingConversations, setCreatingConversations] = useState(false);
+  const [lang, setLang] = useState(getStoredLanguage());
+  const isRtl = lang === 'ar';
+  const tx = (key, vars = {}) => {
+    const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    return Object.entries(vars).reduce(
+      (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+      template
+    );
+  };
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
 
   const getOtherParticipant = (conversation) => {
     if (!conversation.participants || conversation.participants.length === 0) return null;
@@ -40,27 +121,78 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
   };
 
   const formatLastMessage = (conversation) => {
-    if (!conversation.lastMessage) return 'No messages yet';
+    if (!conversation.lastMessage) return tx('noMessagesYet');
     
     const message = conversation.lastMessage;
     const isSentByMe = message.sender?._id?.toString() === user?._id?.toString() || 
                         message.sender?.toString() === user?._id?.toString();
-    const prefix = isSentByMe ? 'You: ' : '';
+    const prefix = isSentByMe ? tx('youPrefix') : '';
 
     switch (message.type) {
       case 'text':
-        return `${prefix}${message.content || 'Message'}`;
+        return `${prefix}${message.content || tx('message')}`;
       case 'image':
-        return `${prefix}📷 Photo`;
+        return `${prefix}${tx('photo')}`;
       case 'video':
-        return `${prefix}🎥 Video`;
+        return `${prefix}${tx('video')}`;
       case 'voice':
-        return `${prefix}🎤 Voice message`;
+        return `${prefix}${tx('voiceMessage')}`;
       case 'file':
-        return `${prefix}📎 ${message.fileName || 'File'}`;
+        return `${prefix}📎 ${message.fileName || tx('file')}`;
       default:
-        return `${prefix}Message`;
+        return `${prefix}${tx('message')}`;
     }
+  };
+
+  const renderLastMessagePreview = (conversation, unreadCount) => {
+    if (!conversation.lastMessage) {
+      return (
+        <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+          {tx('noMessagesYet')}
+        </p>
+      );
+    }
+
+    const message = conversation.lastMessage;
+    const previewUrl = message.fileUrl ? getImageUrl(message.fileUrl) : '';
+
+    if (message.type === 'image' && previewUrl) {
+      return (
+        <div className="flex items-center gap-2 min-w-0">
+          <img
+            src={previewUrl}
+            alt={message.fileName || 'Image'}
+            className="w-10 h-10 rounded object-cover border border-gray-200 flex-shrink-0"
+            loading="lazy"
+          />
+          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+            {message.fileName || tx('photo')}
+          </p>
+        </div>
+      );
+    }
+
+    if (message.type === 'video' && previewUrl) {
+      return (
+        <div className="flex items-center gap-2 min-w-0">
+          <video
+            src={previewUrl}
+            className="w-10 h-10 rounded object-cover border border-gray-200 flex-shrink-0 bg-black"
+            muted
+            preload="metadata"
+          />
+          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+            {message.fileName || tx('video')}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+        {formatLastMessage(conversation)}
+      </p>
+    );
   };
 
   const formatTime = (timestamp) => {
@@ -73,11 +205,11 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
 
     if (hours < 1) {
       const minutes = Math.floor(diff / (1000 * 60));
-      return minutes < 1 ? 'Just now' : `${minutes}m`;
+      return minutes < 1 ? tx('justNow') : `${minutes}m`;
     } else if (days === 0) {
       return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
     } else if (days === 1) {
-      return 'Yesterday';
+      return tx('yesterday');
     } else if (days < 7) {
       return date.toLocaleDateString('en-US', { weekday: 'short' });
     } else {
@@ -113,7 +245,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
   const activeConversationId = activeConversation?._id;
 
   return (
-    <div className="flex flex-col h-full bg-white border-r border-gray-200 relative overflow-hidden">
+    <div className={`flex flex-col h-full bg-white relative overflow-hidden ${isRtl ? 'border-l' : 'border-r'} border-gray-200`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-20 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -121,7 +253,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            Messages
+            {tx('messages')}
           </h2>
           <div className="flex items-center gap-2">
             {isAdmin() && (
@@ -130,19 +262,25 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   try {
                     setCreatingConversations(true);
                     const response = await chatAPI.createProjectConversations();
-                    alert(`Project conversations processed:\nCreated: ${response.data.created}\nUpdated: ${response.data.updated}\nExisting: ${response.data.existing}`);
+                    alert(
+                      tx('projectProcessed', {
+                        created: response.data.created,
+                        updated: response.data.updated,
+                        existing: response.data.existing,
+                      })
+                    );
                     loadConversations();
                   } catch (error) {
                     console.error('Error creating project conversations:', error);
-                    alert('Error creating project conversations. Check console for details.');
+                    alert(tx('createProjectError'));
                   } finally {
                     setCreatingConversations(false);
                   }
                 }}
                 disabled={creatingConversations}
                 className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Create missing project conversations"
-                aria-label="Create missing project conversations"
+                title={tx('createProjectConversations')}
+                aria-label={tx('createProjectConversations')}
               >
                 {creatingConversations ? (
                   <Spinner size="sm" color="white" />
@@ -156,8 +294,8 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             <button
               onClick={onCreateNew}
               className="p-2.5 bg-secondary text-white rounded-lg hover:bg-secondary-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
-              title="New conversation"
-              aria-label="Start new conversation"
+              title={tx('newConversation')}
+              aria-label={tx('startNewConversation')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -178,7 +316,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
           </svg>
           <input
             type="text"
-            placeholder="Search conversations..."
+            placeholder={tx('searchConversations')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200"
@@ -187,7 +325,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              aria-label="Clear search"
+              aria-label={tx('clearSearch')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -199,8 +337,8 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         {/* Conversations count */}
         {!loading && filteredConversations.length > 0 && (
           <div className="mt-3 text-xs text-gray-500">
-            {filteredConversations.length} {filteredConversations.length === 1 ? 'conversation' : 'conversations'}
-            {searchQuery && ` found`}
+            {filteredConversations.length} {filteredConversations.length === 1 ? tx('conversation') : tx('conversations')}
+            {searchQuery && ` ${tx('found')}`}
           </div>
         )}
       </div>
@@ -210,7 +348,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="md" color="secondary" />
-            <p className="mt-3 text-sm text-gray-500">Loading conversations...</p>
+            <p className="mt-3 text-sm text-gray-500">{tx('loadingConversations')}</p>
           </div>
         ) : filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
@@ -219,8 +357,8 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                 <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <p className="text-center font-medium text-gray-600 mb-2">No conversations found</p>
-                <p className="text-center text-sm text-gray-500">Try searching with a different keyword</p>
+                <p className="text-center font-medium text-gray-600 mb-2">{tx('noConversationsFound')}</p>
+                <p className="text-center text-sm text-gray-500">{tx('tryDifferentKeyword')}</p>
               </>
             ) : (
               <>
@@ -230,15 +368,15 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <h3 className="font-semibold text-gray-700 mb-2">No conversations yet</h3>
+                <h3 className="font-semibold text-gray-700 mb-2">{tx('noConversationsYet')}</h3>
                 <p className="text-center text-sm text-gray-500 mb-6 max-w-xs">
-                  Start chatting with your colleagues and collaborators
+                  {tx('chatWithTeam')}
                 </p>
                 <button
                   onClick={onCreateNew}
                   className="px-6 py-2.5 bg-secondary text-white rounded-lg hover:bg-secondary-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                 >
-                  Start a conversation
+                  {tx('startConversation')}
                 </button>
               </>
             )}
@@ -248,8 +386,8 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             {filteredConversations.map((conversation) => {
               const isGroup = conversation.isGroup && conversation.project;
               const displayName = isGroup 
-                ? (conversation.project?.project_name || conversation.groupName || 'Project Group')
-                : (getOtherParticipant(conversation)?.name || 'Unknown User');
+                ? (conversation.project?.project_name || conversation.groupName || tx('projectGroup'))
+                : (getOtherParticipant(conversation)?.name || tx('unknownUser'));
               const displayInitial = isGroup 
                 ? (conversation.project?.project_name?.charAt(0)?.toUpperCase() || conversation.groupName?.charAt(0)?.toUpperCase() || 'P')
                 : (getOtherParticipant(conversation)?.name?.charAt(0)?.toUpperCase() || '?');
@@ -261,10 +399,10 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   key={conversation._id}
                   onClick={() => onSelectConversation(conversation)}
                   className={`
-                    w-full p-4 transition-all duration-200 text-left
+                    w-full p-4 transition-all duration-200 ${isRtl ? 'text-right' : 'text-left'}
                     ${isActive 
-                      ? 'bg-secondary/10 border-l-4 border-secondary' 
-                      : 'hover:bg-gray-50 border-l-4 border-transparent'
+                      ? (isRtl ? 'bg-secondary/10 border-r-4 border-secondary' : 'bg-secondary/10 border-l-4 border-secondary')
+                      : (isRtl ? 'hover:bg-gray-50 border-r-4 border-transparent' : 'hover:bg-gray-50 border-l-4 border-transparent')
                     }
                   `}
                 >
@@ -296,7 +434,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                           </h3>
                           {isGroup && (
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
-                              Group
+                              {tx('group')}
                             </span>
                           )}
                         </div>
@@ -305,9 +443,9 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                         </span>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
-                          {formatLastMessage(conversation)}
-                        </p>
+                        <div className="min-w-0 flex-1">
+                          {renderLastMessagePreview(conversation, unreadCount)}
+                        </div>
                         {unreadCount > 0 && (
                           <span className="bg-secondary text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
                             {unreadCount > 99 ? '99+' : unreadCount}

@@ -1,14 +1,122 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { userAPI } from '../../services/api';
+import { userAPI, subscriptionAPI } from '../../services/api';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Spinner from '../ui/Spinner';
 import Modal from '../ui/Modal';
+import { getStoredLanguage } from '../../i18n';
+
+const TEXT = {
+  en: {
+    settings: 'Settings',
+    manageAccount: 'Manage your account and preferences',
+    subscription: 'Subscription',
+    plan: 'Plan',
+    status: 'Status',
+    expires: 'Expires',
+    graceEnds: 'Grace ends',
+    paymobSubscriptionId: 'Paymob Subscription ID',
+    manageSubscription: 'Manage Subscription',
+    profileInfo: 'Profile Information',
+    editProfile: 'Edit Profile',
+    name: 'Name',
+    title: 'Title',
+    email: 'Email',
+    role: 'Role',
+    cancel: 'Cancel',
+    saveChanges: 'Save Changes',
+    saving: 'Saving...',
+    changePassword: 'Change Password',
+    currentPassword: 'Current Password',
+    newPassword: 'New Password',
+    confirmNewPassword: 'Confirm New Password',
+    changingPassword: 'Changing Password...',
+    userManagement: 'User Management',
+    addUser: 'Add User',
+    noUsers: 'No users found. Add your first user to get started.',
+    addNewUser: 'Add New User',
+    noPasswordNeeded: 'No password is needed. The user will receive an invitation email to set their password.',
+    adding: 'Adding...',
+    editUser: 'Edit User',
+    updating: 'Updating...',
+    updateUser: 'Update User',
+    deleteUser: 'Delete User',
+    cannotUndo: 'This action cannot be undone',
+    confirmDeletePrompt: 'Are you sure you want to delete the following user account?',
+    warning: 'Warning:',
+    warningDeleteData: 'All data associated with this user will be permanently deleted.',
+    deleting: 'Deleting...',
+    profileUpdated: 'Profile updated successfully!',
+    profileUpdateFailed: 'Failed to update profile.',
+    passwordChanged: 'Password changed successfully!',
+    passwordChangeFailed: 'Failed to change password.',
+    passwordsMismatch: 'New passwords do not match.',
+    userAdded: 'User added successfully!',
+    userAddFailed: 'Failed to add user.',
+    userUpdated: 'User updated successfully!',
+    userUpdateFailed: 'Failed to update user.',
+    userDeleteFailed: 'Failed to delete user.',
+    userDeletedSuccess: 'User "{{name}}" deleted successfully!'
+  },
+  ar: {
+    settings: 'الإعدادات',
+    manageAccount: 'إدارة الحساب والتفضيلات',
+    subscription: 'الاشتراك',
+    plan: 'الخطة',
+    status: 'الحالة',
+    expires: 'ينتهي في',
+    graceEnds: 'نهاية فترة السماح',
+    paymobSubscriptionId: 'معرّف اشتراك Paymob',
+    manageSubscription: 'إدارة الاشتراك',
+    profileInfo: 'بيانات الحساب',
+    editProfile: 'تعديل الحساب',
+    name: 'الاسم',
+    title: 'المسمى الوظيفي',
+    email: 'البريد الإلكتروني',
+    role: 'الدور',
+    cancel: 'إلغاء',
+    saveChanges: 'حفظ التعديلات',
+    saving: 'جارٍ الحفظ...',
+    changePassword: 'تغيير كلمة المرور',
+    currentPassword: 'كلمة المرور الحالية',
+    newPassword: 'كلمة المرور الجديدة',
+    confirmNewPassword: 'تأكيد كلمة المرور الجديدة',
+    changingPassword: 'جارٍ تغيير كلمة المرور...',
+    userManagement: 'إدارة المستخدمين',
+    addUser: 'إضافة مستخدم',
+    noUsers: 'لا يوجد مستخدمون. أضف أول مستخدم للبدء.',
+    addNewUser: 'إضافة مستخدم جديد',
+    noPasswordNeeded: 'لا حاجة لكلمة مرور الآن. سيصل للمستخدم بريد دعوة لتعيين كلمة المرور.',
+    adding: 'جارٍ الإضافة...',
+    editUser: 'تعديل المستخدم',
+    updating: 'جارٍ التحديث...',
+    updateUser: 'تحديث المستخدم',
+    deleteUser: 'حذف المستخدم',
+    cannotUndo: 'لا يمكن التراجع عن هذا الإجراء',
+    confirmDeletePrompt: 'هل أنتِ متأكدة من حذف حساب المستخدم التالي؟',
+    warning: 'تحذير:',
+    warningDeleteData: 'سيتم حذف كل بيانات هذا المستخدم نهائيًا.',
+    deleting: 'جارٍ الحذف...',
+    profileUpdated: 'تم تحديث الحساب بنجاح!',
+    profileUpdateFailed: 'فشل تحديث الحساب.',
+    passwordChanged: 'تم تغيير كلمة المرور بنجاح!',
+    passwordChangeFailed: 'فشل تغيير كلمة المرور.',
+    passwordsMismatch: 'كلمتا المرور الجديدتان غير متطابقتين.',
+    userAdded: 'تمت إضافة المستخدم بنجاح!',
+    userAddFailed: 'فشلت إضافة المستخدم.',
+    userUpdated: 'تم تحديث المستخدم بنجاح!',
+    userUpdateFailed: 'فشل تحديث المستخدم.',
+    userDeleteFailed: 'فشل حذف المستخدم.',
+    userDeletedSuccess: 'تم حذف المستخدم "{{name}}" بنجاح!'
+  }
+};
 
 const Settings = () => {
+  const navigate = useNavigate();
   const { user, isAdmin, canManageCompanyTeam, canInviteUsersToCompany, updateUser } = useAuth();
 
   const showTeamSection = () => isAdmin() || canManageCompanyTeam();
@@ -27,7 +135,6 @@ const Settings = () => {
     name: '',
     title: '',
     email: '',
-    password: '',
     role: 'user',
   });
   const [editingUser, setEditingUser] = useState(null);
@@ -45,6 +152,15 @@ const Settings = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+  const [lang, setLang] = useState(getStoredLanguage());
+  const tx = (key, vars = {}) => {
+    const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    return Object.entries(vars).reduce(
+      (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+      template
+    );
+  };
 
   useEffect(() => {
     if (user) {
@@ -57,7 +173,33 @@ const Settings = () => {
     if (showTeamSection()) {
       fetchUsers();
     }
+    fetchSubscriptionInfo();
   }, [user]);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
+  const fetchSubscriptionInfo = async () => {
+    try {
+      const response = await subscriptionAPI.getMySubscription();
+      setSubscriptionInfo(response?.data || null);
+    } catch (apiError) {
+      console.error('Error fetching subscription info:', apiError);
+      setSubscriptionInfo(null);
+    }
+  };
+
+  const formatDate = (value) => {
+    if (!value) return 'N/A';
+    return new Date(value).toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
 
   const fetchUsers = async () => {
     try {
@@ -98,21 +240,21 @@ const Settings = () => {
     setSuccess('');
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('New passwords do not match.');
+      setError(tx('passwordsMismatch'));
       setLoading(false);
       return;
     }
 
     try {
       await userAPI.changePassword(passwordData.currentPassword, passwordData.newPassword);
-      setSuccess('Password changed successfully!');
+      setSuccess(tx('passwordChanged'));
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
       });
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to change password.');
+      setError(error.response?.data?.message || tx('passwordChangeFailed'));
     } finally {
       setLoading(false);
     }
@@ -126,18 +268,17 @@ const Settings = () => {
 
     try {
       await userAPI.addAccount(newUser);
-      setSuccess('User added successfully!');
+      setSuccess(tx('userAdded'));
       setNewUser({
         name: '',
         title: '',
         email: '',
-        password: '',
         role: 'user',
       });
       setOpenDialog(false);
       fetchUsers();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to add user.');
+      setError(error.response?.data?.message || tx('userAddFailed'));
     } finally {
       setLoading(false);
     }
@@ -157,12 +298,12 @@ const Settings = () => {
     
     try {
       await userAPI.deleteAccount(userToDelete._id);
-      setSuccess(`User "${userToDelete.name}" deleted successfully!`);
+      setSuccess(tx('userDeletedSuccess', { name: userToDelete.name }));
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
       fetchUsers();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to delete user.');
+      setError(error.response?.data?.message || tx('userDeleteFailed'));
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
     } finally {
@@ -183,12 +324,12 @@ const Settings = () => {
 
     try {
       await userAPI.updateProfile(profileData);
-      setSuccess('Profile updated successfully!');
+      setSuccess(tx('profileUpdated'));
       setIsEditingProfile(false);
       // Update local user data
       updateUser({ ...user, ...profileData });
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update profile.');
+      setError(error.response?.data?.message || tx('profileUpdateFailed'));
     } finally {
       setLoading(false);
     }
@@ -220,12 +361,12 @@ const Settings = () => {
 
     try {
       await userAPI.updateUser(editingUser._id, editUserData);
-      setSuccess('User updated successfully!');
+      setSuccess(tx('userUpdated'));
       setOpenEditDialog(false);
       setEditingUser(null);
       fetchUsers();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update user.');
+      setError(error.response?.data?.message || tx('userUpdateFailed'));
     } finally {
       setLoading(false);
     }
@@ -246,15 +387,27 @@ const Settings = () => {
     }
   };
 
+  const getRoleLabel = (role) => {
+    const normalized = String(role || '').toLowerCase();
+    if (lang === 'ar') {
+      if (normalized === 'admin') return 'مدير عام';
+      if (normalized === 'manager') return 'مدير';
+      if (normalized === 'developer') return 'مطور';
+      if (normalized === 'tester') return 'مختبر';
+      if (normalized === 'user') return 'مستخدم';
+    }
+    return role || 'N/A';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-12">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent mb-2">
-            Settings
+            {tx('settings')}
           </h1>
-          <p className="text-sm sm:text-base text-gray-600">Manage your account and preferences</p>
+          <p className="text-sm sm:text-base text-gray-600">{tx('manageAccount')}</p>
         </div>
 
         {/* Alerts */}
@@ -274,6 +427,40 @@ const Settings = () => {
           </div>
         )}
 
+        <div className="mb-6">
+          <Card>
+            <Card.Content className="p-4 sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('subscription')}</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {tx('plan')}: <span className="font-semibold uppercase">{subscriptionInfo?.planId || 'free'}</span> · {tx('status')}:{' '}
+                    <span className={`font-semibold ${subscriptionInfo?.status === 'expired' ? 'text-amber-600' : 'text-green-600'}`}>
+                      {subscriptionInfo?.status || 'active'}
+                    </span>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {tx('expires')}: {formatDate(subscriptionInfo?.expiresAt)} · {tx('graceEnds')}: {formatDate(subscriptionInfo?.graceEndsAt)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {tx('paymobSubscriptionId')}: {subscriptionInfo?.paymobSubscriptionId || 'N/A'}
+                  </p>
+                  {subscriptionInfo?.notice && (
+                    <p className="text-xs text-amber-700 mt-2">{subscriptionInfo.notice}</p>
+                  )}
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => navigate('/subscription')}
+                  className="w-full sm:w-auto"
+                >
+                  {tx('manageSubscription')}
+                </Button>
+              </div>
+            </Card.Content>
+          </Card>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
           {/* Profile Information */}
           <Card>
@@ -285,13 +472,13 @@ const Settings = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Profile Information</h2>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('profileInfo')}</h2>
                 </div>
                 {!isEditingProfile && (
                   <button
                     onClick={() => setIsEditingProfile(true)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Edit Profile"
+                    title={tx('editProfile')}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -302,7 +489,7 @@ const Settings = () => {
               
               <form onSubmit={handleUpdateProfile} className="space-y-4">
                 <Input
-                  label="Name"
+                  label={tx('name')}
                   name="name"
                   value={profileData.name}
                   onChange={handleProfileChange}
@@ -315,7 +502,7 @@ const Settings = () => {
                   }
                 />
                 <Input
-                  label="Title"
+                  label={tx('title')}
                   name="title"
                   value={profileData.title}
                   onChange={handleProfileChange}
@@ -328,7 +515,7 @@ const Settings = () => {
                   }
                 />
                 <Input
-                  label="Email"
+                  label={tx('email')}
                   name="email"
                   type="email"
                   value={profileData.email}
@@ -343,14 +530,14 @@ const Settings = () => {
                 />
                 <div className="w-full">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role
+                    {tx('role')}
                   </label>
                   <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-2 border-gray-200 rounded-lg">
                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getRoleBadgeColor(user?.role)}`}>
-                      {user?.role || 'N/A'}
+                      {getRoleLabel(user?.role || 'N/A')}
                     </span>
                   </div>
                 </div>
@@ -370,7 +557,7 @@ const Settings = () => {
                         });
                       }}
                     >
-                      Cancel
+                      {tx('cancel')}
                     </Button>
                     <Button
                       type="submit"
@@ -379,7 +566,7 @@ const Settings = () => {
                       disabled={loading}
                       icon={loading ? <Spinner size="sm" color="white" /> : null}
                     >
-                      {loading ? 'Saving...' : 'Save Changes'}
+                      {loading ? tx('saving') : tx('saveChanges')}
                     </Button>
                   </div>
                 )}
@@ -396,12 +583,12 @@ const Settings = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                   </svg>
                 </div>
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Change Password</h2>
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('changePassword')}</h2>
               </div>
               
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <Input
-                  label="Current Password"
+                  label={tx('currentPassword')}
                   name="currentPassword"
                   type="password"
                   value={passwordData.currentPassword}
@@ -414,7 +601,7 @@ const Settings = () => {
                   }
                 />
                 <Input
-                  label="New Password"
+                  label={tx('newPassword')}
                   name="newPassword"
                   type="password"
                   value={passwordData.newPassword}
@@ -427,7 +614,7 @@ const Settings = () => {
                   }
                 />
                 <Input
-                  label="Confirm New Password"
+                  label={tx('confirmNewPassword')}
                   name="confirmPassword"
                   type="password"
                   value={passwordData.confirmPassword}
@@ -446,7 +633,7 @@ const Settings = () => {
                   disabled={loading}
                   icon={loading ? <Spinner size="sm" color="white" /> : null}
                 >
-                  {loading ? 'Changing Password...' : 'Change Password'}
+                  {loading ? tx('changingPassword') : tx('changePassword')}
                 </Button>
               </form>
             </Card.Content>
@@ -464,7 +651,7 @@ const Settings = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">User Management</h2>
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('userManagement')}</h2>
                 </div>
                 {canInviteUsersToCompany() && (
                   <Button
@@ -477,7 +664,7 @@ const Settings = () => {
                     }
                     className="w-full sm:w-auto"
                   >
-                    Add User
+                    {tx('addUser')}
                   </Button>
                 )}
               </div>
@@ -487,7 +674,7 @@ const Settings = () => {
                   <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  <p className="text-sm sm:text-base text-gray-600 mb-4">No users found. Add your first user to get started.</p>
+                  <p className="text-sm sm:text-base text-gray-600 mb-4">{tx('noUsers')}</p>
                   {canInviteUsersToCompany() && (
                     <Button
                       variant="secondary"
@@ -498,7 +685,7 @@ const Settings = () => {
                         </svg>
                       }
                     >
-                      Add User
+                      {tx('addUser')}
                     </Button>
                   )}
                 </div>
@@ -520,13 +707,13 @@ const Settings = () => {
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
                         <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(userItem.role)}`}>
-                          {userItem.role}
+                          {getRoleLabel(userItem.role)}
                         </span>
                         <div className="flex items-center gap-1 sm:gap-2">
                           <button
                             onClick={() => handleEditUser(userItem)}
                             className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Edit User"
+                            title={tx('editUser')}
                           >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -535,7 +722,7 @@ const Settings = () => {
                           <button
                             onClick={() => handleDeleteUser(userItem)}
                             className="p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete User"
+                            title={tx('deleteUser')}
                           >
                             <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -556,12 +743,12 @@ const Settings = () => {
           <Modal isOpen={openDialog} onClose={() => setOpenDialog(false)}>
             <form onSubmit={handleAddUser}>
               <Modal.Header>
-                <h2 className="text-2xl font-bold text-gray-800">Add New User</h2>
+                <h2 className="text-2xl font-bold text-gray-800">{tx('addNewUser')}</h2>
               </Modal.Header>
               <Modal.Content>
                 <div className="space-y-4">
                   <Input
-                    label="Name"
+                    label={tx('name')}
                     name="name"
                     value={newUser.name}
                     onChange={handleNewUserChange}
@@ -573,7 +760,7 @@ const Settings = () => {
                     }
                   />
                   <Input
-                    label="Title"
+                    label={tx('title')}
                     name="title"
                     value={newUser.title}
                     onChange={handleNewUserChange}
@@ -585,7 +772,7 @@ const Settings = () => {
                     }
                   />
                   <Input
-                    label="Email"
+                    label={tx('email')}
                     name="email"
                     type="email"
                     value={newUser.email}
@@ -597,22 +784,12 @@ const Settings = () => {
                       </svg>
                     }
                   />
-                  <Input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    value={newUser.password}
-                    onChange={handleNewUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                      </svg>
-                    }
-                  />
+                  <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                    {tx('noPasswordNeeded')}
+                  </p>
                   <div className="w-full">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Role<span className="text-red-500 ml-1">*</span>
+                      {tx('role')}<span className="text-red-500 ml-1">*</span>
                     </label>
                     <select
                       name="role"
@@ -621,11 +798,11 @@ const Settings = () => {
                       required
                       className="w-full px-4 py-2.5 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
                     >
-                      <option value="user">User</option>
-                      <option value="developer">Developer</option>
-                      <option value="tester">Tester</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
+                      <option value="user">{lang === 'ar' ? 'مستخدم' : 'User'}</option>
+                      <option value="developer">{lang === 'ar' ? 'مطور' : 'Developer'}</option>
+                      <option value="tester">{lang === 'ar' ? 'مختبر' : 'Tester'}</option>
+                      <option value="manager">{lang === 'ar' ? 'مدير' : 'Manager'}</option>
+                      <option value="admin">{lang === 'ar' ? 'مدير عام' : 'Admin'}</option>
                     </select>
                   </div>
                 </div>
@@ -639,7 +816,7 @@ const Settings = () => {
                     fullWidth
                     className="sm:w-auto"
                   >
-                    Cancel
+                    {tx('cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -649,7 +826,7 @@ const Settings = () => {
                     fullWidth
                     className="sm:w-auto"
                   >
-                    {loading ? 'Adding...' : 'Add User'}
+                    {loading ? tx('adding') : tx('addUser')}
                   </Button>
                 </div>
               </Modal.Footer>
@@ -662,12 +839,12 @@ const Settings = () => {
           <Modal isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)}>
             <form onSubmit={handleUpdateUser}>
               <Modal.Header>
-                <h2 className="text-2xl font-bold text-gray-800">Edit User</h2>
+                <h2 className="text-2xl font-bold text-gray-800">{tx('editUser')}</h2>
               </Modal.Header>
               <Modal.Content>
                 <div className="space-y-4">
                   <Input
-                    label="Name"
+                    label={tx('name')}
                     name="name"
                     value={editUserData.name}
                     onChange={handleEditUserChange}
@@ -679,7 +856,7 @@ const Settings = () => {
                     }
                   />
                   <Input
-                    label="Title"
+                    label={tx('title')}
                     name="title"
                     value={editUserData.title}
                     onChange={handleEditUserChange}
@@ -691,7 +868,7 @@ const Settings = () => {
                     }
                   />
                   <Input
-                    label="Email"
+                    label={tx('email')}
                     name="email"
                     type="email"
                     value={editUserData.email}
@@ -705,7 +882,7 @@ const Settings = () => {
                   />
                   <div className="w-full">
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Role<span className="text-red-500 ml-1">*</span>
+                      {tx('role')}<span className="text-red-500 ml-1">*</span>
                     </label>
                     <select
                       name="role"
@@ -714,11 +891,11 @@ const Settings = () => {
                       required
                       className="w-full px-4 py-2.5 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
                     >
-                      <option value="user">User</option>
-                      <option value="developer">Developer</option>
-                      <option value="tester">Tester</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
+                      <option value="user">{lang === 'ar' ? 'مستخدم' : 'User'}</option>
+                      <option value="developer">{lang === 'ar' ? 'مطور' : 'Developer'}</option>
+                      <option value="tester">{lang === 'ar' ? 'مختبر' : 'Tester'}</option>
+                      <option value="manager">{lang === 'ar' ? 'مدير' : 'Manager'}</option>
+                      <option value="admin">{lang === 'ar' ? 'مدير عام' : 'Admin'}</option>
                     </select>
                   </div>
                 </div>
@@ -735,7 +912,7 @@ const Settings = () => {
                     fullWidth
                     className="sm:w-auto"
                   >
-                    Cancel
+                    {tx('cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -745,7 +922,7 @@ const Settings = () => {
                     fullWidth
                     className="sm:w-auto"
                   >
-                    {loading ? 'Updating...' : 'Update User'}
+                    {loading ? tx('updating') : tx('updateUser')}
                   </Button>
                 </div>
               </Modal.Footer>
@@ -764,15 +941,15 @@ const Settings = () => {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-800">Delete User</h2>
-                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                  <h2 className="text-xl font-bold text-gray-800">{tx('deleteUser')}</h2>
+                  <p className="text-sm text-gray-600">{tx('cannotUndo')}</p>
                 </div>
               </div>
             </Modal.Header>
             <Modal.Content>
               <div className="py-4">
                 <p className="text-gray-700 mb-4">
-                  Are you sure you want to delete the following user account?
+                  {tx('confirmDeletePrompt')}
                 </p>
                 {userToDelete && (
                   <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
@@ -786,14 +963,14 @@ const Settings = () => {
                         <p className="text-sm text-gray-500 truncate">{userToDelete.email}</p>
                       </div>
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(userToDelete.role)}`}>
-                        {userToDelete.role}
+                        {getRoleLabel(userToDelete.role)}
                       </span>
                     </div>
                   </div>
                 )}
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                   <p className="text-sm text-red-800">
-                    <span className="font-semibold">Warning:</span> All data associated with this user will be permanently deleted.
+                    <span className="font-semibold">{tx('warning')}</span> {tx('warningDeleteData')}
                   </p>
                 </div>
               </div>
@@ -808,7 +985,7 @@ const Settings = () => {
                   fullWidth
                   className="sm:w-auto"
                 >
-                  Cancel
+                  {tx('cancel')}
                 </Button>
                 <Button
                   type="button"
@@ -819,7 +996,7 @@ const Settings = () => {
                   fullWidth
                   className="sm:w-auto bg-red-600 hover:bg-red-700 focus:ring-red-500"
                 >
-                  {loading ? 'Deleting...' : 'Delete User'}
+                  {loading ? tx('deleting') : tx('deleteUser')}
                 </Button>
               </div>
             </Modal.Footer>

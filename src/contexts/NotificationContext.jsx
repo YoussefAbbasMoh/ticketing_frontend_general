@@ -1,8 +1,113 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import socketService from '../services/socketService';
+import { getStoredLanguage } from '../i18n';
 
 const NotificationContext = createContext();
+
+const NOTIFICATION_TEXT = {
+  en: {
+    newTicketTitle: 'New Ticket',
+    newTicketMessage: (ticketNo, sender) => `New ticket ${ticketNo} from ${sender}`,
+    ticketReplyTitle: 'New Reply',
+    ticketReplyMessage: (ticketNo, sender) => `New reply on ticket ${ticketNo} from ${sender}`,
+    ticketReplyMessageCc: (ticketNo) => `New reply on ticket ${ticketNo} (CC)`,
+    ticketAssignedTitle: 'Ticket Assigned',
+    ticketAssignedMessage: (ticketNo) => `You have been assigned to ticket ${ticketNo}`,
+    ticketCcTitle: 'Ticket CC',
+    ticketCcMessage: (ticketNo) => `You have been CC'd on ticket ${ticketNo}`,
+    newMessageTitle: 'New Message',
+    newMessage: 'New message',
+    image: 'Image',
+    video: 'Video',
+    voiceMessage: 'Voice message',
+    file: 'File',
+    someone: 'Someone',
+  },
+  ar: {
+    newTicketTitle: 'تذكرة جديدة',
+    newTicketMessage: (ticketNo, sender) => `تذكرة جديدة ${ticketNo} من ${sender}`,
+    ticketReplyTitle: 'رد جديد',
+    ticketReplyMessage: (ticketNo, sender) => `رد جديد على التذكرة ${ticketNo} من ${sender}`,
+    ticketReplyMessageCc: (ticketNo) => `رد جديد على التذكرة ${ticketNo} (نسخة)`,
+    ticketAssignedTitle: 'تم إسناد تذكرة',
+    ticketAssignedMessage: (ticketNo) => `تم إسنادك إلى التذكرة ${ticketNo}`,
+    ticketCcTitle: 'إشعار نسخة',
+    ticketCcMessage: (ticketNo) => `تم إضافتك كنسخة في التذكرة ${ticketNo}`,
+    newMessageTitle: 'رسالة جديدة',
+    newMessage: 'رسالة جديدة',
+    image: 'صورة',
+    video: 'فيديو',
+    voiceMessage: 'رسالة صوتية',
+    file: 'ملف',
+    someone: 'شخص',
+  },
+};
+
+const getTx = () => {
+  const lang = getStoredLanguage();
+  return NOTIFICATION_TEXT[lang] || NOTIFICATION_TEXT.en;
+};
+
+const withLocalizedTicket = (type, data) => {
+  const tx = getTx();
+  const ticketNo = data.ticket?.ticket || '-';
+  const sender = data.ticket?.requested_from || data.reply?.user || tx.someone;
+
+  if (type === 'new_ticket') {
+    return {
+      title: tx.newTicketTitle,
+      message: tx.newTicketMessage(ticketNo, sender),
+    };
+  }
+
+  if (type === 'ticket_reply') {
+    const isCcMessage = String(data.message || '').toLowerCase().includes('(cc)');
+    return {
+      title: tx.ticketReplyTitle,
+      message: isCcMessage
+        ? tx.ticketReplyMessageCc(ticketNo)
+        : tx.ticketReplyMessage(ticketNo, sender),
+    };
+  }
+
+  if (type === 'ticket_assigned') {
+    return {
+      title: tx.ticketAssignedTitle,
+      message: tx.ticketAssignedMessage(ticketNo),
+    };
+  }
+
+  if (type === 'ticket_cc') {
+    return {
+      title: tx.ticketCcTitle,
+      message: tx.ticketCcMessage(ticketNo),
+    };
+  }
+
+  return {
+    title: data.title || '',
+    message: data.message || '',
+  };
+};
+
+const getLocalizedChatMessage = (message) => {
+  const tx = getTx();
+  const sender = message?.sender?.name || tx.someone;
+  const messageType = message?.type;
+
+  let content = tx.newMessage;
+  if (messageType === 'text') content = message?.content || tx.newMessage;
+  if (messageType === 'image') content = `📷 ${tx.image}`;
+  if (messageType === 'video') content = `🎥 ${tx.video}`;
+  if (messageType === 'voice') content = `🎤 ${tx.voiceMessage}`;
+  if (messageType === 'file') content = `📎 ${message?.fileName || tx.file}`;
+
+  return {
+    title: tx.newMessageTitle,
+    message: `${sender}: ${content}`,
+  };
+};
 
 export const useNotifications = () => {
   const context = useContext(NotificationContext);
@@ -101,11 +206,12 @@ export const NotificationProvider = ({ children }) => {
 
         // Listen for new ticket notifications
         socketService.on('new_ticket', (data) => {
+          const localized = withLocalizedTicket('new_ticket', data);
           const notification = {
             id: Date.now(),
             type: 'new_ticket',
-            title: 'New Ticket',
-            message: data.message || `New ticket ${data.ticket?.ticket} from ${data.ticket?.requested_from}`,
+            title: localized.title,
+            message: localized.message,
             ticket: data.ticket,
             timestamp: data.timestamp || new Date(),
             read: false
@@ -150,11 +256,12 @@ export const NotificationProvider = ({ children }) => {
 
         // Listen for ticket reply notifications
         socketService.on('ticket_reply', (data) => {
+          const localized = withLocalizedTicket('ticket_reply', data);
           const notification = {
             id: Date.now(),
             type: 'ticket_reply',
-            title: 'New Reply',
-            message: data.message || `New reply on ticket ${data.ticket?.ticket}`,
+            title: localized.title,
+            message: localized.message,
             ticket: data.ticket,
             reply: data.reply,
             timestamp: data.timestamp || new Date(),
@@ -200,11 +307,12 @@ export const NotificationProvider = ({ children }) => {
 
         // Listen for ticket assignment notifications
         socketService.on('ticket_assigned', (data) => {
+          const localized = withLocalizedTicket('ticket_assigned', data);
           const notification = {
             id: Date.now(),
             type: 'ticket_assigned',
-            title: 'Ticket Assigned',
-            message: data.message || `You have been assigned to ticket ${data.ticket?.ticket}`,
+            title: localized.title,
+            message: localized.message,
             ticket: data.ticket,
             timestamp: data.timestamp || new Date(),
             read: false
@@ -249,11 +357,12 @@ export const NotificationProvider = ({ children }) => {
 
         // Listen for ticket CC notifications
         socketService.on('ticket_cc', (data) => {
+          const localized = withLocalizedTicket('ticket_cc', data);
           const notification = {
             id: Date.now(),
             type: 'ticket_cc',
-            title: 'Ticket CC',
-            message: data.message || `You have been CC'd on ticket ${data.ticket?.ticket}`,
+            title: localized.title,
+            message: localized.message,
             ticket: data.ticket,
             timestamp: data.timestamp || new Date(),
             read: false
@@ -305,27 +414,13 @@ export const NotificationProvider = ({ children }) => {
             return; // Don't notify for own messages
           }
 
-          // Get message content based on type
-          let messageContent = '';
-          if (data.message?.type === 'text') {
-            messageContent = data.message?.content || 'New message';
-          } else if (data.message?.type === 'image') {
-            messageContent = '📷 Image';
-          } else if (data.message?.type === 'video') {
-            messageContent = '🎥 Video';
-          } else if (data.message?.type === 'voice') {
-            messageContent = '🎤 Voice message';
-          } else if (data.message?.type === 'file') {
-            messageContent = `📎 ${data.message?.fileName || 'File'}`;
-          } else {
-            messageContent = 'New message';
-          }
+          const localized = getLocalizedChatMessage(data.message);
 
           const notification = {
             id: Date.now(),
             type: 'chat_message',
-            title: 'New Message',
-            message: `${data.message?.sender?.name || 'Someone'}: ${messageContent}`,
+            title: localized.title,
+            message: localized.message,
             conversationId: data.conversationId,
             sender: data.message?.sender,
             timestamp: data.timestamp || new Date(),

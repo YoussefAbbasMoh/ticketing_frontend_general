@@ -46,6 +46,32 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const autoAssignableRoles = ['admin', 'owner', 'manager'];
+
+  const getCurrentUserFromStorage = () => {
+    try {
+      const userRaw = localStorage.getItem('user');
+      if (!userRaw) return null;
+      return JSON.parse(userRaw);
+    } catch (parseError) {
+      console.error('Error parsing current user from storage:', parseError);
+      return null;
+    }
+  };
+
+  const getAutoAssignedUsers = (selectedUsers = []) => {
+    const currentUser = getCurrentUserFromStorage();
+    const currentUserId = currentUser?._id;
+    const currentUserRole = String(currentUser?.role || '').toLowerCase();
+    const shouldAutoAssignCurrentUser =
+      Boolean(currentUserId) && autoAssignableRoles.includes(currentUserRole);
+
+    if (!shouldAutoAssignCurrentUser) {
+      return selectedUsers;
+    }
+
+    return Array.from(new Set([...selectedUsers, currentUserId]));
+  };
 
   useEffect(() => {
     if (open) {
@@ -101,7 +127,7 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
         ...formData,
         start_date: formData.start_date.toISOString().split('T')[0],
         estimated_end_date: formData.estimated_end_date.toISOString().split('T')[0],
-        assigned_users: formData.assigned_users,
+        assigned_users: getAutoAssignedUsers(formData.assigned_users),
       };
 
       await projectAPI.addProject(projectData);

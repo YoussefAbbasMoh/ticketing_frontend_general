@@ -3,11 +3,13 @@ import { useChat } from '../../contexts/ChatContext';
 import ChatList from './ChatList';
 import ChatWindow from './ChatWindow';
 import NewConversationDialog from './NewConversationDialog';
+import { getStoredLanguage, t } from '../../i18n';
 
 const Chat = () => {
   const { selectConversation, activeConversation, setActiveConversation } = useChat();
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [lang, setLang] = useState(getStoredLanguage());
 
   // Handle responsive breakpoint with resize listener
   useEffect(() => {
@@ -32,6 +34,12 @@ const Chat = () => {
       window.removeEventListener('resize', handleResize);
       clearTimeout(timeoutId);
     };
+  }, []);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
 
   const handleSelectConversation = (conversation) => {
@@ -122,10 +130,10 @@ const Chat = () => {
 
               {/* Text */}
               <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                Welcome to Messages
+                {t(lang, 'chatWelcomeTitle')}
               </h3>
               <p className="text-gray-500 mb-6">
-                Select a conversation from the list or start a new one to begin chatting
+                {t(lang, 'chatWelcomeDescription')}
               </p>
 
               {/* Action Button */}
@@ -136,13 +144,13 @@ const Chat = () => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-                Start New Conversation
+                {t(lang, 'startNewConversation')}
               </button>
 
               {/* Keyboard Shortcut Hint (Desktop Only) */}
               <div className="hidden md:block mt-8 pt-8 border-t border-gray-200">
                 <p className="text-xs text-gray-400">
-                  Tip: Press <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-600">N</kbd> to start a new conversation
+                  {t(lang, 'chatShortcutTipPrefix')} <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-600">N</kbd> {t(lang, 'chatShortcutTipSuffix')}
                 </p>
               </div>
             </div>

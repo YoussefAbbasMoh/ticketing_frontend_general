@@ -1,15 +1,28 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { getStoredLanguage, t } from '../../i18n';
 
 const AppDrawer = ({ open, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [lang, setLang] = useState(getStoredLanguage());
+  const isRtl = lang === 'ar';
+  const activeCompanyId = user?.activeCompanyId ? String(user.activeCompanyId) : '';
+  const activeMembership =
+    (user?.companies || []).find((entry) => {
+      const raw = entry?.companyId ?? entry?.company?._id ?? entry?.company;
+      return raw != null && String(raw) === activeCompanyId;
+    }) || null;
+  const activeCompanyName = activeMembership?.company?.name || '';
+  const activeRoleLabel = activeMembership?.isOwner
+    ? 'owner'
+    : (activeMembership?.companyRole || user?.title || '');
 
   const menuItems = [
     {
-      text: 'Home',
+      text: t(lang, 'home'),
       path: '/',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,7 +31,7 @@ const AppDrawer = ({ open, onClose }) => {
       )
     },
     {
-      text: 'Chat',
+      text: t(lang, 'chat'),
       path: '/chat',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,7 +40,7 @@ const AppDrawer = ({ open, onClose }) => {
       )
     },
     {
-      text: 'Attendance',
+      text: t(lang, 'attendance'),
       path: '/attendance',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -36,7 +49,16 @@ const AppDrawer = ({ open, onClose }) => {
       )
     },
     {
-      text: 'Settings',
+      text: t(lang, 'subscription'),
+      path: '/subscription',
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-3.314 0-6 2.686-6 6h12c0-3.314-2.686-6-6-6zm0 0V5m0 0L9.5 7.5M12 5l2.5 2.5M5 19h14" />
+        </svg>
+      )
+    },
+    {
+      text: t(lang, 'settings'),
       path: '/settings',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,6 +89,12 @@ const AppDrawer = ({ open, onClose }) => {
       .slice(0, 2);
   };
 
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
   return (
     <>
       {/* Backdrop */}
@@ -79,7 +107,7 @@ const AppDrawer = ({ open, onClose }) => {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-72 bg-primary z-50 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 ${isRtl ? 'right-0' : 'left-0'} h-full w-72 bg-primary z-50 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'
           }`}
       >
         <div className="flex flex-col h-full">
@@ -90,8 +118,13 @@ const AppDrawer = ({ open, onClose }) => {
                 {getInitials(user?.name)}
               </div>
               <div className="flex-1">
-                <h3 className="text-white font-semibold text-lg">{user?.name}</h3>
-                <p className="text-gray-400 text-sm">{user?.title}</p>
+                <h3 className="text-white font-semibold text-lg">
+                  {activeCompanyName || user?.name}
+                </h3>
+                <p className="text-gray-400 text-sm">{activeRoleLabel}</p>
+                {activeCompanyName && (
+                  <p className="text-gray-500 text-xs mt-0.5">{user?.name}</p>
+                )}
               </div>
             </div>
             {user?.email && (
@@ -113,8 +146,12 @@ const AppDrawer = ({ open, onClose }) => {
                   key={item.text}
                   onClick={() => handleNavigation(item.path)}
                   className={`w-full flex items-center gap-4 px-6 py-4 transition-all ${isActive
-                      ? 'bg-secondary text-white border-l-4 border-secondary-700'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white border-l-4 border-transparent'
+                      ? isRtl
+                        ? 'bg-secondary text-white border-r-4 border-secondary-700'
+                        : 'bg-secondary text-white border-l-4 border-secondary-700'
+                      : isRtl
+                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white border-r-4 border-transparent'
+                        : 'text-gray-300 hover:bg-gray-800 hover:text-white border-l-4 border-transparent'
                     }`}
                 >
                   <span className={isActive ? 'text-white' : ''}>{item.icon}</span>
@@ -133,7 +170,7 @@ const AppDrawer = ({ open, onClose }) => {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
-              <span className="font-medium">Logout</span>
+              <span className="font-medium">{t(lang, 'logout')}</span>
             </button>
           </div>
         </div>

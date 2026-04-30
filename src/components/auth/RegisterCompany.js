@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage, t } from '../../i18n';
 
 const RegisterCompany = () => {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ const RegisterCompany = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState(getStoredLanguage());
 
   const validationError = useMemo(() => {
     if (!formData.companyName.trim()) return 'Company name is required';
@@ -74,6 +76,12 @@ const RegisterCompany = () => {
     }
   };
 
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -85,8 +93,8 @@ const RegisterCompany = () => {
               className="w-24 h-24 object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Create Company Account</h1>
-          <p className="text-gray-400">Set up your workspace and start inviting your team.</p>
+          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'createCompanyAccount')}</h1>
+          <p className="text-gray-400">{t(lang, 'setupWorkspace')}</p>
         </div>
 
         <div className="bg-primary-800 rounded-2xl shadow-2xl p-8 border border-primary-700">
@@ -99,7 +107,7 @@ const RegisterCompany = () => {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">
-                Company Name
+                {t(lang, 'companyName')}
               </label>
               <input
                 id="companyName"
@@ -116,7 +124,7 @@ const RegisterCompany = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
-                Work Email
+                {t(lang, 'workEmail')}
               </label>
               <input
                 id="email"
@@ -133,7 +141,7 @@ const RegisterCompany = () => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
-                Password
+                {t(lang, 'password')}
               </label>
               <input
                 id="password"
@@ -150,7 +158,7 @@ const RegisterCompany = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
-                Confirm Password
+                {t(lang, 'confirmPassword')}
               </label>
               <input
                 id="confirmPassword"
@@ -173,10 +181,10 @@ const RegisterCompany = () => {
               {loading ? (
                 <>
                   <Spinner size="sm" />
-                  <span className="ml-2">Creating workspace...</span>
+                  <span className="ml-2">{t(lang, 'creatingWorkspace')}</span>
                 </>
               ) : (
-                'Create Company'
+                t(lang, 'createCompany')
               )}
             </button>
           </form>
@@ -188,7 +196,7 @@ const RegisterCompany = () => {
               disabled={loading}
               className="text-secondary-400 hover:text-secondary-300 text-sm font-medium transition-colors disabled:opacity-50"
             >
-              Already have an account? Sign in
+              {t(lang, 'alreadyHaveAccount')}
             </button>
           </div>
         </div>

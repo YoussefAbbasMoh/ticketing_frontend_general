@@ -8,6 +8,146 @@ import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Spinner from '../ui/Spinner';
+import { getStoredLanguage } from '../../i18n';
+
+const TEXT = {
+  en: {
+    failedProjectDetails: 'Failed to fetch project details.',
+    failedTickets: 'Failed to fetch tickets.',
+    na: 'N/A',
+    daysOverdue: '{{days}} days overdue',
+    dueToday: 'Due today',
+    oneDayLeft: '1 day left',
+    daysLeft: '{{days}} days left',
+    statusUpdated: 'Project status updated to "{{status}}"',
+    failedStatusUpdate: 'Failed to update project status.',
+    loadingProjectDetails: 'Loading project details...',
+    backToProjects: 'Back to Projects',
+    unknown: 'Unknown',
+    projectOverview: 'Project overview and ticket management',
+    changeStatus: 'Change Status:',
+    active: 'Active',
+    completed: 'Completed',
+    onHold: 'On Hold',
+    cancelled: 'Cancelled',
+    openProjectChat: 'Open Project Chat',
+    newTicket: 'New Ticket',
+    openProjectChatError: 'Error opening project chat. Please try again.',
+    timeline: 'Timeline',
+    startDate: 'Start Date',
+    endDate: 'End Date',
+    team: 'Team',
+    activeMembers: 'Active members',
+    tickets: 'Tickets',
+    totalTickets: 'Total tickets',
+    open: 'Open',
+    openTickets: 'Open tickets',
+    allTickets: 'All Tickets',
+    searchByTicketId: 'Search by Ticket ID...',
+    all: 'All',
+    inProgress: 'In Progress',
+    pending: 'Pending',
+    resolved: 'Resolved',
+    noTicketsFound: 'No tickets found',
+    createFirstTicketHint: 'Create your first ticket to get started',
+    noTicketsWithStatus: 'No tickets with status "{{status}}"',
+    createFirstTicket: 'Create First Ticket',
+    ticketId: 'Ticket ID',
+    status: 'Status',
+    priority: 'Priority',
+    sender: 'Sender',
+    receiver: 'Receiver',
+    description: 'Description',
+    cc: 'CC',
+    created: 'Created',
+    comments: 'Comments',
+    actions: 'Actions',
+    priorityAsap: 'As soon as possible',
+    priority12Days: '1-2 days',
+    priority35Days: 'Take your time 3-5 days',
+    notSet: 'Not set',
+    showMore: 'Show more',
+    showLess: 'Show less',
+    noDescription: 'No description',
+    more: 'more',
+    none: 'None',
+    commentSingle: 'comment',
+    commentPlural: 'comments',
+    legacy: 'Legacy',
+    noComments: 'No comments',
+    editTicket: 'Edit Ticket',
+    assignUsers: 'Assign Users',
+    untitledProject: 'Untitled Project'
+  },
+  ar: {
+    failedProjectDetails: 'فشل في جلب تفاصيل المشروع.',
+    failedTickets: 'فشل في جلب التذاكر.',
+    na: 'غير متاح',
+    daysOverdue: 'متأخر {{days}} يوم',
+    dueToday: 'مستحق اليوم',
+    oneDayLeft: 'يوم واحد متبقٍ',
+    daysLeft: 'متبقي {{days}} يوم',
+    statusUpdated: 'تم تحديث حالة المشروع إلى "{{status}}"',
+    failedStatusUpdate: 'فشل تحديث حالة المشروع.',
+    loadingProjectDetails: 'جارٍ تحميل تفاصيل المشروع...',
+    backToProjects: 'العودة للمشاريع',
+    unknown: 'غير معروف',
+    projectOverview: 'نظرة عامة على المشروع وإدارة التذاكر',
+    changeStatus: 'تغيير الحالة:',
+    active: 'نشط',
+    completed: 'مكتمل',
+    onHold: 'معلق',
+    cancelled: 'ملغي',
+    openProjectChat: 'فتح دردشة المشروع',
+    newTicket: 'تذكرة جديدة',
+    openProjectChatError: 'حدث خطأ أثناء فتح دردشة المشروع. حاول مرة أخرى.',
+    timeline: 'الجدول الزمني',
+    startDate: 'تاريخ البدء',
+    endDate: 'تاريخ الانتهاء',
+    team: 'الفريق',
+    activeMembers: 'أعضاء نشطون',
+    tickets: 'التذاكر',
+    totalTickets: 'إجمالي التذاكر',
+    open: 'مفتوحة',
+    openTickets: 'تذاكر مفتوحة',
+    allTickets: 'كل التذاكر',
+    searchByTicketId: 'ابحث برقم التذكرة...',
+    all: 'الكل',
+    inProgress: 'قيد التنفيذ',
+    pending: 'معلقة',
+    resolved: 'تم الحل',
+    noTicketsFound: 'لا توجد تذاكر',
+    createFirstTicketHint: 'ابدأ بإنشاء أول تذكرة',
+    noTicketsWithStatus: 'لا توجد تذاكر بحالة "{{status}}"',
+    createFirstTicket: 'أنشئ أول تذكرة',
+    ticketId: 'رقم التذكرة',
+    status: 'الحالة',
+    priority: 'الأولوية',
+    sender: 'المرسل',
+    receiver: 'المستقبل',
+    description: 'الوصف',
+    cc: 'نسخة',
+    created: 'تاريخ الإنشاء',
+    comments: 'التعليقات',
+    actions: 'إجراءات',
+    priorityAsap: 'في أسرع وقت',
+    priority12Days: 'خلال 1-2 يوم',
+    priority35Days: 'على مهلك 3-5 أيام',
+    notSet: 'غير محدد',
+    showMore: 'عرض المزيد',
+    showLess: 'عرض أقل',
+    noDescription: 'لا يوجد وصف',
+    more: 'أخرى',
+    none: 'لا يوجد',
+    commentSingle: 'تعليق',
+    commentPlural: 'تعليقات',
+    legacy: 'قديم',
+    noComments: 'لا توجد تعليقات',
+    editTicket: 'تعديل التذكرة',
+    assignUsers: 'تعيين المستخدمين',
+    untitledProject: 'مشروع بدون اسم'
+  }
+};
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -23,11 +163,25 @@ const ProjectDetails = () => {
   const [expandedDescriptions, setExpandedDescriptions] = useState({});
   const [expandedComments, setExpandedComments] = useState({});
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [lang, setLang] = useState(getStoredLanguage());
+  const tx = (key, vars = {}) => {
+    const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    return Object.entries(vars).reduce(
+      (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
+      template
+    );
+  };
 
   useEffect(() => {
     fetchProjectDetails();
     fetchTickets();
   }, [projectId]);
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
 
   const fetchProjectDetails = async () => {
     try {
@@ -35,7 +189,7 @@ const ProjectDetails = () => {
       setProject(response.data.project || response.data);
       console.log('Project data:', response.data);
     } catch (error) {
-      setError('Failed to fetch project details.');
+      setError(tx('failedProjectDetails'));
       console.error('Error fetching project:', error);
     }
   };
@@ -47,7 +201,7 @@ const ProjectDetails = () => {
       setTickets(Array.isArray(ticketData) ? ticketData : []);
       console.log('Tickets data:', ticketData);
     } catch (error) {
-      setError('Failed to fetch tickets.');
+      setError(tx('failedTickets'));
       console.error('Error fetching tickets:', error);
       setTickets([]);
     } finally {
@@ -77,7 +231,7 @@ const ProjectDetails = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return tx('na');
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -86,7 +240,7 @@ const ProjectDetails = () => {
   };
 
   const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return tx('na');
     return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -113,10 +267,10 @@ const ProjectDetails = () => {
   };
 
   const getRemainingDaysText = (days) => {
-    if (days < 0) return `${Math.abs(days)} days overdue`;
-    if (days === 0) return 'Due today';
-    if (days === 1) return '1 day left';
-    return `${days} days left`;
+    if (days < 0) return tx('daysOverdue', { days: Math.abs(days) });
+    if (days === 0) return tx('dueToday');
+    if (days === 1) return tx('oneDayLeft');
+    return tx('daysLeft', { days });
   };
 
   const getInitials = (name) => {
@@ -164,11 +318,11 @@ const ProjectDetails = () => {
       await projectAPI.updateProjectStatus(projectId, newStatus);
       setProject(prev => ({ ...prev, status: newStatus }));
       // Show success message briefly
-      const successMsg = `Project status updated to "${newStatus}"`;
+      const successMsg = tx('statusUpdated', { status: newStatus });
       setError(''); // Clear any errors
       // You could add a success state here if needed
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to update project status.');
+      setError(error.response?.data?.message || tx('failedStatusUpdate'));
       console.error('Error updating status:', error);
     } finally {
       setUpdatingStatus(false);
@@ -202,14 +356,14 @@ const ProjectDetails = () => {
     return (
       <div className="flex flex-col justify-center items-center min-h-screen gap-4">
         <Spinner size="xl" color="secondary" />
-        <p className="text-gray-600">Loading project details...</p>
+        <p className="text-gray-600">{tx('loadingProjectDetails')}</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-12">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 max-w-7xl">
         {/* Header */}
         <div className="mb-8">
           <Button
@@ -222,7 +376,7 @@ const ProjectDetails = () => {
               </svg>
             }
           >
-            Back to Projects
+            {tx('backToProjects')}
           </Button>
 
           <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
@@ -232,15 +386,15 @@ const ProjectDetails = () => {
                   {project?.project_name}
                 </h1>
                 <Badge variant={getStatusColor(project?.status)} size="lg">
-                  {project?.status || 'Unknown'}
+                  {project?.status || tx('unknown')}
                 </Badge>
               </div>
-              <p className="text-gray-600 mb-3">Project overview and ticket management</p>
+              <p className="text-gray-600 mb-3">{tx('projectOverview')}</p>
               
               {/* Status Changer - Admin Only */}
               {isAdmin() && (
                 <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-700">Change Status:</label>
+                  <label className="text-sm font-medium text-gray-700">{tx('changeStatus')}</label>
                   <div className="relative">
                     <select
                       value={project?.status || ''}
@@ -250,10 +404,10 @@ const ProjectDetails = () => {
                         updatingStatus ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer'
                       }`}
                     >
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="on_hold">On Hold</option>
-                      <option value="cancelled">Cancelled</option>
+                      <option value="active">{tx('active')}</option>
+                      <option value="completed">{tx('completed')}</option>
+                      <option value="on_hold">{tx('onHold')}</option>
+                      <option value="cancelled">{tx('cancelled')}</option>
                     </select>
                     {updatingStatus && (
                       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -275,7 +429,7 @@ const ProjectDetails = () => {
                     navigate('/chat');
                   } catch (error) {
                     console.error('Error opening project chat:', error);
-                    alert('Error opening project chat. Please try again.');
+                    alert(tx('openProjectChatError'));
                   }
                 }}
                 className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
@@ -285,7 +439,7 @@ const ProjectDetails = () => {
                   </svg>
                 }
               >
-                Open Project Chat
+                {tx('openProjectChat')}
               </Button>
               <Button
                 variant="secondary"
@@ -298,7 +452,7 @@ const ProjectDetails = () => {
                   </svg>
                 }
               >
-                New Ticket
+                {tx('newTicket')}
               </Button>
             </div>
           </div>
@@ -323,15 +477,15 @@ const ProjectDetails = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">Timeline</h3>
+                <h3 className="text-lg font-semibold text-gray-800">{tx('timeline')}</h3>
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">Start Date</p>
+                  <p className="text-xs text-gray-500 mb-1">{tx('startDate')}</p>
                   <p className="text-sm font-semibold text-gray-700">{formatDate(project?.start_date)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">End Date</p>
+                  <p className="text-xs text-gray-500 mb-1">{tx('endDate')}</p>
                   <p className="text-sm font-semibold text-gray-700">{formatDate(project?.estimated_end_date)}</p>
                 </div>
                 {remainingDays !== null && (
@@ -352,10 +506,10 @@ const ProjectDetails = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">Team</h3>
+                <h3 className="text-lg font-semibold text-gray-800">{tx('team')}</h3>
               </div>
               <p className="text-3xl font-bold text-primary mb-1">{project?.assigned_users?.length || 0}</p>
-              <p className="text-xs text-gray-500 mb-3">Active members</p>
+              <p className="text-xs text-gray-500 mb-3">{tx('activeMembers')}</p>
               {project?.assigned_users && project.assigned_users.length > 0 && (
                 <div className="flex -space-x-2">
                   {project.assigned_users.slice(0, 5).map((user, index) => (
@@ -386,10 +540,10 @@ const ProjectDetails = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">Tickets</h3>
+                <h3 className="text-lg font-semibold text-gray-800">{tx('tickets')}</h3>
               </div>
               <p className="text-3xl font-bold text-primary mb-1">{stats.total}</p>
-              <p className="text-xs text-gray-500">Total tickets</p>
+              <p className="text-xs text-gray-500">{tx('totalTickets')}</p>
             </Card.Content>
           </Card>
 
@@ -402,10 +556,10 @@ const ProjectDetails = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">Open</h3>
+                <h3 className="text-lg font-semibold text-gray-800">{tx('open')}</h3>
               </div>
               <p className="text-3xl font-bold text-green-600 mb-1">{stats.open}</p>
-              <p className="text-xs text-gray-500">Open tickets</p>
+              <p className="text-xs text-gray-500">{tx('openTickets')}</p>
             </Card.Content>
           </Card>
         </div>
@@ -414,7 +568,7 @@ const ProjectDetails = () => {
         <Card>
           <Card.Content className="p-6">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-              <h2 className="text-2xl font-bold text-gray-800">All Tickets ({filteredTickets.length})</h2>
+              <h2 className="text-2xl font-bold text-gray-800">{tx('allTickets')} ({filteredTickets.length})</h2>
             </div>
 
             {/* Search and Filter Section */}
@@ -428,7 +582,7 @@ const ProjectDetails = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search by Ticket ID..."
+                  placeholder={tx('searchByTicketId')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
@@ -455,7 +609,7 @@ const ProjectDetails = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  All
+                  {tx('all')}
                 </button>
                 <button
                   onClick={() => setFilter('open')}
@@ -465,7 +619,7 @@ const ProjectDetails = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Open ({stats.open})
+                  {tx('open')} ({stats.open})
                 </button>
                 <button
                   onClick={() => setFilter('in_progress')}
@@ -475,7 +629,7 @@ const ProjectDetails = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  In Progress ({stats.inProgress})
+                  {tx('inProgress')} ({stats.inProgress})
                 </button>
                 <button
                   onClick={() => setFilter('pending')}
@@ -485,7 +639,7 @@ const ProjectDetails = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Pending ({stats.pending})
+                  {tx('pending')} ({stats.pending})
                 </button>
                 <button
                   onClick={() => setFilter('resolved')}
@@ -495,7 +649,7 @@ const ProjectDetails = () => {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  Resolved ({stats.resolved})
+                  {tx('resolved')} ({stats.resolved})
                 </button>
               </div>
             </div>
@@ -507,11 +661,11 @@ const ProjectDetails = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">No tickets found</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">{tx('noTicketsFound')}</h3>
                 <p className="text-gray-600 mb-6">
                   {filter === 'all'
-                    ? "Create your first ticket to get started"
-                    : `No tickets with status "${filter}"`
+                    ? tx('createFirstTicketHint')
+                    : tx('noTicketsWithStatus', { status: filter })
                   }
                 </p>
                 {filter === 'all' && (
@@ -525,7 +679,7 @@ const ProjectDetails = () => {
                       </svg>
                     }
                   >
-                    Create First Ticket
+                    {tx('createFirstTicket')}
                   </Button>
                 )}
               </div>
@@ -534,17 +688,17 @@ const ProjectDetails = () => {
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 border-b-2 border-gray-200">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Ticket ID</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48 min-w-48">Priority</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Sender</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Receiver</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Description</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">CC</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Created</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">End Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Comments</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('ticketId')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('status')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48 min-w-48">{tx('priority')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('sender')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('receiver')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('description')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('cc')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('created')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('endDate')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('comments')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('actions')}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -555,11 +709,11 @@ const ProjectDetails = () => {
                         className="hover:bg-blue-50 transition-colors cursor-pointer"
                       >
                         <td className="px-4 py-4">
-                          <p className="text-sm font-semibold text-gray-900">{ticket.ticket || 'N/A'}</p>
+                          <p className="text-sm font-semibold text-gray-900">{ticket.ticket || tx('na')}</p>
                         </td>
                         <td className="px-4 py-4">
                           <Badge variant={getStatusColor(ticket.status)} size="sm">
-                            {ticket.status || 'Unknown'}
+                            {ticket.status || tx('unknown')}
                           </Badge>
                         </td>
                         <td className="px-4 py-4 w-48 min-w-48">
@@ -571,21 +725,21 @@ const ProjectDetails = () => {
                               }
                               size="sm"
                             >
-                              {ticket.priority === 'as_soon_as_possible' ? '🔴 As soon as possible' :
-                               ticket.priority === '1-2_days' ? '🟡 1-2 days' :
-                               ticket.priority === 'take_your_time_3-5_days' ? '🟢 Take your time 3-5 days' :
+                              {ticket.priority === 'as_soon_as_possible' ? `🔴 ${tx('priorityAsap')}` :
+                               ticket.priority === '1-2_days' ? `🟡 ${tx('priority12Days')}` :
+                               ticket.priority === 'take_your_time_3-5_days' ? `🟢 ${tx('priority35Days')}` :
                                ticket.priority}
                             </Badge>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">Not set</span>
+                            <span className="text-xs text-gray-400 italic">{tx('notSet')}</span>
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-900">{ticket.requested_from || 'N/A'}</p>
+                          <p className="text-sm text-gray-900">{ticket.requested_from || tx('na')}</p>
                           <p className="text-xs text-gray-500">{ticket.requested_from_email || ''}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-900">{ticket.requested_to || 'N/A'}</p>
+                          <p className="text-sm text-gray-900">{ticket.requested_to || tx('na')}</p>
                           <p className="text-xs text-gray-500">{ticket.requested_to_email || ''}</p>
                         </td>
                         <td className="px-4 py-4">
@@ -605,14 +759,14 @@ const ProjectDetails = () => {
                                   >
                                     {expandedDescriptions[ticket._id] ? (
                                       <>
-                                        <span>Show less</span>
+                                        <span>{tx('showLess')}</span>
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                                         </svg>
                                       </>
                                     ) : (
                                       <>
-                                        <span>Show more</span>
+                                        <span>{tx('showMore')}</span>
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                         </svg>
@@ -622,7 +776,7 @@ const ProjectDetails = () => {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400 italic">No description</span>
+                              <span className="text-sm text-gray-400 italic">{tx('noDescription')}</span>
                             )}
                           </div>
                         </td>
@@ -635,11 +789,11 @@ const ProjectDetails = () => {
                                 </span>
                               ))}
                               {ticket.cc.length > 2 && (
-                                <span className="text-xs text-gray-500">+{ticket.cc.length - 2} more</span>
+                                <span className="text-xs text-gray-500">+{ticket.cc.length - 2} {tx('more')}</span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400">None</span>
+                            <span className="text-xs text-gray-400">{tx('none')}</span>
                           )}
                         </td>
                         <td className="px-4 py-4">
@@ -647,7 +801,7 @@ const ProjectDetails = () => {
                           <p className="text-xs text-gray-500">{ticket.time || ''}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-700">{ticket.end_date ? formatDate(ticket.end_date) : 'Not set'}</p>
+                          <p className="text-sm text-gray-700">{ticket.end_date ? formatDate(ticket.end_date) : tx('notSet')}</p>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
@@ -662,16 +816,16 @@ const ProjectDetails = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                   </svg>
                                   <span className="text-sm font-semibold text-gray-700">
-                                    {totalComments} {totalComments === 1 ? 'comment' : 'comments'}
+                                    {totalComments} {totalComments === 1 ? tx('commentSingle') : tx('commentPlural')}
                                   </span>
                                   {hasLegacyComment && (
                                     <Badge variant="default" className="text-xs">
-                                      Legacy
+                                      {tx('legacy')}
                                     </Badge>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-sm text-gray-400 italic">No comments</span>
+                                <span className="text-sm text-gray-400 italic">{tx('noComments')}</span>
                               );
                             })()}
                           </div>
@@ -683,7 +837,7 @@ const ProjectDetails = () => {
                               navigate(`/ticket/${ticket._id}/edit`);
                             }}
                             className="p-2 text-secondary hover:bg-secondary/10 rounded-lg transition-colors"
-                            title="Edit Ticket"
+                            title={tx('editTicket')}
                           >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

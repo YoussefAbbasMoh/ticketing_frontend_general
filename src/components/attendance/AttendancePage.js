@@ -7,6 +7,7 @@ import Button from '../ui/Button';
 import Spinner from '../ui/Spinner';
 import Alert from '../ui/Alert';
 import Modal from '../ui/Modal';
+import { getStoredLanguage } from '../../i18n';
 
 /** For datetime-local inputs (browser local timezone) */
 const toLocalDateTimeValue = (iso) => {
@@ -24,9 +25,115 @@ const fromLocalDateTimeValue = (v) => {
     return d.toISOString();
 };
 
+const TEXT = {
+    en: {
+        title: 'Attendance',
+        subtitle: 'Track and manage attendance records',
+        failedFetchHistory: 'Failed to fetch attendance history',
+        failedFetchSummary: 'Failed to fetch attendance summary',
+        checkInRequired: 'Check-in time is required',
+        setCheckoutOrOpenSession: 'Set check-out time or enable "Open session"',
+        updatedSuccessfully: 'Attendance updated successfully',
+        failedUpdate: 'Failed to update attendance',
+        couldNotDownload: 'Could not download report',
+        failedDownload: 'Failed to download report',
+        timedOut: 'Download timed out. Please try again.',
+        interrupted: 'The download was interrupted. Check your connection, disable ad-blockers for this site, or try another browser.',
+        myAttendance: 'My Attendance',
+        attendanceSummary: 'Attendance Summary',
+        generateMonthly: 'Generate Monthly Report',
+        downloadForAll: 'Download Excel report for all users',
+        month: 'Month',
+        year: 'Year',
+        downloading: 'Downloading...',
+        downloadExcel: 'Download Excel',
+        loadingRecords: 'Loading records...',
+        noPersonalRecords: 'No personal attendance records found.',
+        noRecords: 'No records found.',
+        date: 'Date',
+        checkIn: 'Check In',
+        checkOut: 'Check Out',
+        duration: 'Duration',
+        status: 'Status',
+        actions: 'Actions',
+        active: 'Active',
+        edit: 'Edit',
+        user: 'User',
+        role: 'Role',
+        unknown: 'Unknown',
+        previous: 'Previous',
+        next: 'Next',
+        pageOf: 'Page {{page}} of {{total}}',
+        editAttendance: 'Edit attendance',
+        openSession: 'Open session (no check-out yet)',
+        note: 'Note',
+        optionalNote: 'Optional note',
+        cancel: 'Cancel',
+        saving: 'Saving...',
+        saveChanges: 'Save changes'
+    },
+    ar: {
+        title: 'الحضور',
+        subtitle: 'متابعة وإدارة سجلات الحضور',
+        failedFetchHistory: 'فشل في جلب سجل الحضور',
+        failedFetchSummary: 'فشل في جلب ملخص الحضور',
+        checkInRequired: 'وقت الحضور مطلوب',
+        setCheckoutOrOpenSession: 'حددي وقت الانصراف أو فعّلي خيار الجلسة المفتوحة',
+        updatedSuccessfully: 'تم تحديث الحضور بنجاح',
+        failedUpdate: 'فشل في تحديث الحضور',
+        couldNotDownload: 'تعذر تحميل التقرير',
+        failedDownload: 'فشل في تحميل التقرير',
+        timedOut: 'انتهت مهلة التحميل، حاولي مرة أخرى.',
+        interrupted: 'تمت مقاطعة التحميل. تحققي من الاتصال أو أوقفي مانع الإعلانات لهذا الموقع أو جربي متصفحًا آخر.',
+        myAttendance: 'حضوري',
+        attendanceSummary: 'ملخص الحضور',
+        generateMonthly: 'إنشاء تقرير شهري',
+        downloadForAll: 'تحميل تقرير Excel لجميع المستخدمين',
+        month: 'الشهر',
+        year: 'السنة',
+        downloading: 'جارٍ التحميل...',
+        downloadExcel: 'تحميل Excel',
+        loadingRecords: 'جارٍ تحميل السجلات...',
+        noPersonalRecords: 'لا توجد سجلات حضور شخصية.',
+        noRecords: 'لا توجد سجلات.',
+        date: 'التاريخ',
+        checkIn: 'الحضور',
+        checkOut: 'الانصراف',
+        duration: 'المدة',
+        status: 'الحالة',
+        actions: 'الإجراءات',
+        active: 'نشط',
+        edit: 'تعديل',
+        user: 'المستخدم',
+        role: 'الدور',
+        unknown: 'غير معروف',
+        previous: 'السابق',
+        next: 'التالي',
+        pageOf: 'صفحة {{page}} من {{total}}',
+        editAttendance: 'تعديل الحضور',
+        openSession: 'جلسة مفتوحة (بدون انصراف حتى الآن)',
+        note: 'ملاحظة',
+        optionalNote: 'ملاحظة اختيارية',
+        cancel: 'إلغاء',
+        saving: 'جارٍ الحفظ...',
+        saveChanges: 'حفظ التغييرات'
+    }
+};
+
+const formatText = (template, vars = {}) =>
+    Object.entries(vars).reduce(
+        (acc, [key, value]) => acc.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value)),
+        template
+    );
+
 const AttendancePage = () => {
     const { user } = useAuth();
     const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
+    const [lang, setLang] = useState(getStoredLanguage());
+    const tt = (key, vars) => {
+        const value = TEXT[lang]?.[key] || TEXT.en[key] || key;
+        return formatText(value, vars || {});
+    };
 
     const [activeTab, setActiveTab] = useState('my_attendance');
     const [logs, setLogs] = useState([]);
@@ -62,6 +169,12 @@ const AttendancePage = () => {
         }
     }, [activeTab, page, reportMonth, reportYear]);
 
+    useEffect(() => {
+        const onLanguageChanged = () => setLang(getStoredLanguage());
+        window.addEventListener('language-changed', onLanguageChanged);
+        return () => window.removeEventListener('language-changed', onLanguageChanged);
+    }, []);
+
     const fetchMyLogs = async () => {
         try {
             setLoading(true);
@@ -69,7 +182,7 @@ const AttendancePage = () => {
             setLogs(response.data.logs || []);
         } catch (err) {
             console.error('Error fetching logs:', err);
-            setError('Failed to fetch attendance history');
+            setError(tt('failedFetchHistory'));
         } finally {
             setLoading(false);
         }
@@ -86,7 +199,7 @@ const AttendancePage = () => {
             setTotalPages(response.data.pagination?.pages || 1);
         } catch (err) {
             console.error('Error fetching all logs:', err);
-            setError(err.response?.data?.message || 'Failed to fetch attendance summary');
+            setError(err.response?.data?.message || tt('failedFetchSummary'));
         } finally {
             setLoading(false);
         }
@@ -114,7 +227,7 @@ const AttendancePage = () => {
         if (!editRecord?._id) return;
         const checkInIso = fromLocalDateTimeValue(editCheckIn);
         if (!checkInIso) {
-            setError('Check-in time is required');
+            setError(tt('checkInRequired'));
             return;
         }
         try {
@@ -130,14 +243,14 @@ const AttendancePage = () => {
             } else {
                 const outIso = fromLocalDateTimeValue(editCheckOut);
                 if (!outIso) {
-                    setError('Set check-out time or enable "Open session"');
+                    setError(tt('setCheckoutOrOpenSession'));
                     setSavingEdit(false);
                     return;
                 }
                 payload.checkOut = outIso;
             }
             await attendanceAPI.adminUpdateAttendance(editRecord._id, payload);
-            setSuccessMsg('Attendance updated successfully');
+            setSuccessMsg(tt('updatedSuccessfully'));
             closeEditModal();
             await fetchMyLogs();
             if (isManagerOrAdmin) {
@@ -145,7 +258,7 @@ const AttendancePage = () => {
             }
         } catch (err) {
             console.error('Save attendance edit:', err);
-            setError(err.response?.data?.message || 'Failed to update attendance');
+            setError(err.response?.data?.message || tt('failedUpdate'));
         } finally {
             setSavingEdit(false);
         }
@@ -171,7 +284,7 @@ const AttendancePage = () => {
             const ct = (response.headers['content-type'] || '').toLowerCase();
             if (ct.includes('application/json')) {
                 const msg = await parseBlobErrorMessage(response.data);
-                setError(msg || 'Could not download report');
+                setError(msg || tt('couldNotDownload'));
                 return;
             }
 
@@ -198,7 +311,7 @@ const AttendancePage = () => {
             }, 120000);
         } catch (err) {
             console.error('Error downloading report:', err);
-            let msg = 'Failed to download report';
+            let msg = tt('failedDownload');
             const status = err.response?.status;
             const data = err.response?.data;
 
@@ -226,10 +339,9 @@ const AttendancePage = () => {
                 code === 'ERR_CANCELED' ||
                 String(err.message || '') === 'Request aborted';
             if (isTimeout) {
-                msg = 'Download timed out. Please try again.';
+                msg = tt('timedOut');
             } else if (isAbort) {
-                msg =
-                    'The download was interrupted. Check your connection, disable ad-blockers for this site, or try another browser.';
+                msg = tt('interrupted');
             } else if (err.message) {
                 msg = err.message;
             }
@@ -250,10 +362,10 @@ const AttendancePage = () => {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-7xl">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-800">Attendance</h1>
-                <p className="text-gray-600">Track and manage attendance records</p>
+        <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
+            <div className="mb-6 sm:mb-8">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{tt('title')}</h1>
+                <p className="text-sm sm:text-base text-gray-600">{tt('subtitle')}</p>
             </div>
 
             {error && (
@@ -269,18 +381,18 @@ const AttendancePage = () => {
 
             {/* Tabs */}
             {isManagerOrAdmin && (
-                <div className="flex border-b border-gray-200 mb-6">
+                <div className="flex border-b border-gray-200 mb-5 sm:mb-6">
                     <button
                         className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeTab === 'my_attendance' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => setActiveTab('my_attendance')}
                     >
-                        My Attendance
+                        {tt('myAttendance')}
                     </button>
                     <button
                         className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeTab === 'summary' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
                         onClick={() => { setActiveTab('summary'); setPage(1); }}
                     >
-                        Attendance Summary
+                        {tt('attendanceSummary')}
                     </button>
                 </div>
             )}
@@ -288,15 +400,15 @@ const AttendancePage = () => {
             {/* Admin Report Section - Only visible in Summary Tab for Admins/Managers */}
             {isManagerOrAdmin && activeTab === 'summary' && (
                 <Card className="mb-8 border-l-4 border-purple-500">
-                    <Card.Content className="p-6">
+                    <Card.Content className="p-4 sm:p-6">
                         <div className="flex flex-col sm:flex-row justify-between items-end gap-4">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-800 mb-1">Generate Monthly Report</h2>
-                                <p className="text-sm text-gray-600">Download Excel report for all users</p>
+                                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">{tt('generateMonthly')}</h2>
+                                <p className="text-sm text-gray-600">{tt('downloadForAll')}</p>
                             </div>
                             <div className="flex flex-wrap items-end gap-4 w-full sm:w-auto">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('month')}</label>
                                     <select
                                         value={reportMonth}
                                         onChange={(e) => {
@@ -311,7 +423,7 @@ const AttendancePage = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('year')}</label>
                                     <select
                                         value={reportYear}
                                         onChange={(e) => {
@@ -335,7 +447,7 @@ const AttendancePage = () => {
                                         </svg>
                                     }
                                 >
-                                    {downloading ? 'Downloading...' : 'Download Excel'}
+                                    {downloading ? tt('downloading') : tt('downloadExcel')}
                                 </Button>
                             </div>
                         </div>
@@ -349,7 +461,7 @@ const AttendancePage = () => {
                     {loading ? (
                         <div className="p-12 text-center">
                             <Spinner size="lg" color="primary" />
-                            <p className="mt-4 text-gray-500">Loading records...</p>
+                            <p className="mt-4 text-gray-500">{tt('loadingRecords')}</p>
                         </div>
                     ) : (
                         <>
@@ -357,40 +469,40 @@ const AttendancePage = () => {
                                 // My Attendance Table
                                 logs.length === 0 ? (
                                     <div className="p-12 text-center text-gray-500">
-                                        <p>No personal attendance records found.</p>
+                                        <p>{tt('noPersonalRecords')}</p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('date')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkIn')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkOut')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('duration')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('status')}</th>
                                                     {isManagerOrAdmin && (
-                                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('actions')}</th>
                                                     )}
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {logs.map((log) => (
                                                     <tr key={log._id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(log.date)}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">Active</span>}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(log.date)}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">{tt('active')}</span>}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
                                                         {isManagerOrAdmin && (
-                                                            <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right">
                                                                 <Button
                                                                     type="button"
                                                                     variant="secondary"
                                                                     size="sm"
                                                                     onClick={() => openEditModal({ ...log, user: log.user || user })}
                                                                 >
-                                                                    Edit
+                                                                    {tt('edit')}
                                                                 </Button>
                                                             </td>
                                                         )}
@@ -404,51 +516,51 @@ const AttendancePage = () => {
                                 // All Attendance Table (Summary)
                                 allLogs.length === 0 ? (
                                     <div className="p-12 text-center text-gray-500">
-                                        <p>No records found.</p>
+                                        <p>{tt('noRecords')}</p>
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
                                         <table className="min-w-full divide-y divide-gray-200">
                                             <thead className="bg-gray-50">
                                                 <tr>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('user')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('role')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('date')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkIn')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkOut')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('duration')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('status')}</th>
+                                                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('actions')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody className="bg-white divide-y divide-gray-200">
                                                 {allLogs.map((log) => (
                                                     <tr key={log._id} className="hover:bg-gray-50">
-                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                                                             <div className="flex items-center">
                                                                 <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
                                                                     {log.user?.name ? log.user.name.slice(0, 2).toUpperCase() : '??'}
                                                                 </div>
-                                                                <div className="ml-3">
-                                                                    <div className="text-sm font-medium text-gray-900">{log.user?.name || 'Unknown'}</div>
+                                                                <div className="ms-3">
+                                                                    <div className="text-sm font-medium text-gray-900">{log.user?.name || tt('unknown')}</div>
                                                                     <div className="text-xs text-gray-500">{log.user?.email}</div>
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{log.user?.role || '-'}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(log.date)}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">Active</span>}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
-                                                        <td className="px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
-                                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{log.user?.role || '-'}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(log.date)}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">{tt('active')}</span>}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
+                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right">
                                                             <Button
                                                                 type="button"
                                                                 variant="secondary"
                                                                 size="sm"
                                                                 onClick={() => openEditModal(log)}
                                                             >
-                                                                Edit
+                                                                {tt('edit')}
                                                             </Button>
                                                         </td>
                                                     </tr>
@@ -464,17 +576,17 @@ const AttendancePage = () => {
 
                 {/* Pagination for Summary Tab */}
                 {activeTab === 'summary' && !loading && totalPages > 1 && (
-                    <Card.Footer className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <Card.Footer className="px-4 sm:px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                         <Button
                             variant="secondary"
                             disabled={page === 1}
                             onClick={() => setPage(p => Math.max(1, p - 1))}
                             size="sm"
                         >
-                            Previous
+                            {tt('previous')}
                         </Button>
                         <span className="text-sm text-gray-600">
-                            Page {page} of {totalPages}
+                            {tt('pageOf', { page, total: totalPages })}
                         </span>
                         <Button
                             variant="secondary"
@@ -482,14 +594,14 @@ const AttendancePage = () => {
                             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                             size="sm"
                         >
-                            Next
+                            {tt('next')}
                         </Button>
                     </Card.Footer>
                 )}
             </Card>
 
             <Modal isOpen={editOpen} onClose={closeEditModal} size="lg">
-                <Modal.Header onClose={closeEditModal}>Edit attendance</Modal.Header>
+                <Modal.Header onClose={closeEditModal}>{tt('editAttendance')}</Modal.Header>
                 <Modal.Content>
                     {editRecord && (
                         <div className="space-y-4">
@@ -498,10 +610,10 @@ const AttendancePage = () => {
                                 {' · '}
                                 {editRecord.user?.email || user?.email}
                                 {' · '}
-                                Date: <span className="font-mono">{editRecord.date}</span>
+                                {tt('date')}: <span className="font-mono">{editRecord.date}</span>
                             </p>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Check in</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('checkIn')}</label>
                                 <input
                                     type="datetime-local"
                                     value={editCheckIn}
@@ -521,12 +633,12 @@ const AttendancePage = () => {
                                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
                                 <label htmlFor="edit-open-session" className="text-sm text-gray-700">
-                                    Open session (no check-out yet)
+                                    {tt('openSession')}
                                 </label>
                             </div>
                             {!editOpenSession && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Check out</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('checkOut')}</label>
                                     <input
                                         type="datetime-local"
                                         value={editCheckOut}
@@ -536,7 +648,7 @@ const AttendancePage = () => {
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('status')}</label>
                                 <select
                                     value={editStatus}
                                     onChange={(e) => setEditStatus(e.target.value)}
@@ -548,13 +660,13 @@ const AttendancePage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('note')}</label>
                                 <textarea
                                     value={editNote}
                                     onChange={(e) => setEditNote(e.target.value)}
                                     rows={3}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="Optional note"
+                                    placeholder={tt('optionalNote')}
                                 />
                             </div>
                         </div>
@@ -562,10 +674,10 @@ const AttendancePage = () => {
                 </Modal.Content>
                 <Modal.Footer>
                     <Button type="button" variant="secondary" onClick={closeEditModal} disabled={savingEdit}>
-                        Cancel
+                        {tt('cancel')}
                     </Button>
                     <Button type="button" onClick={handleSaveEdit} disabled={savingEdit}>
-                        {savingEdit ? 'Saving...' : 'Save changes'}
+                        {savingEdit ? tt('saving') : tt('saveChanges')}
                     </Button>
                 </Modal.Footer>
             </Modal>

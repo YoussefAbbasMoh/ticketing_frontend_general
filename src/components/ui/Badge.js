@@ -2,14 +2,14 @@ import React from 'react';
 
 const Badge = ({ children, variant = 'default', size = 'md', className = '' }) => {
   const variants = {
-    default: 'bg-gray-100 text-gray-800',
-    primary: 'bg-primary-100 text-primary-900',
-    secondary: 'bg-secondary-100 text-secondary-900',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
-    orange: 'bg-orange-300 text-orange-900',
+    default: 'bg-app-surface-variant text-app-text',
+    primary: 'bg-app-primary/10 text-app-primary',
+    secondary: 'bg-orange/15 text-orange-dark',
+    success: 'bg-emerald-100 text-emerald-950',
+    warning: 'bg-amber-100 text-amber-950',
+    error: 'bg-red-100 text-red-900',
+    info: 'bg-sky-100 text-sky-950',
+    orange: 'bg-orange/15 text-orange-dark',
   };
   
   const sizes = {

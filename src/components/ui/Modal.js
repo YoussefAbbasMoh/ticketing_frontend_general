@@ -34,7 +34,7 @@ const Modal = ({ isOpen, onClose, children, size = 'md', className = '' }) => {
       {/* Modal */}
       <div className="flex min-h-screen items-center justify-center p-4">
         <div 
-          className={`relative bg-white rounded-2xl shadow-2xl w-full ${sizes[size]} ${className}`}
+          className={`relative w-full rounded-app border border-app-divider bg-app-surface shadow-app-card ${sizes[size]} ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
           {children}
@@ -45,12 +45,14 @@ const Modal = ({ isOpen, onClose, children, size = 'md', className = '' }) => {
 };
 
 const ModalHeader = ({ children, onClose, className = '' }) => (
-  <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-200 ${className}`}>
-    <h2 className="text-2xl font-bold text-primary">{children}</h2>
+  <div className={`flex items-center justify-between border-b border-app-divider px-6 py-4 ${className}`}>
+    <h2 className="text-[18px] font-extrabold tracking-tight text-app-text">{children}</h2>
     {onClose && (
       <button
         onClick={onClose}
-        className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+        type="button"
+        className="rounded-app-input p-1 text-app-text-tertiary transition-colors hover:bg-app-surface-variant hover:text-app-text"
+        aria-label="Close"
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -67,7 +69,7 @@ const ModalContent = ({ children, className = '' }) => (
 );
 
 const ModalFooter = ({ children, className = '' }) => (
-  <div className={`flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-200 ${className}`}>
+  <div className={`flex items-center justify-end gap-3 border-t border-app-divider px-6 py-4 ${className}`}>
     {children}
   </div>
 );

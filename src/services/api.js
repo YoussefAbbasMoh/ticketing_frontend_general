@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+/** If set, used instead of `/auth/refresh` (e.g. `/auth/token/refresh`). */
+const AUTH_REFRESH_PATH =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_REFRESH_PATH) || '/auth/refresh';
+
 const getApiBaseUrl = () => {
   if (import.meta?.env?.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL;
@@ -13,6 +17,22 @@ const getApiBaseUrl = () => {
 
 const API_BASE_URL = getApiBaseUrl();
 
+/**
+ * Multipart uploads must not use `Content-Type: multipart/form-data` without a boundary.
+ * The runtime sets `multipart/form-data; boundary=...` automatically when this header is omitted.
+ * Also clear the default `application/json` from the axios instance for these requests.
+ */
+const formDataRequestConfig = {
+  transformRequest: [
+    (data, headers) => {
+      if (data instanceof FormData) {
+        delete headers['Content-Type'];
+      }
+      return data;
+    },
+  ],
+};
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -20,6 +40,52 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+let refreshInFlight = null;
+
+/**
+ * Ask the backend for a new access token (sliding session).
+ * Backend should accept the current Bearer (even if expired) and return `{ token: string }`.
+ * If the route is missing (404), returns null and callers fall back to login.
+ */
+export async function refreshAccessToken() {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return null;
+      const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+      const response = await axios.post(
+        `${API_BASE_URL}${AUTH_REFRESH_PATH.startsWith('/') ? '' : '/'}${AUTH_REFRESH_PATH}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'x-lang': preferredLang,
+            'Content-Type': 'application/json',
+          },
+          validateStatus: (s) => s < 500,
+        }
+      );
+      if (response.status !== 200 && response.status !== 201) {
+        return null;
+      }
+      const newToken = response.data?.token;
+      if (typeof newToken === 'string' && newToken.length > 0) {
+        localStorage.setItem('token', newToken);
+        return newToken;
+      }
+    } catch {
+      /* network or CORS */
+    } finally {
+      refreshInFlight = null;
+    }
+    return null;
+  })();
+
+  return refreshInFlight;
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -37,10 +103,10 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle auth errors
+// Response interceptor: try refresh once on auth failure, then logout
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
     const message = String(error.response?.data?.message || '').toLowerCase();
     const isAuthMessage =
@@ -53,31 +119,40 @@ api.interceptors.response.use(
       message.includes('token');
 
     if (status === 401 || (status === 403 && isAuthMessage)) {
-      // CRITICAL: Check if we're on login page FIRST - if so, NEVER redirect
       const currentPath = window.location.pathname.toLowerCase();
       if (currentPath.includes('login')) {
-        // We're on login page - don't redirect, let component handle the error
         return Promise.reject(error);
       }
-      
-      // Check if this is a login API request - don't redirect for those either
+
       const requestConfig = error.config || {};
       const requestUrl = String(requestConfig.url || '');
       const requestMethod = String(requestConfig.method || '').toLowerCase();
-      
-      // If it's a POST to any login endpoint, don't redirect
+
       if (requestMethod === 'post' && requestUrl.includes('login')) {
         return Promise.reject(error);
+      }
+
+      // Avoid refresh loop
+      const isRefreshCall =
+        requestUrl.includes(AUTH_REFRESH_PATH) ||
+        requestUrl.endsWith('/auth/refresh') ||
+        requestConfig._authRetry;
+
+      if (!isRefreshCall) {
+        requestConfig._authRetry = true;
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          requestConfig.headers = requestConfig.headers || {};
+          requestConfig.headers.Authorization = `Bearer ${newToken}`;
+          return api.request(requestConfig);
+        }
       }
 
       localStorage.removeItem('token');
       localStorage.removeItem('user');
 
-      // Redirecting while a blob/download request is in flight aborts it ("Request aborted").
-      // Let the caller show a message; user can open Login from the app.
       const isBlobDownload =
-        requestConfig.responseType === 'blob' ||
-        requestUrl.includes('/admin/report');
+        requestConfig.responseType === 'blob' || requestUrl.includes('/admin/report');
       if (isBlobDownload) {
         return Promise.reject(error);
       }
@@ -168,30 +243,53 @@ export const ticketAPI = {
   // Image upload endpoint
   uploadImages: (formData) => {
     const token = localStorage.getItem('token');
+    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
     return axios.post(`${API_BASE_URL}/upload/ticket-images`, formData, {
+      ...formDataRequestConfig,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'x-lang': preferredLang,
       },
     });
   },
 };
 
-// Upload API
+// Upload API — ticket images: prefer Bunny on the client, then POST public URLs as JSON.
 export const uploadAPI = {
-  uploadTicketImages: (files) => {
+  /**
+   * @param {File[]|string[]} filesOrUrls - Files (multipart) or absolute URLs (JSON), e.g. after Bunny Storage.
+   */
+  uploadTicketImages: (filesOrUrls) => {
+    if (!filesOrUrls?.length) {
+      return Promise.resolve({ data: { success: true, images: [], count: 0 } });
+    }
+    if (typeof filesOrUrls[0] === 'string') {
+      return api.post('/upload/ticket-images', { images: filesOrUrls });
+    }
     const formData = new FormData();
-    files.forEach(file => {
+    filesOrUrls.forEach((file) => {
       formData.append('images', file);
     });
-    return api.post('/upload/ticket-images', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    return api.post('/upload/ticket-images', formData, formDataRequestConfig);
   },
-  deleteTicketImage: (filename) => api.delete(`/upload/ticket-images/${filename}`),
+  deleteTicketImage: (filename) => api.delete(`/upload/ticket-images/${encodeURIComponent(filename)}`),
 };
+
+/**
+ * Upload ticket image files to Bunny Storage, then register URLs with the API.
+ * @param {File[]} files
+ * @param {(file: File, destinationPath?: string) => Promise<{ url: string }>} uploadFile - from useBunnyUpload().uploadFile
+ */
+export async function uploadTicketImagesViaBunny(files, uploadFile) {
+  if (!files?.length) return [];
+  const urls = [];
+  for (const file of files) {
+    const result = await uploadFile(file, 'tickets');
+    urls.push(result.url);
+  }
+  const res = await uploadAPI.uploadTicketImages(urls);
+  return res.data?.images || res.data?.urls || urls;
+}
 
 // Chat API
 export const chatAPI = {
@@ -213,10 +311,12 @@ export const chatAPI = {
     if (replyTo) formData.append('replyTo', replyTo);
 
     const token = localStorage.getItem('token');
+    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
     return axios.post(`${API_BASE_URL}/chat/message/file`, formData, {
+      ...formDataRequestConfig,
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'x-lang': preferredLang,
       },
     });
   },

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import AppBar from './AppBar';
 import AppDrawer from './AppDrawer';
 
 const Layout = ({ children }) => {
+  const theme = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleDrawerToggle = () => {
@@ -22,7 +23,7 @@ const Layout = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          backgroundColor: '#f5f5f5',
+          backgroundColor: theme.palette.background.default,
           minHeight: 'calc(100vh - 64px)',
           display: 'flex',
           flexDirection: 'column',

@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import EmojiPicker from 'emoji-picker-react';
+import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
+
+const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import VoiceRecorder from './VoiceRecorder';
 
 const MessageInput = ({
@@ -203,17 +204,17 @@ const MessageInput = ({
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white relative z-10 flex-shrink-0">
+    <div className="relative z-10 flex-shrink-0 border-t border-app-divider bg-app-surface">
       {/* Context Banner (Reply/Edit) */}
       {(replyTo || editingMessage) && (
-        <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center justify-between animate-slideUp">
+        <div className="flex animate-slideUp items-center justify-between border-b border-app-divider bg-app-background px-4 py-2">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-1 h-8 bg-secondary rounded-full flex-shrink-0"></div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-semibold text-secondary truncate">
+            <div className="h-8 w-1 flex-shrink-0 rounded-full bg-orange"></div>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-xs font-semibold text-orange">
                 {editingMessage ? 'Editing Message' : `Replying to ${replyTo.senderName || replyTo.sender?.name || 'User'}`}
               </span>
-              <span className="text-sm text-gray-500 truncate">
+              <span className="truncate text-sm text-app-text-secondary">
                 {editingMessage
                   ? editingMessage.content
                   : (replyTo.type === 'text' ? replyTo.content : `[${replyTo.type}]`)
@@ -223,7 +224,7 @@ const MessageInput = ({
           </div>
           <button
             onClick={editingMessage ? onCancelEdit : onCancelReply}
-            className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+            className="rounded-full p-1 text-app-text-secondary transition-colors hover:bg-app-surface-variant"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -237,14 +238,14 @@ const MessageInput = ({
         <div className="px-4 pt-3">
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-1.5 overflow-hidden rounded-full bg-app-border">
                 <div
-                  className="h-full bg-secondary transition-all duration-300 ease-out"
+                  className="h-full bg-orange transition-all duration-300 ease-out"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
             </div>
-            <span className="text-xs text-gray-600 font-medium">
+            <span className="text-xs font-medium text-app-text-secondary">
               {uploadProgress}%
             </span>
           </div>
@@ -259,10 +260,10 @@ const MessageInput = ({
               type="button"
               onClick={() => setShowOptions(!showOptions)}
               disabled={disabled || uploading || recording || editingMessage}
-              className={`p-2 sm:p-2.5 rounded-lg transition-all flex-shrink-0 ${showOptions
-                  ? 'bg-secondary/10 text-secondary'
-                  : 'text-gray-500 hover:bg-gray-100 hover:text-secondary'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              className={`flex-shrink-0 rounded-lg p-2 transition-all sm:p-2.5 ${showOptions
+                  ? 'bg-orange/10 text-orange'
+                  : 'text-app-text-secondary hover:bg-app-surface-variant hover:text-orange'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
               title="Attach file"
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,7 +273,7 @@ const MessageInput = ({
 
             {/* File Options Menu */}
             {showOptions && (
-              <div className="absolute bottom-full left-0 mb-2 bg-white border border-gray-200 rounded-xl shadow-xl py-2 z-50 min-w-[160px] animate-slideUp">
+              <div className="absolute bottom-full left-0 z-50 mb-2 min-w-[160px] animate-slideUp rounded-app-input border border-app-divider bg-app-surface py-2 shadow-app-card">
                 <div className="flex flex-col">
                   <button
                     type="button"
@@ -280,14 +281,14 @@ const MessageInput = ({
                       imageInputRef.current?.click();
                       setShowOptions(false);
                     }}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange/10">
+                      <svg className="h-5 w-5 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <span className="font-medium text-gray-700">Photo</span>
+                    <span className="font-medium text-app-text">Photo</span>
                   </button>
 
                   <button
@@ -296,14 +297,14 @@ const MessageInput = ({
                       videoInputRef.current?.click();
                       setShowOptions(false);
                     }}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-primary/10">
+                      <svg className="h-5 w-5 text-app-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                     </div>
-                    <span className="font-medium text-gray-700">Video</span>
+                    <span className="font-medium text-app-text">Video</span>
                   </button>
 
                   <button
@@ -312,14 +313,14 @@ const MessageInput = ({
                       fileInputRef.current?.click();
                       setShowOptions(false);
                     }}
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
                   >
-                    <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-surface-variant">
+                      <svg className="h-5 w-5 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
-                    <span className="font-medium text-gray-700">Document</span>
+                    <span className="font-medium text-app-text">Document</span>
                   </button>
                 </div>
               </div>
@@ -331,7 +332,7 @@ const MessageInput = ({
             <button
               type="button"
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-2 sm:p-2.5 text-gray-500 hover:bg-gray-100 hover:text-secondary rounded-lg transition-colors flex-shrink-0"
+              className="flex-shrink-0 rounded-lg p-2 text-app-text-secondary transition-colors hover:bg-app-surface-variant hover:text-orange sm:p-2.5"
               disabled={disabled || uploading || recording}
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,13 +340,22 @@ const MessageInput = ({
               </svg>
             </button>
             {showEmojiPicker && (
-              <div className="absolute bottom-full left-0 mb-2 z-50">
-                <EmojiPicker
-                  onEmojiClick={handleEmojiClick}
-                  width={300}
-                  height={400}
-                  searchDisabled={false}
-                />
+              <div className="absolute bottom-full left-0 z-50 mb-2 h-[400px] w-[300px]">
+                <Suspense
+                  fallback={
+                    <div
+                      className="h-full w-full animate-pulse rounded-lg bg-app-surface-variant"
+                      aria-hidden
+                    />
+                  }
+                >
+                  <EmojiPicker
+                    onEmojiClick={handleEmojiClick}
+                    width={300}
+                    height={400}
+                    searchDisabled={false}
+                  />
+                </Suspense>
               </div>
             )}
           </div>
@@ -382,7 +392,7 @@ const MessageInput = ({
               placeholder={recording ? "Recording voice message..." : (editingMessage ? "Edit your message..." : "Type a message...")}
               disabled={disabled || uploading || recording}
               rows={1}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 text-sm sm:text-base border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent resize-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+              className="w-full resize-none rounded-app-input border border-app-border bg-white px-3 py-2 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange disabled:cursor-not-allowed disabled:bg-app-background sm:px-4 sm:py-2.5 sm:text-base"
               style={{
                 minHeight: '44px',
                 maxHeight: '120px'
@@ -391,7 +401,7 @@ const MessageInput = ({
 
             {/* Character count (optional) */}
             {message.length > 500 && (
-              <div className="absolute bottom-1 right-2 text-xs text-gray-400">
+              <div className="absolute bottom-1 right-2 text-xs text-app-text-tertiary">
                 {message.length}/1000
               </div>
             )}
@@ -402,7 +412,7 @@ const MessageInput = ({
             <button
               type="submit"
               disabled={disabled || uploading}
-              className="p-2 sm:p-2.5 bg-secondary text-white rounded-xl hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 flex-shrink-0"
+              className="flex-shrink-0 transform rounded-app-input bg-orange p-2 text-white shadow-app-soft transition-all hover:bg-orange-dark hover:shadow-app-card active:scale-95 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 sm:p-2.5"
               title={editingMessage ? "Save Changes" : "Send message"}
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -421,13 +431,13 @@ const MessageInput = ({
 
         {/* Keyboard Shortcuts Hint */}
         {message.length === 0 && !recording && (
-          <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
+          <div className="mt-2 flex items-center gap-4 text-xs text-app-text-tertiary">
             <span className="hidden sm:inline">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Enter</kbd> to send
+              <kbd className="rounded border border-app-border bg-app-surface-variant px-1.5 py-0.5 text-app-text-secondary">Enter</kbd> to send
             </span>
             <span className="hidden sm:inline">
-              <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Shift</kbd> +
-              <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 ml-1">Enter</kbd> for new line
+              <kbd className="rounded border border-app-border bg-app-surface-variant px-1.5 py-0.5 text-app-text-secondary">Shift</kbd> +
+              <kbd className="ml-1 rounded border border-app-border bg-app-surface-variant px-1.5 py-0.5 text-app-text-secondary">Enter</kbd> for new line
             </span>
           </div>
         )}

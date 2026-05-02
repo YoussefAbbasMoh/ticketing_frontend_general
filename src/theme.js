@@ -1,61 +1,120 @@
 import { createTheme } from '@mui/material/styles';
+import { colors, radii, typography } from './theme/designTokens.js';
 
 const theme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
-      main: '#0e1121', // Dark blue
+      main: colors.primary,
+      contrastText: colors.onPrimary,
     },
     secondary: {
-      main: '#fe5008', // Orange
+      main: colors.secondary,
+      contrastText: colors.onSecondary,
     },
     background: {
-      default: '#ffffff', // White
-      paper: '#f5f5f5',
+      default: colors.background,
+      paper: colors.surface,
     },
     text: {
-      primary: '#0e1121',
-      secondary: '#666666',
+      primary: colors.text,
+      secondary: colors.textSecondary,
+      disabled: colors.disabledText,
+    },
+    divider: colors.divider,
+    success: { main: colors.success },
+    warning: { main: colors.warning },
+    error: { main: colors.error },
+    info: { main: colors.info },
+    action: {
+      disabled: colors.disabled,
+      disabledBackground: colors.surfaceVariant,
     },
   },
+  shape: {
+    borderRadius: radii.input,
+  },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: typography.fontFamily,
     h1: {
-      fontSize: '2.5rem',
-      fontWeight: 600,
+      fontSize: `${typography.displayLarge.fontSize}px`,
+      fontWeight: typography.displayLarge.fontWeight,
+      color: colors.text,
     },
     h2: {
-      fontSize: '2rem',
-      fontWeight: 600,
+      fontSize: `${typography.headlineMedium.fontSize}px`,
+      fontWeight: typography.headlineMedium.fontWeight,
+      color: colors.text,
     },
     h3: {
-      fontSize: '1.5rem',
-      fontWeight: 500,
+      fontSize: `${typography.titleMedium.fontSize}px`,
+      fontWeight: typography.titleMedium.fontWeight,
+      color: colors.text,
     },
     h4: {
-      fontSize: '1.25rem',
-      fontWeight: 500,
+      fontSize: `${typography.titleMedium.fontSize}px`,
+      fontWeight: 600,
+      color: colors.text,
     },
     h5: {
-      fontSize: '1.125rem',
-      fontWeight: 500,
+      fontSize: `${typography.bodyLarge.fontSize}px`,
+      fontWeight: 600,
+      color: colors.text,
     },
     h6: {
-      fontSize: '1rem',
-      fontWeight: 500,
+      fontSize: `${typography.bodyLarge.fontSize}px`,
+      fontWeight: 600,
+      color: colors.text,
+    },
+    body1: {
+      fontSize: `${typography.bodyLarge.fontSize}px`,
+      fontWeight: typography.bodyLarge.fontWeight,
+      color: colors.text,
+    },
+    body2: {
+      fontSize: `${typography.bodyMedium.fontSize}px`,
+      fontWeight: typography.bodyMedium.fontWeight,
+      color: colors.textSecondary,
+    },
+    button: {
+      fontSize: `${typography.labelLarge.fontSize}px`,
+      fontWeight: typography.labelLarge.fontWeight,
+      textTransform: 'none',
     },
   },
   components: {
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: {
+          backgroundColor: colors.background,
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: colors.background,
+          color: colors.text,
+          boxShadow: 'none',
+          backgroundImage: 'none',
+        },
+      },
+    },
     MuiButton: {
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 8,
-          fontWeight: 500,
+          borderRadius: radii.button,
+          fontWeight: typography.labelLarge.fontWeight,
+          minHeight: 40,
         },
-        contained: {
+        containedPrimary: {
+          backgroundColor: colors.primary,
+          color: colors.onPrimary,
           boxShadow: 'none',
           '&:hover': {
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            boxShadow: 'none',
+            backgroundColor: colors.primarySoft,
           },
         },
       },
@@ -63,8 +122,9 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          borderRadius: radii.card,
+          boxShadow: '0 2px 12px rgba(8, 9, 54, 0.102), 0 1px 2px rgba(15, 23, 42, 0.06)',
+          border: `1px solid ${colors.divider}`,
         },
       },
     },
@@ -72,7 +132,23 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: 8,
+            borderRadius: radii.input,
+            backgroundColor: colors.surface,
+          },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        root: {
+          '& fieldset': {
+            borderColor: colors.border,
+          },
+          '&:hover fieldset': {
+            borderColor: colors.textTertiary,
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: colors.primary,
           },
         },
       },

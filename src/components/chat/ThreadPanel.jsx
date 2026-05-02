@@ -82,43 +82,43 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col overflow-hidden">
+            <div className="flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-app-surface shadow-app-card">
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-secondary/5 to-secondary/10">
+                <div className="flex items-center justify-between border-b border-app-divider bg-gradient-to-r from-orange/5 to-orange/10 p-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                            <svg className="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange/15">
+                            <svg className="h-5 w-5 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900">Thread</h2>
-                            <p className="text-xs text-gray-500">{threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}</p>
+                            <h2 className="text-lg font-bold text-app-text">Thread</h2>
+                            <p className="text-xs text-app-text-secondary">{threadReplies.length} {threadReplies.length === 1 ? 'reply' : 'replies'}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="rounded-app-input p-2 transition-colors hover:bg-app-surface-variant"
                         aria-label="Close thread"
                     >
-                        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="h-6 w-6 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
 
                 {/* Original Message */}
-                <div className="p-4 bg-gray-50 border-b border-gray-200">
+                <div className="border-b border-app-divider bg-app-background p-4">
                     <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-secondary to-secondary-700 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange to-orange-dark text-sm font-bold text-white">
                             {parentMessage.senderName?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-baseline gap-2 mb-1">
-                                <span className="font-semibold text-gray-900">{parentMessage.senderName}</span>
-                                <span className="text-xs text-gray-500">{formatTime(parentMessage.createdAt)}</span>
+                                <span className="font-semibold text-app-text">{parentMessage.senderName}</span>
+                                <span className="text-xs text-app-text-secondary">{formatTime(parentMessage.createdAt)}</span>
                             </div>
-                            <div className="text-gray-700 whitespace-pre-wrap break-words">
+                            <div className="whitespace-pre-wrap break-words text-app-text">
                                 {parentMessage.type === 'text'
                                     ? parentMessage.content
                                     : `[${parentMessage.type.charAt(0).toUpperCase() + parentMessage.type.slice(1)}]`
@@ -129,19 +129,19 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                 </div>
 
                 {/* Thread Replies */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-white">
+                <div className="flex-1 space-y-2 overflow-y-auto bg-app-surface p-4">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-full">
-                            <Spinner size="lg" color="secondary" />
-                            <p className="mt-3 text-sm text-gray-500">Loading thread...</p>
+                        <div className="flex h-full flex-col items-center justify-center">
+                            <Spinner size="lg" color="primary" />
+                            <p className="mt-3 text-sm text-app-text-secondary">Loading thread...</p>
                         </div>
                     ) : threadReplies.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                            <svg className="w-16 h-16 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex h-full flex-col items-center justify-center text-app-text-secondary">
+                            <svg className="mb-3 h-16 w-16 text-app-border" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                             </svg>
                             <p className="text-sm font-medium">No replies yet</p>
-                            <p className="text-xs text-gray-400 mt-1">Be the first to reply!</p>
+                            <p className="mt-1 text-xs text-app-text-tertiary">Be the first to reply!</p>
                         </div>
                     ) : (
                         <>
@@ -153,12 +153,12 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                                     <div key={reply._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
                                         <div className={`max-w-[80%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                                             <div className={`rounded-2xl px-4 py-2 ${isOwn
-                                                    ? 'bg-gradient-to-br from-secondary to-secondary-700 text-white'
-                                                    : 'bg-gray-100 text-gray-800'
+                                                    ? 'bg-gradient-to-br from-orange to-orange-dark text-white'
+                                                    : 'bg-app-surface-variant text-app-text'
                                                 }`}>
                                                 <p className="whitespace-pre-wrap break-words">{reply.content}</p>
                                                 <div className="flex items-center gap-1 mt-1">
-                                                    <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+                                                    <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-app-text-secondary'}`}>
                                                         {formatTime(reply.createdAt)}
                                                     </span>
                                                 </div>
@@ -173,7 +173,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                 </div>
 
                 {/* Reply Input */}
-                <form onSubmit={handleSendReply} className="p-4 border-t border-gray-200 bg-white">
+                <form onSubmit={handleSendReply} className="border-t border-app-divider bg-app-surface p-4">
                     <div className="flex items-end gap-2">
                         <div className="flex-1 relative">
                             <textarea
@@ -184,7 +184,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                                 placeholder="Reply to thread..."
                                 disabled={sending}
                                 rows={1}
-                                className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent resize-none transition-all disabled:bg-gray-50 disabled:cursor-not-allowed"
+                                className="w-full resize-none rounded-app-input border border-app-border bg-white px-4 py-2.5 text-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange disabled:cursor-not-allowed disabled:bg-app-background"
                                 style={{
                                     minHeight: '44px',
                                     maxHeight: '120px'
@@ -194,7 +194,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                         <button
                             type="submit"
                             disabled={!replyText.trim() || sending}
-                            className="p-2.5 bg-secondary text-white rounded-xl hover:bg-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 flex-shrink-0"
+                            className="flex-shrink-0 transform rounded-app-input bg-orange p-2.5 text-white shadow-app-soft transition-all hover:bg-orange-dark hover:shadow-app-card active:scale-95 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
                             title="Send reply"
                         >
                             {sending ? (
@@ -206,9 +206,9 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                             )}
                         </button>
                     </div>
-                    <div className="mt-2 text-xs text-gray-400">
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600">Enter</kbd> to send •
-                        <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-gray-600 ml-1">Shift+Enter</kbd> for new line
+                    <div className="mt-2 text-xs text-app-text-tertiary">
+                        <kbd className="rounded border border-app-border bg-app-surface-variant px-1.5 py-0.5 text-app-text-secondary">Enter</kbd> to send •
+                        <kbd className="ml-1 rounded border border-app-border bg-app-surface-variant px-1.5 py-0.5 text-app-text-secondary">Shift+Enter</kbd> for new line
                     </div>
                 </form>
             </div>

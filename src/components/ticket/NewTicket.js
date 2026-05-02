@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ticketAPI, projectAPI, uploadAPI, getImageUrl } from '../../services/api';
+import { ticketAPI, projectAPI, getImageUrl, uploadTicketImagesViaBunny } from '../../services/api';
+import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -169,6 +170,7 @@ const NewTicket = () => {
   const [images, setImages] = useState([]); // Array of File objects
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const { uploadFile } = useBunnyUpload();
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]); // Object URLs for preview
   const [lang, setLang] = useState(getStoredLanguage());
   const tx = (key, vars = {}) => {
@@ -370,11 +372,8 @@ const NewTicket = () => {
       if (images.length > 0) {
         setUploadingImages(true);
         try {
-          const uploadResponse = await uploadAPI.uploadTicketImages(images);
-          // Backend returns { images: [...], ... }, so use uploadResponse.data.images
-          imageUrls = uploadResponse.data?.images || uploadResponse.data?.urls || [];
+          imageUrls = await uploadTicketImagesViaBunny(images, uploadFile);
           if (!Array.isArray(imageUrls)) {
-            console.warn('Invalid image URLs format:', uploadResponse.data);
             imageUrls = [];
           }
           console.log('Images uploaded successfully:', imageUrls);

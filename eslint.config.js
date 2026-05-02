@@ -7,7 +7,7 @@ import globals from 'globals';
 export default [
   { ignores: ['dist', 'build', 'node_modules'] },
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,

@@ -3,6 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { userAPI } from '../../services/api';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage, t } from '../../i18n';
+import AuthPageLayout from './AuthPageLayout';
+import {
+  authInputClass,
+  authLabelClass,
+  authLinkSecondaryClass,
+  authPrimaryButtonClass,
+} from './authFieldClasses';
 
 const AcceptInvite = () => {
   const [searchParams] = useSearchParams();
@@ -57,33 +64,41 @@ const AcceptInvite = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'acceptInvitation')}</h1>
-          <p className="text-gray-400">{t(lang, 'setPasswordActivate')}</p>
+    <AuthPageLayout>
+      <div className="w-full max-w-app-form">
+        <div className="mb-s36 flex justify-center">
+          <div className="rounded-full bg-app-primary p-s16 shadow-none">
+            <img src="/logo4.webp" alt="" className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]" />
+          </div>
         </div>
 
-        <div className="bg-primary-800 rounded-2xl shadow-2xl p-8 border border-primary-700">
+        <div className="text-center">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-app-text">
+            {t(lang, 'acceptInvitation')}
+          </h1>
+          <p className="mt-s8 text-[13px] text-app-text-secondary">{t(lang, 'setPasswordActivate')}</p>
+        </div>
+
+        <div className="mt-s36 w-full rounded-app border border-app-divider bg-app-surface p-s24 shadow-app-soft">
           {!token && (
-            <div className="mb-4 rounded-xl border border-red-500 bg-red-500/10 p-3 text-sm text-red-200">
+            <div className="mb-s16 rounded-app-input border border-app-error/40 bg-app-error/10 p-s12 text-[13px] text-app-error">
               Invitation token is missing. Please use the link from your email.
             </div>
           )}
           {error && (
-            <div className="mb-4 rounded-xl border border-red-500 bg-red-500/10 p-3 text-sm text-red-200">
+            <div className="mb-s16 rounded-app-input border border-app-error/40 bg-app-error/10 p-s12 text-[13px] text-app-error">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-4 rounded-xl border border-green-500 bg-green-500/10 p-3 text-sm text-green-200">
+            <div className="mb-s16 rounded-app-input border border-app-success/40 bg-app-success/10 p-s12 text-[13px] text-app-success">
               {success}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-s20">
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className={authLabelClass}>
                 {t(lang, 'password')}
               </label>
               <input
@@ -94,13 +109,13 @@ const AcceptInvite = () => {
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500"
+                className={authInputClass}
                 placeholder="Enter your password"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="confirmPassword" className={authLabelClass}>
                 {t(lang, 'confirmPassword')}
               </label>
               <input
@@ -111,19 +126,15 @@ const AcceptInvite = () => {
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500"
+                className={authInputClass}
                 placeholder="Confirm your password"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading || !token}
-              className="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-secondary-600 hover:to-secondary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-            >
+            <button type="submit" disabled={loading || !token} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" />
+                  <Spinner size="sm" color="white" />
                   <span className="ml-2">{t(lang, 'pleaseWait')}</span>
                 </>
               ) : (
@@ -132,18 +143,14 @@ const AcceptInvite = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => navigate('/login')}
-              className="text-secondary-400 hover:text-secondary-300 text-sm font-medium"
-            >
+          <div className="mt-s24 text-center">
+            <button type="button" onClick={() => navigate('/login')} className={authLinkSecondaryClass}>
               {t(lang, 'backToLogin')}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </AuthPageLayout>
   );
 };
 

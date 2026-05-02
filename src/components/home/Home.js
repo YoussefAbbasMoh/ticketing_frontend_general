@@ -1,4 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import AddRounded from '@mui/icons-material/AddRounded';
+import ArrowForwardRounded from '@mui/icons-material/ArrowForwardRounded';
+import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
+import ChatRounded from '@mui/icons-material/ChatRounded';
+import CloseRounded from '@mui/icons-material/CloseRounded';
+import FolderOffOutlined from '@mui/icons-material/FolderOffOutlined';
+import PersonAddOutlined from '@mui/icons-material/PersonAddOutlined';
+import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
+import SearchRounded from '@mui/icons-material/SearchRounded';
+import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
 import { useNavigate } from 'react-router-dom';
 import { projectAPI, ticketAPI, subscriptionAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -10,7 +20,12 @@ import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
-import Spinner from '../ui/Spinner';
+import WorkspaceWelcome from './WorkspaceWelcome';
+import WorkspaceTicketPreviewCard from './WorkspaceTicketPreviewCard';
+import WorkspaceProjectPreviewCard from './WorkspaceProjectPreviewCard';
+import StatChip from './StatChip';
+import WorkspaceHomePanel from './WorkspaceHomePanel';
+import { HomeLoadingSkeleton, ActiveTicketsLoadingRail } from './HomeSkeletons';
 import { getStoredLanguage } from '../../i18n';
 
 const TEXT = {
@@ -59,7 +74,12 @@ const TEXT = {
     details: 'Details',
     assignUsers: 'Assign Users',
     openProjectChatError: 'Error opening project chat. Please try again.',
-    addNewProject: 'Add New Project'
+    addNewProject: 'Add New Project',
+    projects: 'Projects',
+    viewAll: 'View All',
+    projectsSummary: '{{active}} active · {{completed}} completed',
+    noActiveTicketsLine: 'No active tickets',
+    ticketsRequireAttention: '{{count}} tickets requiring attention',
   },
   ar: {
     welcomeBack: 'مرحبًا بعودتك',
@@ -106,7 +126,12 @@ const TEXT = {
     details: 'التفاصيل',
     assignUsers: 'تعيين المستخدمين',
     openProjectChatError: 'حدث خطأ أثناء فتح دردشة المشروع. حاول مرة أخرى.',
-    addNewProject: 'إضافة مشروع جديد'
+    addNewProject: 'إضافة مشروع جديد',
+    projects: 'المشاريع',
+    viewAll: 'عرض الكل',
+    projectsSummary: '{{active}} نشط · {{completed}} مكتمل',
+    noActiveTicketsLine: 'لا توجد تذاكر نشطة',
+    ticketsRequireAttention: '{{count}} تذكرة تحتاج انتباهك',
   }
 };
 
@@ -119,9 +144,8 @@ const Home = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTickets, setActiveTickets] = useState([]);
-  const [loadingTickets, setLoadingTickets] = useState(false);
-  const [expandedTickets, setExpandedTickets] = useState({});
-  const [ticketsSectionExpanded, setTicketsSectionExpanded] = useState(false);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [attendanceKind, setAttendanceKind] = useState('loading');
   const [subscriptionNotice, setSubscriptionNotice] = useState('');
   const [subscriptionStatus, setSubscriptionStatus] = useState('');
   const [lang, setLang] = useState(getStoredLanguage());
@@ -141,7 +165,6 @@ const Home = () => {
       template
     );
   };
-  const welcomeLabel = user?.name || tx('welcomeFallback');
   const welcomeCompanySuffix = activeCompanyName ? ` @ ${activeCompanyName}` : '';
 
   useEffect(() => {
@@ -239,23 +262,6 @@ const Home = () => {
     }
   };
 
-  const getTicketStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'open':
-        return 'success';
-      case 'in_progress':
-        return 'warning';
-      case 'pending':
-        return 'orange';
-      case 'resolved':
-        return 'info';
-      case 'closed':
-        return 'default';
-      default:
-        return 'default';
-    }
-  };
-
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -275,10 +281,10 @@ const Home = () => {
   };
 
   const getRemainingDaysColor = (days) => {
-    if (days < 0) return 'text-red-600 bg-red-50 border-red-200';
-    if (days <= 7) return 'text-orange-600 bg-orange-50 border-orange-200';
-    if (days <= 30) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
-    return 'text-green-600 bg-green-50 border-green-200';
+    if (days < 0) return 'border-red-800/30 bg-red-50 text-red-900';
+    if (days <= 7) return 'border-orange/35 bg-orange-50 text-orange-950';
+    if (days <= 30) return 'border-amber-800/30 bg-amber-50 text-amber-950';
+    return 'border-emerald-800/25 bg-emerald-50 text-emerald-950';
   };
 
   const getRemainingDaysText = (days) => {
@@ -295,10 +301,10 @@ const Home = () => {
   };
 
   const getProjectStats = () => {
-    const total = filteredProjects.length;
-    const active = filteredProjects.filter(p => p.status?.toLowerCase() === 'active').length;
-    const completed = filteredProjects.filter(p => p.status?.toLowerCase() === 'completed').length;
-    const onHold = filteredProjects.filter(p => p.status?.toLowerCase() === 'on_hold').length;
+    const total = projects.length;
+    const active = projects.filter((p) => p.status?.toLowerCase() === 'active').length;
+    const completed = projects.filter((p) => p.status?.toLowerCase() === 'completed').length;
+    const onHold = projects.filter((p) => p.status?.toLowerCase() === 'on_hold').length;
 
     return { total, active, completed, onHold };
   };
@@ -331,18 +337,6 @@ const Home = () => {
       .slice(0, 2);
   };
 
-  const toggleTicketExpansion = (ticketId, e) => {
-    e.stopPropagation();
-    setExpandedTickets(prev => ({
-      ...prev,
-      [ticketId]: !prev[ticketId]
-    }));
-  };
-
-  const toggleTicketsSection = () => {
-    setTicketsSectionExpanded(prev => !prev);
-  };
-
   // Filter projects by search query
   const filteredProjects = projects.filter(project => {
     if (searchQuery === '') return true;
@@ -350,62 +344,26 @@ const Home = () => {
   });
 
   const stats = getProjectStats();
+  const isRtl = lang === 'ar';
 
   if (loading) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-screen gap-4">
-        <Spinner size="xl" color="secondary" />
-        <p className="text-gray-600">{tx('loadingProjects')}</p>
-      </div>
-    );
+    return <HomeLoadingSkeleton tx={tx} />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-16">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent mb-2">
-                {tx('welcomeBack')}, {welcomeLabel}{welcomeCompanySuffix}! 👋
-              </h1>
-              <p className="text-lg sm:text-xl text-gray-600">
-                {tx('happeningToday')}
-              </p>
-            </div>
-            {isAdmin() && (
-              <div className="flex gap-3">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => navigate('/chat')}
-                  className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all border-2 border-secondary"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  }
-                >
-                  {tx('chat')}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={handleAddProject}
-                  className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-                  icon={
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  }
-                >
-                  {tx('newProject')}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
+    <div className="min-h-screen bg-app-background pb-16 font-cairo text-app-text">
+      <div className="container mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
+        <WorkspaceWelcome
+          lang={lang}
+          userName={user?.name}
+          welcomeFallback={tx('welcomeFallback')}
+          companySuffix={activeCompanyName ? ` @ ${activeCompanyName}` : ''}
+          attendanceKind={attendanceKind}
+          isAdmin={isAdmin()}
+          onChat={() => navigate('/chat')}
+          onNewProject={handleAddProject}
+          isRtl={isRtl}
+        />
 
         {error && (
           <div className="mb-6">
@@ -423,332 +381,145 @@ const Home = () => {
           </div>
         )}
 
-        {/* Attendance Widget */}
-        <AttendanceWidget />
+        <AttendanceWidget onAttendanceKindChange={setAttendanceKind} />
 
-        {/* Active Tickets Box - Collapsible */}
-        <Card className="mb-8 shadow-xl bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 overflow-hidden">
-          {/* Header - Always Visible */}
-          <div
-            className="p-4 sm:p-6 md:p-8 cursor-pointer hover:bg-gray-50/50 transition-colors"
-            onClick={toggleTicketsSection}
-          >
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-                <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
-                  <svg className="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                  </svg>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent truncate">
-                    {tx('activeTickets')}
-                  </h2>
-                  <p className="text-gray-600 text-xs sm:text-sm mt-1 font-medium">
-                    {tx('ticketsNeedAttention')}
-                  </p>
-                </div>
+        {/* Active Tickets — Flutter TicketsSection: card shell + ~172px horizontal rail */}
+        <WorkspaceHomePanel
+          id="workspace-active-tickets"
+          title={tx('activeTickets')}
+          subtitle={
+            loadingTickets
+              ? tx('loadingTickets')
+              : activeTickets.length === 0
+                ? tx('noActiveTicketsLine')
+                : tx('ticketsRequireAttention', { count: activeTickets.length })
+          }
+        >
+          {loadingTickets ? (
+            <ActiveTicketsLoadingRail />
+          ) : activeTickets.length === 0 ? (
+            <div className="flex h-[172px] flex-col items-center justify-center overflow-hidden rounded-app-input border border-dashed border-app-border bg-app-background/60 px-4 py-4 text-center">
+              <div className="mx-auto mb-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-app-success/15 shadow-app-soft text-emerald-800">
+                <SupportAgentOutlined sx={{ fontSize: 30 }} />
               </div>
-
-              <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                {activeTickets.length > 0 && (
-                  <div className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-full shadow-lg">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                    </svg>
-                    <span className="font-bold text-base sm:text-lg">
-                      {activeTickets.length}
-                    </span>
-                  </div>
-                )}
-
-                {/* Expand/Collapse Button */}
-                <button
-                  className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-blue-100 to-purple-100 hover:from-blue-200 hover:to-purple-200 transition-all duration-300 shadow-md hover:shadow-lg flex-shrink-0"
-                  title={ticketsSectionExpanded ? tx('collapse') : tx('expand')}
-                >
-                  <svg
-                    className={`w-5 h-5 sm:w-6 sm:h-6 text-blue-600 transition-transform duration-300 ${ticketsSectionExpanded ? 'rotate-180' : ''}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
+              <h3 className="text-sm font-bold text-app-text">{tx('allClear')}</h3>
+              <p className="mt-0.5 line-clamp-2 max-w-md text-xs text-app-text-secondary">{tx('noActiveTickets')}</p>
+              <p className="mt-1 line-clamp-1 text-[11px] text-app-text-secondary">{tx('greatJob')} 🎉</p>
+            </div>
+          ) : (
+            <div className="min-h-[172px]">
+              <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-app-border">
+                {activeTickets.map((ticket) => (
+                  <WorkspaceTicketPreviewCard
+                    key={ticket._id}
+                    ticket={ticket}
+                    onClick={() => navigate(`/ticket/${ticket._id}/edit`)}
+                  />
+                ))}
               </div>
             </div>
+          )}
+        </WorkspaceHomePanel>
+
+        {/* Projects — Flutter ProjectsSection: same card shell, chips + ~150px rail */}
+        <WorkspaceHomePanel
+          id="workspace-projects-intro"
+          title={tx('projects')}
+          subtitle={tx('projectsSummary', { active: stats.active, completed: stats.completed })}
+          headerRight={
+            projects.length > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document.getElementById('projects-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className="rounded-full bg-app-primary/10 px-3.5 py-1.5 text-xs font-bold text-app-primary transition-colors hover:bg-app-primary/15"
+              >
+                {tx('viewAll')}
+              </button>
+            ) : null
+          }
+        >
+          <div className="mb-4 flex flex-wrap gap-2 sm:gap-3">
+            <StatChip label={tx('active')} count={stats.active} tone="success" icon="active" />
+            <StatChip label={tx('completed')} count={stats.completed} tone="info" icon="completed" />
+            <StatChip label={tx('totalProjects')} count={stats.total} tone="primary" icon="total" />
           </div>
-
-          {/* Collapsible Content */}
-          <div
-            className={`transition-all duration-500 ease-in-out ${ticketsSectionExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
-              } overflow-hidden`}
-          >
-            <Card.Content className="px-4 sm:px-6 md:px-8 pb-4 sm:pb-6 md:pb-8 pt-0">
-              {loadingTickets ? (
-                <div className="flex justify-center items-center py-12 sm:py-16">
-                  <div className="text-center">
-                    <Spinner size="xl" color="secondary" />
-                    <p className="text-gray-600 mt-4 font-medium text-sm sm:text-base">{tx('loadingTickets')}</p>
-                  </div>
-                </div>
-              ) : activeTickets.length === 0 ? (
-                <div className="text-center py-12 sm:py-16 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl sm:rounded-2xl border-2 border-dashed border-blue-300 mx-2 sm:mx-0">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mb-4 sm:mb-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl">
-                    <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 sm:mb-3">{tx('allClear')}</h3>
-                  <p className="text-gray-600 text-base sm:text-lg px-4">{tx('noActiveTickets')}</p>
-                  <p className="text-gray-500 mt-2 text-sm sm:text-base">{tx('greatJob')} 🎉</p>
-                </div>
-              ) : (
-                <div className="space-y-3 sm:space-y-4 mt-2 sm:mt-4">
-                  {activeTickets.map((ticket, index) => {
-                    const isExpanded = expandedTickets[ticket._id];
-                    return (
-                      <div
-                        key={ticket._id}
-                        onClick={() => navigate(`/ticket/${ticket._id}/edit`)}
-                        className="group relative p-4 sm:p-6 bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl hover:border-blue-400 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        {/* Priority Indicator */}
-                        <div className="absolute top-0 left-0 w-1 sm:w-2 h-full bg-gradient-to-b from-blue-500 to-purple-600 rounded-l-xl sm:rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                        <div className="flex flex-col sm:flex-row justify-between items-start mb-3 sm:mb-4 gap-3">
-                          <div className="flex-1 pl-1 sm:pl-2 w-full min-w-0">
-                            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3 flex-wrap">
-                              <button
-                                onClick={(e) => toggleTicketExpansion(ticket._id, e)}
-                                className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 group-hover:from-blue-200 group-hover:to-purple-200 transition-colors hover:scale-110 flex-shrink-0"
-                                title={isExpanded ? "Collapse" : "Expand"}
-                              >
-                                <svg
-                                  className={`w-4 h-4 sm:w-5 sm:h-5 text-blue-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                              <div className="flex-1 min-w-0">
-                                <h3 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">
-                                  {ticket.ticket}
-                                </h3>
-                              </div>
-                              <Badge variant={getTicketStatusColor(ticket.status)} size="sm" className="shadow-sm flex-shrink-0">
-                                {ticket.status || tx('unknown')}
-                              </Badge>
-                            </div>
-
-                            {ticket.project && (
-                              <div className="flex items-center gap-2 mb-2 sm:mb-3 ml-8 sm:ml-14">
-                                <div className="flex items-center gap-2 px-2 sm:px-3 py-1 sm:py-1.5 bg-gray-100 rounded-lg group-hover:bg-blue-50 transition-colors">
-                                  <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                                  </svg>
-                                  <span className="text-xs sm:text-sm font-semibold text-gray-700 group-hover:text-blue-700 truncate">
-                                    {ticket.project.project_name}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="ml-8 sm:ml-14 mb-3 sm:mb-4">
-                              <p className={`text-xs sm:text-sm text-gray-600 leading-relaxed ${isExpanded ? '' : 'line-clamp-2'}`}>
-                                {ticket.description}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-3 sm:pt-4 border-t-2 border-gray-100 ml-1 sm:ml-2 gap-3 sm:gap-0">
-                          <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <span className="text-white text-xs font-bold">
-                                  {ticket.requested_from?.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 font-medium">{tx('from')}</p>
-                                <p className="text-xs sm:text-sm text-gray-800 font-semibold truncate max-w-[100px] sm:max-w-none">{ticket.requested_from}</p>
-                              </div>
-                            </div>
-
-                            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                            </svg>
-
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center shadow-sm flex-shrink-0">
-                                <span className="text-white text-xs font-bold">
-                                  {ticket.requested_to?.charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div>
-                                <p className="text-xs text-gray-500 font-medium">{tx('to')}</p>
-                                <p className="text-xs sm:text-sm text-gray-800 font-semibold truncate max-w-[100px] sm:max-w-none">{ticket.requested_to}</p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 text-gray-500 ml-auto sm:ml-0">
-                            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span className="text-xs sm:text-sm font-medium">
-                              {formatDate(ticket.date)}
-                              {ticket.time && (
-                                <span className="text-xs ml-1 hidden sm:inline">• {ticket.time}</span>
-                              )}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Hover Arrow */}
-                        <div className="absolute top-1/2 right-4 sm:right-6 -translate-y-1/2 opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300 hidden sm:block">
-                          <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card.Content>
-          </div>
-        </Card>
-
-        {/* Stats Cards */}
-        {projects.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {/* Total Projects */}
-            <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white shadow-lg">
-              <Card.Content className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-purple-100 text-sm mb-2">{tx('totalProjects')}</p>
-                    <p className="text-4xl font-bold">{stats.total}</p>
-                  </div>
-                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            {/* Active Projects */}
-            <Card className="border-2 border-green-500 shadow-md hover:shadow-lg transition-shadow">
-              <Card.Content className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-gray-600 text-sm mb-2">{tx('active')}</p>
-                    <p className="text-4xl font-bold text-green-600">{stats.active}</p>
-                  </div>
-                  <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            {/* Completed Projects */}
-            <Card className="border-2 border-blue-500 shadow-md hover:shadow-lg transition-shadow">
-              <Card.Content className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-gray-600 text-sm mb-2">{tx('completed')}</p>
-                    <p className="text-4xl font-bold text-blue-600">{stats.completed}</p>
-                  </div>
-                  <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-
-            {/* On Hold Projects */}
-            <Card className="border-2 border-orange-500 shadow-md hover:shadow-lg transition-shadow">
-              <Card.Content className="p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-gray-600 text-sm mb-2">{tx('onHold')}</p>
-                    <p className="text-4xl font-bold text-orange-600">{stats.onHold}</p>
-                  </div>
-                  <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                </div>
-              </Card.Content>
-            </Card>
-          </div>
-        )}
-
-        {/* Search Bar */}
-        {projects.length > 0 && (
-          <div className="mb-6">
-            <div className="relative max-w-md">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+          {projects.length === 0 ? (
+            <div className="flex min-h-[150px] flex-col items-center justify-center rounded-app-input border border-dashed border-app-border bg-app-background/60 px-4 py-10 text-center">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-app-primary/10 text-app-primary">
+                <FolderOffOutlined sx={{ fontSize: 36 }} />
               </div>
-              <input
-                type="text"
-                placeholder={tx('searchProjectsPlaceholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200 text-base"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            {searchQuery && (
-              <p className="mt-2 text-sm text-gray-600">
-                {tx('foundProjects', {
-                  count: filteredProjects.length,
-                  label: filteredProjects.length === 1 ? tx('projectSingle') : tx('projectPlural'),
-                  query: searchQuery,
-                })}
+              <h3 className="text-base font-bold text-app-text">{tx('noProjectsYet')}</h3>
+              <p className="mt-1 max-w-md text-sm text-app-text-secondary">
+                {isAdmin() ? tx('createFirstProjectHint') : tx('noAssignedProjects')}
               </p>
-            )}
-          </div>
-        )}
-
-        {/* Projects Grid */}
-        {filteredProjects.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-300">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center">
-              <svg className="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-              </svg>
+              {isAdmin() && (
+                <Button variant="secondary" size="md" className="mt-5" onClick={handleAddProject}>
+                  {tx('createFirstProject')}
+                </Button>
+              )}
             </div>
-            <h3 className="text-2xl font-semibold text-gray-800 mb-2">
+          ) : (
+            <div className="min-h-[150px]">
+              <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-app-border">
+                {filteredProjects.slice(0, 10).map((project, index) => (
+                  <WorkspaceProjectPreviewCard
+                    key={project._id}
+                    project={project}
+                    index={index}
+                    onClick={() => navigate(`/project/${project._id}`)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </WorkspaceHomePanel>
+
+        {projects.length > 0 && (
+          <div id="projects-section" className="scroll-mt-24">
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-tertiary">
+                  <SearchRounded sx={{ fontSize: 22 }} />
+                </div>
+                <input
+                  type="text"
+                  placeholder={tx('searchProjectsPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full rounded-app-input border border-app-border bg-app-surface py-3 pl-10 pr-4 text-base text-app-text transition-all duration-200 hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-text-tertiary hover:text-app-text"
+                  >
+                    <CloseRounded sx={{ fontSize: 22 }} />
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="mt-2 text-sm text-app-text-secondary">
+                  {tx('foundProjects', {
+                    count: filteredProjects.length,
+                    label: filteredProjects.length === 1 ? tx('projectSingle') : tx('projectPlural'),
+                    query: searchQuery,
+                  })}
+                </p>
+              )}
+            </div>
+
+        {filteredProjects.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-app-border bg-app-surface py-16 text-center">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-app-primary/10 text-app-primary">
+              <FolderOffOutlined sx={{ fontSize: 44 }} />
+            </div>
+            <h3 className="mb-2 text-2xl font-semibold text-app-text">
               {searchQuery ? tx('noProjectsFound') : tx('noProjectsYet')}
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="mb-6 text-app-text-secondary">
               {searchQuery
                 ? tx('noProjectsMatch', { query: searchQuery })
                 : isAdmin()
@@ -760,11 +531,7 @@ const Home = () => {
                 variant="secondary"
                 size="lg"
                 onClick={handleAddProject}
-                icon={
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                }
+                icon={<AddRounded sx={{ fontSize: 22 }} />}
               >
                 {tx('createFirstProject')}
               </Button>
@@ -794,26 +561,24 @@ const Home = () => {
                       {isAdmin() && (
                         <button
                           onClick={(e) => handleAssignUsers(project, e)}
-                          className="p-2 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-600 transition-colors"
+                          className="rounded-lg bg-app-info/12 p-2 text-app-info transition-colors hover:bg-app-info/20"
                           title={tx('assignUsers') || 'Assign Users'}
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                          </svg>
+                          <PersonAddOutlined sx={{ fontSize: 18 }} />
                         </button>
                       )}
                     </div>
 
                     {/* Project Name */}
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 line-clamp-2 min-h-[3.5rem]">
+                    <h3 className="mb-4 line-clamp-2 min-h-[3.5rem] text-xl font-bold text-app-text">
                       {project.project_name || tx('untitledProject')}
                     </h3>
 
-                    <div className="h-px bg-gray-200 mb-4"></div>
+                    <div className="mb-4 h-px bg-app-divider" />
 
                     {/* Dates */}
                     <div className="mb-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600 mb-3">
+                      <div className="mb-3 flex items-center gap-2 text-sm text-app-text-secondary">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
@@ -825,9 +590,7 @@ const Home = () => {
                         <div className={`p-3 rounded-lg border-2 ${daysColor}`}>
                           <div className="flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
+                              <ScheduleRounded sx={{ fontSize: 22 }} />
                               <span className="text-sm font-semibold">{daysText}</span>
                             </div>
                             <Badge variant={daysBadge.color} size="sm">
@@ -840,31 +603,31 @@ const Home = () => {
 
                     {/* Team Members */}
                     {project.assigned_users && project.assigned_users.length > 0 && (
-                      <div className="flex items-center gap-3 pt-4 border-t border-gray-200">
+                      <div className="flex items-center gap-3 border-t border-app-divider pt-4">
                         <div className="flex -space-x-2">
                           {project.assigned_users.slice(0, 4).map((user, index) => (
                             <div
                               key={index}
-                              className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white"
+                              className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-app-primary text-xs font-bold text-white"
                               title={user.name}
                             >
                               {getInitials(user.name)}
                             </div>
                           ))}
                           {project.assigned_users.length > 4 && (
-                            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-xs font-bold border-2 border-white">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-app-surface-variant text-xs font-bold text-app-text">
                               +{project.assigned_users.length - 4}
                             </div>
                           )}
                         </div>
-                        <span className="text-sm text-gray-600 font-medium">
+                        <span className="text-sm font-medium text-app-text-secondary">
                           {project.assigned_users.length} {project.assigned_users.length !== 1 ? tx('membersSuffixPlural') : tx('membersSuffix')}
                         </span>
                       </div>
                     )}
                   </Card.Content>
 
-                  <Card.Footer className="bg-gray-50 p-4">
+                  <Card.Footer className="bg-app-surface-variant p-4">
                     <div className="flex gap-2">
                       <Button
                         variant="ghost"
@@ -879,12 +642,8 @@ const Home = () => {
                             alert(tx('openProjectChatError'));
                           }
                         }}
-                        className="shadow-none hover:shadow-md border-2 border-blue-500 text-blue-600 hover:bg-blue-50"
-                        icon={
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                        }
+                        className="border-2 border-app-info text-app-info shadow-none hover:bg-app-info/10 hover:shadow-app-soft"
+                        icon={<ChatRounded sx={{ fontSize: 22 }} />}
                       >
                         {tx('chat')}
                       </Button>
@@ -895,11 +654,7 @@ const Home = () => {
                           e.stopPropagation();
                           navigate(`/project/${project._id}`);
                         }}
-                        icon={
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                          </svg>
-                        }
+                        icon={<ArrowForwardRounded sx={{ fontSize: 22 }} />}
                         className="shadow-none hover:shadow-md"
                       >
                         {tx('details')}
@@ -909,6 +664,8 @@ const Home = () => {
                 </Card>
               );
             })}
+          </div>
+        )}
           </div>
         )}
 
@@ -934,12 +691,10 @@ const Home = () => {
         {isAdmin() && projects.length > 0 && (
           <button
             onClick={handleAddProject}
-            className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-secondary to-secondary-700 text-white rounded-full shadow-2xl hover:shadow-3xl hover:scale-110 transition-all duration-300 flex items-center justify-center"
+            className="fixed bottom-8 right-8 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange to-orange-dark text-white shadow-app-card transition-all duration-300 hover:scale-110 hover:shadow-lg"
             title={tx('addNewProject')}
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
+            <AddRounded sx={{ fontSize: 36 }} />
           </button>
         )}
       </div>

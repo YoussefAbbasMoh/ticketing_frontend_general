@@ -96,26 +96,26 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
       <div 
         ref={dialogRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col animate-slideUp overflow-hidden"
+        className="flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-app-surface shadow-app-card animate-slideUp"
       >
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-secondary/5 to-transparent">
+        <div className="border-b border-app-divider bg-gradient-to-r from-orange/5 to-transparent p-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h2 className="flex items-center gap-2 text-2xl font-bold text-app-text">
+                <svg className="h-6 w-6 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
                 New Conversation
               </h2>
-              <p className="text-sm text-gray-500 mt-1">Select a user to start chatting</p>
+              <p className="mt-1 text-sm text-app-text-secondary">Select a user to start chatting</p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="rounded-app-input p-2 transition-colors hover:bg-app-surface-variant"
               aria-label="Close dialog"
             >
-              <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -123,10 +123,10 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
         </div>
 
         {/* Search */}
-        <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="border-b border-app-divider bg-app-background p-4">
           <div className="relative">
             <svg 
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+              className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-app-text-tertiary" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -139,7 +139,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
               placeholder="Search by name, email, or title..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all bg-white"
+              className="w-full rounded-app-input border border-app-border bg-white py-2.5 pl-10 pr-4 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-orange"
             />
             {searchQuery && (
               <button
@@ -147,7 +147,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
                   setSearchQuery('');
                   searchInputRef.current?.focus();
                 }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 transform text-app-text-tertiary hover:text-app-text-secondary"
                 aria-label="Clear search"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -159,7 +159,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
 
           {/* Results count */}
           {!loading && (
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="mt-2 text-xs text-app-text-secondary">
               {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'} 
               {searchQuery && ' found'}
             </div>
@@ -185,29 +185,29 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
         )}
 
         {/* Users List */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Spinner size="lg" color="secondary" />
-              <p className="mt-3 text-sm text-gray-500">Loading users...</p>
+              <Spinner size="lg" color="primary" />
+              <p className="mt-3 text-sm text-app-text-secondary">Loading users...</p>
             </div>
           ) : filteredUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+            <div className="flex flex-col items-center justify-center py-12 text-app-text-secondary">
               {searchQuery ? (
                 <>
-                  <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="mb-4 h-16 w-16 text-app-border" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  <p className="font-medium text-gray-600 mb-1">No users found</p>
-                  <p className="text-sm text-gray-500">Try searching with a different keyword</p>
+                  <p className="mb-1 font-medium text-app-text">No users found</p>
+                  <p className="text-sm text-app-text-secondary">Try searching with a different keyword</p>
                 </>
               ) : (
                 <>
-                  <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="mb-4 h-16 w-16 text-app-border" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
-                  <p className="font-medium text-gray-600 mb-1">No users available</p>
-                  <p className="text-sm text-gray-500">There are no users to start a conversation with</p>
+                  <p className="mb-1 font-medium text-app-text">No users available</p>
+                  <p className="text-sm text-app-text-secondary">There are no users to start a conversation with</p>
                 </>
               )}
             </div>
@@ -217,7 +217,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
                 <div key={group} className="mb-4">
                   {/* Group Header (only show if there are actual groups) */}
                   {Object.keys(groupedUsers).length > 1 && (
-                    <h3 className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <h3 className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-app-text-tertiary">
                       {group}
                     </h3>
                   )}
@@ -229,30 +229,30 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
                         key={user._id}
                         onClick={() => handleSelectUser(user)}
                         disabled={creating}
-                        className="w-full p-3 hover:bg-gray-50 rounded-xl transition-all text-left flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed group"
+                        className="group flex w-full items-center gap-3 rounded-app-input p-3 text-left transition-all hover:bg-app-surface-variant disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <div className="relative flex-shrink-0">
-                          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary-700 flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:shadow-lg transition-shadow">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-orange to-orange-dark text-lg font-bold text-white shadow-app-soft transition-shadow group-hover:shadow-app-card">
                             {user.name?.charAt(0)?.toUpperCase() || '?'}
                           </div>
                           {user.isOnline && (
-                            <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></div>
+                            <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full border-2 border-white bg-app-success"></div>
                           )}
                         </div>
                         
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-gray-900 truncate">
+                          <h3 className="truncate font-semibold text-app-text">
                             {user.name || 'Unknown User'}
                           </h3>
-                          <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                          <p className="truncate text-sm text-app-text-secondary">{user.email}</p>
                           {user.title && (
-                            <p className="text-xs text-gray-400 truncate mt-0.5">{user.title}</p>
+                            <p className="mt-0.5 truncate text-xs text-app-text-tertiary">{user.title}</p>
                           )}
                         </div>
 
                         {/* Arrow Icon */}
                         <svg 
-                          className="w-5 h-5 text-gray-400 group-hover:text-secondary transition-colors flex-shrink-0" 
+                          className="h-5 w-5 flex-shrink-0 text-app-text-tertiary transition-colors group-hover:text-orange" 
                           fill="none" 
                           stroke="currentColor" 
                           viewBox="0 0 24 24"
@@ -269,9 +269,9 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
         </div>
 
         {/* Footer (optional - show keyboard shortcuts) */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50">
-          <p className="text-xs text-gray-500 text-center">
-            Press <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-600">Esc</kbd> to close
+        <div className="border-t border-app-divider bg-app-background p-4">
+          <p className="text-center text-xs text-app-text-secondary">
+            Press <kbd className="rounded border border-app-border bg-app-surface px-2 py-1 text-app-text-secondary">Esc</kbd> to close
           </p>
         </div>
       </div>

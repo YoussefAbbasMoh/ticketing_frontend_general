@@ -9,8 +9,8 @@ const Spinner = ({ size = 'md', color = 'primary', className = '' }) => {
   };
   
   const colors = {
-    primary: 'border-primary border-t-transparent',
-    secondary: 'border-secondary border-t-transparent',
+    primary: 'border-app-primary border-t-transparent',
+    secondary: 'border-orange border-t-transparent',
     white: 'border-white border-t-transparent',
   };
   

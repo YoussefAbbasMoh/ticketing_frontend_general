@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ticketAPI } from '../../services/api';
+import { ticketAPI, uploadTicketImagesViaBunny } from '../../services/api';
+import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import Spinner from '../ui/Spinner';
@@ -11,6 +12,7 @@ const ReplyForm = ({ ticketId, onReplyAdded }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const { uploadFile } = useBunnyUpload();
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files || []);
@@ -35,16 +37,8 @@ const ReplyForm = ({ ticketId, onReplyAdded }) => {
       // Upload images if any
       if (images.length > 0) {
         setUploading(true);
-        const formData = new FormData();
-        images.forEach((file) => {
-          formData.append('images', file);
-        });
-
-        const uploadResponse = await ticketAPI.uploadImages(formData);
-        // Backend returns { images: [...], ... }, so use uploadResponse.data.images
-        imageUrls = uploadResponse.data?.images || uploadResponse.data?.urls || [];
+        imageUrls = await uploadTicketImagesViaBunny(images, uploadFile);
         if (!Array.isArray(imageUrls)) {
-          console.warn('Invalid image URLs format:', uploadResponse.data);
           imageUrls = [];
         }
         setUploading(false);

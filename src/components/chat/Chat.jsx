@@ -68,7 +68,7 @@ const Chat = () => {
   const showChatWindow = !isMobile || activeConversation;
 
   return (
-    <div className="flex h-screen w-full bg-gray-50 overflow-hidden relative">
+    <div className="relative flex h-screen w-full overflow-hidden bg-app-background font-cairo">
       {/* Chat List - Full width on mobile, fixed width on desktop */}
       <div 
         className={`
@@ -77,7 +77,7 @@ const Chat = () => {
           flex-shrink-0 
           h-full
           transition-all duration-300 ease-in-out
-          border-r border-gray-200
+          border-r border-app-divider
           relative
           z-0
         `}
@@ -108,13 +108,13 @@ const Chat = () => {
           />
         ) : (
           // Empty State
-          <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-gray-50 to-gray-100">
-            <div className="text-center px-6 max-w-md">
+          <div className="flex h-full w-full items-center justify-center bg-app-background">
+            <div className="max-w-md px-6 text-center">
               {/* Icon */}
-              <div className="mb-6 relative">
-                <div className="absolute inset-0 bg-secondary/10 rounded-full blur-2xl"></div>
+              <div className="relative mb-6">
+                <div className="absolute inset-0 rounded-full bg-orange/15 blur-2xl" />
                 <svg 
-                  className="w-20 h-20 mx-auto text-secondary relative" 
+                  className="relative mx-auto h-20 w-20 text-app-primary" 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -129,17 +129,18 @@ const Chat = () => {
               </div>
 
               {/* Text */}
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              <h3 className="mb-2 text-xl font-semibold text-app-text">
                 {t(lang, 'chatWelcomeTitle')}
               </h3>
-              <p className="text-gray-500 mb-6">
+              <p className="mb-6 text-app-text-secondary">
                 {t(lang, 'chatWelcomeDescription')}
               </p>
 
               {/* Action Button */}
               <button
+                type="button"
                 onClick={handleCreateNew}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-secondary text-white rounded-lg hover:bg-secondary-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                className="inline-flex min-h-[40px] transform items-center gap-2 rounded-app-btn bg-app-primary px-6 py-3 text-app-on-primary shadow-app-soft transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 hover:shadow-app-card"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -148,9 +149,13 @@ const Chat = () => {
               </button>
 
               {/* Keyboard Shortcut Hint (Desktop Only) */}
-              <div className="hidden md:block mt-8 pt-8 border-t border-gray-200">
-                <p className="text-xs text-gray-400">
-                  {t(lang, 'chatShortcutTipPrefix')} <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-gray-600">N</kbd> {t(lang, 'chatShortcutTipSuffix')}
+              <div className="mt-8 hidden border-t border-app-divider pt-8 md:block">
+                <p className="text-xs text-app-text-tertiary">
+                  {t(lang, 'chatShortcutTipPrefix')}{' '}
+                  <kbd className="rounded border border-app-border bg-app-surface px-2 py-1 text-app-text-secondary">
+                    N
+                  </kbd>{' '}
+                  {t(lang, 'chatShortcutTipSuffix')}
                 </p>
               </div>
             </div>

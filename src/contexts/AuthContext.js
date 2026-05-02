@@ -1,16 +1,13 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authAPI, refreshAccessToken } from '../services/api';
+import { decodeJwtPayload, getJwtExpiresAtMs, isJwtExpired } from '../utils/jwt';
 
 const AuthContext = createContext();
 
 const readTokenCompanyId = (token) => {
-  if (!token) return null;
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    return payload.companyId ? String(payload.companyId) : null;
-  } catch {
-    return null;
-  }
+  const payload = decodeJwtPayload(token);
+  if (!payload) return null;
+  return payload.companyId ? String(payload.companyId) : null;
 };
 
 /** Login sends `companyId`; profile/DB may use `company` or populated `{ _id }`. */
@@ -37,7 +34,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
-    
+
+    if (token && isJwtExpired(token, 0)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setLoading(false);
+      return;
+    }
+
     if (token && userData) {
       try {
         let parsed = JSON.parse(userData);
@@ -46,14 +50,46 @@ export const AuthProvider = ({ children }) => {
           parsed = { ...parsed, activeCompanyId: fromToken };
         }
         setUser(parsed);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
+      } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
     }
     setLoading(false);
   }, []);
+
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+  }, []);
+
+  /** Proactive refresh before short-lived JWTs expire (requires `POST /auth/refresh` on backend). */
+  useEffect(() => {
+    if (!user) return undefined;
+
+    const tick = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      if (isJwtExpired(token)) {
+        logout();
+        if (!window.location.pathname.toLowerCase().includes('login')) {
+          window.location.href = '/login';
+        }
+        return;
+      }
+      const expMs = getJwtExpiresAtMs(token);
+      if (expMs == null) return;
+      const msLeft = expMs - Date.now();
+      if (msLeft > 0 && msLeft < 4 * 60 * 1000) {
+        await refreshAccessToken();
+      }
+    };
+
+    const id = setInterval(tick, 90_000);
+    tick();
+    return () => clearInterval(id);
+  }, [user, logout]);
 
   const login = (userData, token) => {
     const fromToken = readTokenCompanyId(token);
@@ -64,12 +100,6 @@ export const AuthProvider = ({ children }) => {
     setUser(merged);
     localStorage.setItem('user', JSON.stringify(merged));
     localStorage.setItem('token', token);
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
   };
 
   const updateUser = (userData) => {

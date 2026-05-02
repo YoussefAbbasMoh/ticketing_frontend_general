@@ -230,8 +230,8 @@ export const NotificationProvider = ({ children }) => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
                   body: notification.message,
-                  icon: '/absai-logo.png',
-                  badge: '/absai-logo.png',
+                  icon: '/logo4.webp',
+                  badge: '/logo4.webp',
                   tag: `ticket-${data.ticket?._id}`,
                   requireInteraction: false,
                   data: {
@@ -245,8 +245,8 @@ export const NotificationProvider = ({ children }) => {
               // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
-                icon: '/absai-logo.png',
-                badge: '/absai-logo.png',
+                icon: '/logo4.webp',
+                badge: '/logo4.webp',
                 tag: `ticket-${data.ticket?._id}`,
                 requireInteraction: false
               });
@@ -281,8 +281,8 @@ export const NotificationProvider = ({ children }) => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
                   body: notification.message,
-                  icon: '/absai-logo.png',
-                  badge: '/absai-logo.png',
+                  icon: '/logo4.webp',
+                  badge: '/logo4.webp',
                   tag: `reply-${data.ticket?._id}`,
                   requireInteraction: false,
                   data: {
@@ -296,8 +296,8 @@ export const NotificationProvider = ({ children }) => {
               // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
-                icon: '/absai-logo.png',
-                badge: '/absai-logo.png',
+                icon: '/logo4.webp',
+                badge: '/logo4.webp',
                 tag: `reply-${data.ticket?._id}`,
                 requireInteraction: false
               });
@@ -331,8 +331,8 @@ export const NotificationProvider = ({ children }) => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
                   body: notification.message,
-                  icon: '/absai-logo.png',
-                  badge: '/absai-logo.png',
+                  icon: '/logo4.webp',
+                  badge: '/logo4.webp',
                   tag: `assigned-${data.ticket?._id}`,
                   requireInteraction: false,
                   data: {
@@ -346,8 +346,8 @@ export const NotificationProvider = ({ children }) => {
               // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
-                icon: '/absai-logo.png',
-                badge: '/absai-logo.png',
+                icon: '/logo4.webp',
+                badge: '/logo4.webp',
                 tag: `assigned-${data.ticket?._id}`,
                 requireInteraction: false
               });
@@ -381,8 +381,8 @@ export const NotificationProvider = ({ children }) => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
                   body: notification.message,
-                  icon: '/absai-logo.png',
-                  badge: '/absai-logo.png',
+                  icon: '/logo4.webp',
+                  badge: '/logo4.webp',
                   tag: `cc-${data.ticket?._id}`,
                   requireInteraction: false,
                   data: {
@@ -396,8 +396,8 @@ export const NotificationProvider = ({ children }) => {
               // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
-                icon: '/absai-logo.png',
-                badge: '/absai-logo.png',
+                icon: '/logo4.webp',
+                badge: '/logo4.webp',
                 tag: `cc-${data.ticket?._id}`,
                 requireInteraction: false
               });
@@ -440,8 +440,8 @@ export const NotificationProvider = ({ children }) => {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
                   body: notification.message,
-                  icon: '/absai-logo.png',
-                  badge: '/absai-logo.png',
+                  icon: '/logo4.webp',
+                  badge: '/logo4.webp',
                   tag: `chat-${data.conversationId}`,
                   requireInteraction: false,
                   data: {
@@ -455,8 +455,8 @@ export const NotificationProvider = ({ children }) => {
               // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
-                icon: '/absai-logo.png',
-                badge: '/absai-logo.png',
+                icon: '/logo4.webp',
+                badge: '/logo4.webp',
                 tag: `chat-${data.conversationId}`,
                 requireInteraction: false
               });

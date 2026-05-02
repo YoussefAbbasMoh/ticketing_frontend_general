@@ -147,7 +147,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
   const renderLastMessagePreview = (conversation, unreadCount) => {
     if (!conversation.lastMessage) {
       return (
-        <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+        <p className={`truncate text-sm ${unreadCount > 0 ? 'font-medium text-app-text' : 'text-app-text-secondary'}`}>
           {tx('noMessagesYet')}
         </p>
       );
@@ -162,10 +162,10 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
           <img
             src={previewUrl}
             alt={message.fileName || 'Image'}
-            className="w-10 h-10 rounded object-cover border border-gray-200 flex-shrink-0"
+            className="h-10 w-10 flex-shrink-0 rounded border border-app-border object-cover"
             loading="lazy"
           />
-          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+          <p className={`truncate text-sm ${unreadCount > 0 ? 'font-medium text-app-text' : 'text-app-text-secondary'}`}>
             {message.fileName || tx('photo')}
           </p>
         </div>
@@ -177,11 +177,11 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         <div className="flex items-center gap-2 min-w-0">
           <video
             src={previewUrl}
-            className="w-10 h-10 rounded object-cover border border-gray-200 flex-shrink-0 bg-black"
+            className="h-10 w-10 flex-shrink-0 rounded border border-app-border bg-black object-cover"
             muted
             preload="metadata"
           />
-          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+          <p className={`truncate text-sm ${unreadCount > 0 ? 'font-medium text-app-text' : 'text-app-text-secondary'}`}>
             {message.fileName || tx('video')}
           </p>
         </div>
@@ -189,7 +189,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
     }
 
     return (
-      <p className={`text-sm truncate ${unreadCount > 0 ? 'text-gray-900 font-medium' : 'text-gray-600'}`}>
+      <p className={`truncate text-sm ${unreadCount > 0 ? 'font-medium text-app-text' : 'text-app-text-secondary'}`}>
         {formatLastMessage(conversation)}
       </p>
     );
@@ -245,12 +245,12 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
   const activeConversationId = activeConversation?._id;
 
   return (
-    <div className={`flex flex-col h-full bg-white relative overflow-hidden ${isRtl ? 'border-l' : 'border-r'} border-gray-200`}>
+    <div className={`relative flex h-full flex-col overflow-hidden bg-app-surface ${isRtl ? 'border-l' : 'border-r'} border-app-divider`}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-white sticky top-0 z-20 flex-shrink-0">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-            <svg className="w-6 h-6 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="sticky top-0 z-20 flex-shrink-0 border-b border-app-divider bg-app-surface p-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="flex items-center gap-2 text-2xl font-bold text-app-text">
+            <svg className="h-6 w-6 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             {tx('messages')}
@@ -278,7 +278,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   }
                 }}
                 disabled={creatingConversations}
-                className="p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="rounded-lg bg-app-info p-2 text-white shadow-app-soft transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                 title={tx('createProjectConversations')}
                 aria-label={tx('createProjectConversations')}
               >
@@ -293,7 +293,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             )}
             <button
               onClick={onCreateNew}
-              className="p-2.5 bg-secondary text-white rounded-lg hover:bg-secondary-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
+              className="rounded-lg bg-orange p-2.5 text-white shadow-app-soft transition-all duration-200 hover:opacity-95 active:scale-95 transform hover:scale-105"
               title={tx('newConversation')}
               aria-label={tx('startNewConversation')}
             >
@@ -307,7 +307,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         {/* Search */}
         <div className="relative">
           <svg 
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" 
+            className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-app-text-tertiary" 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
@@ -319,12 +319,12 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             placeholder={tx('searchConversations')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all duration-200"
+            className="w-full rounded-app-input border border-app-border bg-app-surface py-2.5 pl-10 pr-4 text-app-text transition-all duration-200 focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 transform text-app-text-tertiary hover:text-app-text"
               aria-label={tx('clearSearch')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -336,7 +336,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
 
         {/* Conversations count */}
         {!loading && filteredConversations.length > 0 && (
-          <div className="mt-3 text-xs text-gray-500">
+          <div className="mt-3 text-xs text-app-text-tertiary">
             {filteredConversations.length} {filteredConversations.length === 1 ? tx('conversation') : tx('conversations')}
             {searchQuery && ` ${tx('found')}`}
           </div>
@@ -344,37 +344,38 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
       </div>
 
       {/* Conversations List */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent relative z-0">
+      <div className="relative z-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Spinner size="md" color="secondary" />
-            <p className="mt-3 text-sm text-gray-500">{tx('loadingConversations')}</p>
+            <Spinner size="md" color="primary" />
+            <p className="mt-3 text-sm text-app-text-secondary">{tx('loadingConversations')}</p>
           </div>
         ) : filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-gray-500 p-8">
+          <div className="flex h-full flex-col items-center justify-center p-8 text-app-text-secondary">
             {searchQuery ? (
               <>
-                <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="mb-4 h-16 w-16 text-app-border" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <p className="text-center font-medium text-gray-600 mb-2">{tx('noConversationsFound')}</p>
-                <p className="text-center text-sm text-gray-500">{tx('tryDifferentKeyword')}</p>
+                <p className="mb-2 text-center font-medium text-app-text">{tx('noConversationsFound')}</p>
+                <p className="text-center text-sm text-app-text-secondary">{tx('tryDifferentKeyword')}</p>
               </>
             ) : (
               <>
                 <div className="relative mb-6">
-                  <div className="absolute inset-0 bg-secondary/10 rounded-full blur-xl"></div>
-                  <svg className="w-20 h-20 text-secondary relative" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute inset-0 rounded-full bg-orange/15 blur-xl" />
+                  <svg className="relative h-20 w-20 text-app-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                 </div>
-                <h3 className="font-semibold text-gray-700 mb-2">{tx('noConversationsYet')}</h3>
-                <p className="text-center text-sm text-gray-500 mb-6 max-w-xs">
+                <h3 className="mb-2 font-semibold text-app-text">{tx('noConversationsYet')}</h3>
+                <p className="mb-6 max-w-xs text-center text-sm text-app-text-secondary">
                   {tx('chatWithTeam')}
                 </p>
                 <button
+                  type="button"
                   onClick={onCreateNew}
-                  className="px-6 py-2.5 bg-secondary text-white rounded-lg hover:bg-secondary-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  className="min-h-[40px] transform rounded-app-btn bg-app-primary px-6 py-2.5 text-app-on-primary shadow-app-soft transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 hover:shadow-app-card"
                 >
                   {tx('startConversation')}
                 </button>
@@ -382,7 +383,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-app-divider">
             {filteredConversations.map((conversation) => {
               const isGroup = conversation.isGroup && conversation.project;
               const displayName = isGroup 
@@ -401,23 +402,23 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   className={`
                     w-full p-4 transition-all duration-200 ${isRtl ? 'text-right' : 'text-left'}
                     ${isActive 
-                      ? (isRtl ? 'bg-secondary/10 border-r-4 border-secondary' : 'bg-secondary/10 border-l-4 border-secondary')
-                      : (isRtl ? 'hover:bg-gray-50 border-r-4 border-transparent' : 'hover:bg-gray-50 border-l-4 border-transparent')
+                      ? (isRtl ? 'border-r-4 border-app-primary bg-app-primary/10' : 'border-l-4 border-app-primary bg-app-primary/10')
+                      : (isRtl ? 'border-r-4 border-transparent hover:bg-app-surface-variant' : 'border-l-4 border-transparent hover:bg-app-surface-variant')
                     }
                   `}
                 >
                   <div className="flex items-center gap-3">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ${
+                      <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-app-soft ${
                         isGroup 
-                          ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
-                          : 'bg-gradient-to-br from-secondary to-secondary-700'
+                          ? 'bg-app-info' 
+                          : 'bg-app-primary'
                       }`}>
                         {displayInitial}
                       </div>
                       {isGroup && (
-                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
+                        <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-app-info">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
                           </svg>
@@ -429,16 +430,16 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <h3 className={`font-semibold truncate ${unreadCount > 0 ? 'text-gray-900' : 'text-gray-800'}`}>
+                          <h3 className={`truncate font-semibold ${unreadCount > 0 ? 'text-app-text' : 'text-app-text-secondary'}`}>
                             {displayName}
                           </h3>
                           {isGroup && (
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                            <span className="flex-shrink-0 rounded-full bg-app-surface-variant px-2 py-0.5 text-xs text-app-text-secondary">
                               {tx('group')}
                             </span>
                           )}
                         </div>
-                        <span className={`text-xs flex-shrink-0 ml-2 ${unreadCount > 0 ? 'text-secondary font-medium' : 'text-gray-500'}`}>
+                        <span className={`ml-2 flex-shrink-0 text-xs ${unreadCount > 0 ? 'font-medium text-orange' : 'text-app-text-tertiary'}`}>
                           {formatTime(conversation.lastMessageAt)}
                         </span>
                       </div>
@@ -447,7 +448,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                           {renderLastMessagePreview(conversation, unreadCount)}
                         </div>
                         {unreadCount > 0 && (
-                          <span className="bg-secondary text-white text-xs font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center flex-shrink-0">
+                          <span className="flex h-5 min-w-[20px] flex-shrink-0 items-center justify-center rounded-full bg-orange px-1.5 text-xs font-bold text-white">
                             {unreadCount > 99 ? '99+' : unreadCount}
                           </span>
                         )}

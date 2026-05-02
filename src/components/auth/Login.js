@@ -4,6 +4,14 @@ import { authAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage, t } from '../../i18n';
+import AuthPageLayout from './AuthPageLayout';
+import {
+  authInputClass,
+  authLabelClass,
+  authLinkMutedClass,
+  authLinkSecondaryClass,
+  authPrimaryButtonClass,
+} from './authFieldClasses';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -158,52 +166,56 @@ const Login = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo/Brand Section */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img 
-              src="/absai-logo.png" 
-              alt="ABSAI Logo" 
-              className="w-24 h-24 object-contain"
+    <AuthPageLayout>
+      <div className="w-full max-w-app-form">
+        {/* LogoBadge — circular primary like `logo_badge.dart` */}
+        <div className="mb-s36 flex justify-center">
+          <div className="rounded-full bg-app-primary p-s16 shadow-none">
+            <img
+              src="/logo4.webp"
+              alt=""
+              className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]"
               onError={(e) => {
-                // Fallback to icon if image fails to load
                 e.target.style.display = 'none';
-                e.target.nextElementSibling.style.display = 'flex';
               }}
             />
-            <div 
-              className="hidden items-center justify-center w-16 h-16 bg-secondary-500 rounded-2xl shadow-xl"
-              style={{ display: 'none' }}
-            >
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'welcomeBack')}</h1>
-          <p className="text-gray-400">{t(lang, 'signInSubtitle')}</p>
-        </div>  
+        </div>
 
-        {/* Login Card */}
-        <div className="bg-primary-800 rounded-2xl shadow-2xl p-8 border border-primary-700">
+        <div className="text-center">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-app-text">
+            {t(lang, 'welcomeBack')}
+          </h1>
+          <p className="mt-s8 text-[13px] leading-normal text-app-text-secondary">
+            {t(lang, 'signInSubtitle')}
+          </p>
+        </div>
+
+        <div className="mt-s36 w-full">
           {error && (
-            <div className="mb-6 animate-fade-in">
-              <div className="bg-red-500 bg-opacity-10 border border-red-500 rounded-xl p-4 flex items-start gap-3">
-                <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div className="mb-s24 animate-fade-in rounded-app-input border border-app-error/40 bg-app-error/10 p-s16">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="mt-0.5 h-5 w-5 flex-shrink-0 text-app-error"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
-                <div className="flex-1">
-                  <p className="text-red-200 text-sm">{error}</p>
-                </div>
+                <p className="flex-1 text-[13px] text-app-error">{error}</p>
                 <button
                   type="button"
                   onClick={() => setError('')}
-                  className="text-red-400 hover:text-red-300 transition-colors flex-shrink-0"
+                  className="flex-shrink-0 text-app-error/80 hover:text-app-error"
                   aria-label="Close error"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -211,10 +223,9 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
+          <form onSubmit={handleSubmit} className="space-y-s24">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="email" className={authLabelClass}>
                 {t(lang, 'emailAddress')}
               </label>
               <input
@@ -227,14 +238,13 @@ const Login = () => {
                 autoComplete="email"
                 autoFocus
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className={authInputClass}
                 placeholder={t(lang, 'emailAddress')}
               />
             </div>
 
-            {/* Password Input */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className={authLabelClass}>
                 {t(lang, 'password')}
               </label>
               <input
@@ -246,14 +256,14 @@ const Login = () => {
                 required
                 autoComplete="current-password"
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className={authInputClass}
                 placeholder={t(lang, 'password')}
               />
             </div>
 
             {companyChoices && companyChoices.length > 0 && (
               <div>
-                <label htmlFor="companyId" className="block text-sm font-medium text-gray-300 mb-2">
+                <label htmlFor="companyId" className={authLabelClass}>
                   {t(lang, 'company')}
                 </label>
                 <select
@@ -261,7 +271,10 @@ const Login = () => {
                   value={selectedCompanyId}
                   onChange={(e) => setSelectedCompanyId(e.target.value)}
                   disabled={loading}
-                  className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent disabled:opacity-50"
+                  className={`${authInputClass} appearance-none bg-[length:1rem] bg-[right_12px_center] bg-no-repeat pr-10`}
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%235C6378'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                  }}
                 >
                   {companyChoices.map((c) => {
                     const id = c.companyId != null ? String(c.companyId) : '';
@@ -278,7 +291,7 @@ const Login = () => {
                     );
                   })}
                 </select>
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-s8 text-[12px] leading-relaxed text-app-text-secondary">
                   نفس البريد مسجّل في أكثر من شركة — اختر أين تريد العمل ثم اضغط «Sign In» مرة أخرى.
                   <br />
                   This email belongs to multiple companies — pick a workspace, then press Sign In again.
@@ -286,15 +299,21 @@ const Login = () => {
               </div>
             )}
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-secondary-600 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2 focus:ring-offset-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center"
-            >
+            <div className="flex justify-end pt-s8">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                disabled={loading}
+                className={`${authLinkSecondaryClass} disabled:cursor-not-allowed`}
+              >
+                {t(lang, 'forgotPassword')}
+              </button>
+            </div>
+
+            <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" />
+                  <Spinner size="sm" color="white" />
                   <span className="ml-2">{t(lang, 'signingIn')}</span>
                 </>
               ) : (
@@ -303,44 +322,30 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Forgot Password Link */}
-          <div className="mt-6 text-center">
+          <div className="mt-s24 text-center">
             <button
               type="button"
-              onClick={() => navigate('/forgot-password')}
+              onClick={() => navigate('/register-company')}
               disabled={loading}
-              className="text-secondary-400 hover:text-secondary-300 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`${authLinkMutedClass} disabled:cursor-not-allowed`}
             >
-              {t(lang, 'forgotPassword')}
+              {t(lang, 'newCompanyCreateWorkspace')}
             </button>
-            <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => navigate('/register-company')}
-                disabled={loading}
-                className="text-gray-300 hover:text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {t(lang, 'newCompanyCreateWorkspace')}
-              </button>
-            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center text-gray-500 text-sm ">
-          <p>© 2025 Ticket Management System. All rights reserved for ABS..</p>
-        </div>
+        <p className="mt-s36 text-center text-[13px] text-app-text-tertiary">
+          © {new Date().getFullYear()} Tik — Team operations
+        </p>
       </div>
 
       {companyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-lg rounded-2xl border border-primary-600 bg-primary-800 p-6 shadow-2xl">
-            <h2 className="text-xl font-bold text-white">{t(lang, 'chooseWorkspace')}</h2>
-            <p className="mt-1 text-sm text-gray-400">
-              {t(lang, 'multiCompanySelect')}
-            </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-app-text/40 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg rounded-app border border-app-divider bg-app-surface p-s24 shadow-app-card">
+            <h2 className="text-[16px] font-semibold leading-snug text-app-text">{t(lang, 'chooseWorkspace')}</h2>
+            <p className="mt-s8 text-[13px] text-app-text-secondary">{t(lang, 'multiCompanySelect')}</p>
 
-            <div className="mt-4 space-y-2 max-h-64 overflow-auto pr-1">
+            <div className="mt-s16 max-h-64 space-y-s8 overflow-auto pr-1">
               {(companyChoices || []).map((c) => {
                 const id = c?.companyId != null ? String(c.companyId) : '';
                 const roleLabel = c?.isOwner ? 'Owner' : (c?.companyRole || 'member');
@@ -349,28 +354,26 @@ const Login = () => {
                     key={id}
                     type="button"
                     onClick={() => setSelectedCompanyId(id)}
-                    className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                    className={`w-full rounded-app-input border px-s16 py-s12 text-left transition ${
                       selectedCompanyId === id
-                        ? 'border-secondary-500 bg-secondary-500/20'
-                        : 'border-primary-600 bg-primary-700 hover:border-primary-500'
+                        ? 'border-app-primary bg-app-primary/8 ring-1 ring-app-primary/20'
+                        : 'border-app-border bg-app-background hover:border-app-text-tertiary'
                     }`}
                   >
-                    <div className="text-sm font-semibold text-white">
+                    <div className="text-[14px] font-semibold text-app-text">
                       {(c?.company && c.company.name) || 'Company'}
                     </div>
-                    <div className="text-xs text-gray-300">Role: {String(roleLabel)}</div>
+                    <div className="text-[12px] text-app-text-secondary">Role: {String(roleLabel)}</div>
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-5 rounded-xl border border-primary-600 bg-primary-700 p-4">
+            <div className="mt-s20 rounded-app-input border border-app-border bg-app-surface-variant p-s16">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-white">{t(lang, 'needNewCompany')}</p>
-                  <p className="text-xs text-gray-400">
-                    {t(lang, 'openRegistrationHelp')}
-                  </p>
+                  <p className="text-[14px] font-semibold text-app-text">{t(lang, 'needNewCompany')}</p>
+                  <p className="text-[12px] text-app-text-secondary">{t(lang, 'openRegistrationHelp')}</p>
                 </div>
                 <button
                   type="button"
@@ -382,7 +385,7 @@ const Login = () => {
                       },
                     })
                   }
-                  className="h-9 w-9 rounded-full bg-secondary-500 text-white hover:bg-secondary-600"
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-orange text-app-on-secondary hover:opacity-95"
                   title="Go to register company page"
                 >
                   +
@@ -391,10 +394,10 @@ const Login = () => {
             </div>
 
             {companyActionError && (
-              <p className="mt-3 text-sm text-red-300">{companyActionError}</p>
+              <p className="mt-s12 text-[13px] text-app-error">{companyActionError}</p>
             )}
 
-            <div className="mt-5 flex items-center justify-end gap-2">
+            <div className="mt-s24 flex items-center justify-end gap-s12">
               <button
                 type="button"
                 onClick={() => {
@@ -402,7 +405,7 @@ const Login = () => {
                   setCompanyActionError('');
                   setPendingLoginData(null);
                 }}
-                className="rounded-lg border border-primary-500 px-4 py-2 text-sm text-gray-200 hover:bg-primary-700"
+                className="rounded-app-input border border-app-border px-s16 py-2 text-[14px] text-app-text-secondary hover:bg-app-surface-variant"
                 disabled={companyActionLoading}
               >
                 {t(lang, 'back')}
@@ -411,7 +414,7 @@ const Login = () => {
                 type="button"
                 onClick={handleConfirmCompanyChoice}
                 disabled={!selectedCompanyId || companyActionLoading}
-                className="rounded-lg bg-secondary-500 px-4 py-2 text-sm font-semibold text-white hover:bg-secondary-600 disabled:opacity-50"
+                className="rounded-app-btn bg-orange px-s20 py-2 text-[14px] font-semibold text-white hover:opacity-95 disabled:opacity-50"
               >
                 {companyActionLoading ? t(lang, 'pleaseWait') : t(lang, 'continue')}
               </button>
@@ -419,7 +422,7 @@ const Login = () => {
           </div>
         </div>
       )}
-    </div>
+    </AuthPageLayout>
   );
 };
 

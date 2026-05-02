@@ -1,5 +1,7 @@
 import { io } from 'socket.io-client';
 
+const isDev = import.meta.env?.DEV;
+
 class SocketService {
   constructor() {
     this.socket = null;
@@ -8,60 +10,72 @@ class SocketService {
 
   connect(token) {
     if (this.socket?.connected) {
-      console.log('Socket already connected, reusing...');
+      if (isDev) console.log('Socket already connected, reusing...');
       return this.socket;
     }
 
     if (!token) {
-      console.error('No token provided for socket connection');
+      if (isDev) console.error('No token provided for socket connection');
       return null;
     }
 
-    console.log('Attempting socket connection with token:', token.substring(0, 20) + '...');
+    if (isDev) console.log('Attempting socket connection…');
 
-    // Use the same domain - Socket.io will use /socket.io/ path
-    // If Nginx is configured correctly, this will work
     const SOCKET_URL = 'https://tickets.absai.dev';
-    
+
     this.socket = io(SOCKET_URL, {
-      path: '/socket.io/', // Socket.io default path
+      path: '/socket.io/',
       auth: {
-        token: token
+        token: token,
       },
-      transports: ['polling', 'websocket'], // Try polling first (more reliable), then upgrade to websocket
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      reconnectionAttempts: Infinity, // Keep trying to reconnect
+      reconnectionAttempts: Infinity,
       forceNew: false,
       upgrade: true,
-      rememberUpgrade: true, // Remember websocket upgrade
-      timeout: 20000, // 20 second timeout
-     // Limit reconnection attempts
+      rememberUpgrade: true,
+      timeout: 20000,
     });
 
     this.socket.on('connect', () => {
-      console.log('Socket connected');
+      if (isDev) console.log('Socket connected');
       this.isConnected = true;
     });
 
     this.socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected, reason:', reason);
+      if (isDev) console.log('Socket disconnected, reason:', reason);
       this.isConnected = false;
     });
 
     this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        type: error.type,
-        description: error.description
-      });
+      const message = error?.message || '';
+      const lower = message.toLowerCase();
+      const authDenied =
+        /not found|unauthorized|forbidden|invalid token|jwt|authentication/i.test(lower) ||
+        error?.description === 400;
+
+      if (authDenied && this.socket) {
+        try {
+          this.socket.io.opts.reconnection = false;
+        } catch {
+          /* ignore */
+        }
+        this.socket.disconnect();
+        this.socket = null;
+        this.isConnected = false;
+        return;
+      }
+
+      if (isDev) {
+        console.error('Socket connection error:', error);
+      }
       this.isConnected = false;
     });
 
     this.socket.on('error', (error) => {
-      console.error('Socket error event:', error);
+      if (isDev) console.error('Socket error event:', error);
     });
 
     return this.socket;
@@ -69,6 +83,11 @@ class SocketService {
 
   disconnect() {
     if (this.socket) {
+      try {
+        this.socket.io.opts.reconnection = false;
+      } catch {
+        /* ignore */
+      }
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
@@ -79,7 +98,6 @@ class SocketService {
     if (this.socket) {
       this.socket.on(event, callback);
     } else {
-      // If socket not created yet, create it first
       const token = localStorage.getItem('token');
       if (token) {
         this.connect(token);
@@ -104,4 +122,3 @@ class SocketService {
 }
 
 export default new SocketService();
-

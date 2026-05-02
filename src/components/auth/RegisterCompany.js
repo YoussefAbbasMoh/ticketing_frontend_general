@@ -1,13 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage, t } from '../../i18n';
+import AuthPageLayout from './AuthPageLayout';
+import {
+  authInputClass,
+  authLabelClass,
+  authLinkSecondaryClass,
+  authPrimaryButtonClass,
+} from './authFieldClasses';
+
+const TIK_REGISTER_PREFILL_KEY = 'tik_register_prefill';
+const TIK_SELECTED_PLAN_KEY = 'tik_selected_plan';
 
 const RegisterCompany = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login } = useAuth();
   const prefillEmail = location.state?.prefillEmail || '';
   const prefillPassword = location.state?.prefillPassword || '';
@@ -82,31 +93,81 @@ const RegisterCompany = () => {
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
 
+  useEffect(() => {
+    let fromStorage = null;
+    try {
+      const raw = sessionStorage.getItem(TIK_REGISTER_PREFILL_KEY);
+      if (raw) {
+        fromStorage = JSON.parse(raw);
+        sessionStorage.removeItem(TIK_REGISTER_PREFILL_KEY);
+      }
+    } catch {
+      sessionStorage.removeItem(TIK_REGISTER_PREFILL_KEY);
+    }
+
+    const companyQ =
+      searchParams.get('company') ||
+      searchParams.get('companyName') ||
+      fromStorage?.companyName ||
+      '';
+    const emailQ = searchParams.get('email') || fromStorage?.email || '';
+    const passwordQ = fromStorage?.password || '';
+    const confirmQ =
+      fromStorage?.confirmPassword != null
+        ? fromStorage.confirmPassword
+        : passwordQ;
+
+    if (!companyQ && !emailQ && !passwordQ) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      ...(companyQ ? { companyName: companyQ } : {}),
+      ...(emailQ ? { email: emailQ } : {}),
+      ...(passwordQ ? { password: passwordQ } : {}),
+      ...(confirmQ ? { confirmPassword: confirmQ } : {}),
+    }));
+  }, [searchParams]);
+
+  useEffect(() => {
+    const plan = searchParams.get('plan');
+    if (!plan) return;
+    try {
+      sessionStorage.setItem(TIK_SELECTED_PLAN_KEY, plan);
+    } catch {
+      /* ignore */
+    }
+  }, [searchParams]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
+    <AuthPageLayout>
+      <div className="w-full max-w-app-form">
+        <div className="mb-s36 flex justify-center">
+          <div className="rounded-full bg-app-primary p-s16 shadow-none">
             <img
-              src="/absai-logo.png"
-              alt="ABSAI Logo"
-              className="w-24 h-24 object-contain"
+              src="/logo4.webp"
+              alt=""
+              className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]"
             />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{t(lang, 'createCompanyAccount')}</h1>
-          <p className="text-gray-400">{t(lang, 'setupWorkspace')}</p>
         </div>
 
-        <div className="bg-primary-800 rounded-2xl shadow-2xl p-8 border border-primary-700">
+        <div className="text-center">
+          <h1 className="text-[32px] font-bold leading-tight tracking-tight text-app-text">
+            {t(lang, 'createCompanyAccount')}
+          </h1>
+          <p className="mt-s8 text-[13px] leading-normal text-app-text-secondary">{t(lang, 'setupWorkspace')}</p>
+        </div>
+
+        <div className="mt-s36 w-full">
           {error && (
-            <div className="mb-6 bg-red-500 bg-opacity-10 border border-red-500 rounded-xl p-4">
-              <p className="text-red-200 text-sm">{error}</p>
+            <div className="mb-s24 rounded-app-input border border-app-error/40 bg-app-error/10 p-s16">
+              <p className="text-[13px] text-app-error">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-s20">
             <div>
-              <label htmlFor="companyName" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="companyName" className={authLabelClass}>
                 {t(lang, 'companyName')}
               </label>
               <input
@@ -117,13 +178,13 @@ const RegisterCompany = () => {
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50"
+                className={authInputClass}
                 placeholder="e.g. Acme Solutions"
               />
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="email" className={authLabelClass}>
                 {t(lang, 'workEmail')}
               </label>
               <input
@@ -134,13 +195,13 @@ const RegisterCompany = () => {
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50"
+                className={authInputClass}
                 placeholder="owner@company.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="password" className={authLabelClass}>
                 {t(lang, 'password')}
               </label>
               <input
@@ -151,13 +212,13 @@ const RegisterCompany = () => {
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50"
+                className={authInputClass}
                 placeholder="At least 6 characters"
               />
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-300 mb-2">
+              <label htmlFor="confirmPassword" className={authLabelClass}>
                 {t(lang, 'confirmPassword')}
               </label>
               <input
@@ -168,19 +229,15 @@ const RegisterCompany = () => {
                 onChange={handleChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 bg-primary-700 border border-primary-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent transition-all disabled:opacity-50"
+                className={authInputClass}
                 placeholder="Re-enter password"
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-secondary-500 to-secondary-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-secondary-600 hover:to-secondary-700 focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:ring-offset-2 focus:ring-offset-primary-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-xl flex items-center justify-center"
-            >
+            <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" />
+                  <Spinner size="sm" color="white" />
                   <span className="ml-2">{t(lang, 'creatingWorkspace')}</span>
                 </>
               ) : (
@@ -189,19 +246,19 @@ const RegisterCompany = () => {
             </button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-s24 text-center">
             <button
               type="button"
               onClick={() => navigate('/login')}
               disabled={loading}
-              className="text-secondary-400 hover:text-secondary-300 text-sm font-medium transition-colors disabled:opacity-50"
+              className={`${authLinkSecondaryClass} disabled:cursor-not-allowed`}
             >
               {t(lang, 'alreadyHaveAccount')}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </AuthPageLayout>
   );
 };
 

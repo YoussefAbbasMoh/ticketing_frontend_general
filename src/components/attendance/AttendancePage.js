@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
+import DownloadRounded from '@mui/icons-material/DownloadRounded';
+import { useNavigate } from 'react-router-dom';
 import { attendanceAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import Card from '../ui/Card';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
-import Spinner from '../ui/Spinner';
 import Alert from '../ui/Alert';
 import Modal from '../ui/Modal';
-import { getStoredLanguage } from '../../i18n';
+import AttendancePageSkeleton, { AttendanceTableSkeleton } from './AttendancePageSkeleton';
+import { getStoredLanguage, t as i18nT } from '../../i18n';
 
 /** For datetime-local inputs (browser local timezone) */
 const toLocalDateTimeValue = (iso) => {
@@ -127,9 +130,16 @@ const formatText = (template, vars = {}) =>
     );
 
 const AttendancePage = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
     const [lang, setLang] = useState(getStoredLanguage());
+    const locale = lang === 'ar' ? 'ar-EG' : 'en-US';
+    const isRtl = lang === 'ar';
+    const yearOptions = useMemo(() => {
+        const y = new Date().getFullYear();
+        return [y - 2, y - 1, y, y + 1, y + 2];
+    }, []);
     const tt = (key, vars) => {
         const value = TEXT[lang]?.[key] || TEXT.en[key] || key;
         return formatText(value, vars || {});
@@ -180,8 +190,7 @@ const AttendancePage = () => {
             setLoading(true);
             const response = await attendanceAPI.getMyAttendance(50);
             setLogs(response.data.logs || []);
-        } catch (err) {
-            console.error('Error fetching logs:', err);
+        } catch {
             setError(tt('failedFetchHistory'));
         } finally {
             setLoading(false);
@@ -198,7 +207,6 @@ const AttendancePage = () => {
             setAllLogs(response.data.logs || []);
             setTotalPages(response.data.pagination?.pages || 1);
         } catch (err) {
-            console.error('Error fetching all logs:', err);
             setError(err.response?.data?.message || tt('failedFetchSummary'));
         } finally {
             setLoading(false);
@@ -257,7 +265,6 @@ const AttendancePage = () => {
                 await fetchAllLogs();
             }
         } catch (err) {
-            console.error('Save attendance edit:', err);
             setError(err.response?.data?.message || tt('failedUpdate'));
         } finally {
             setSavingEdit(false);
@@ -310,7 +317,6 @@ const AttendancePage = () => {
                 }
             }, 120000);
         } catch (err) {
-            console.error('Error downloading report:', err);
             let msg = tt('failedDownload');
             const status = err.response?.status;
             const data = err.response?.data;
@@ -353,19 +359,52 @@ const AttendancePage = () => {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString();
+        return new Date(dateStr).toLocaleDateString(locale, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+        });
     };
 
     const formatTime = (dateStr) => {
         if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return new Date(dateStr).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
     };
 
+    const showFullPageSkeleton =
+        loading &&
+        activeTab === 'my_attendance' &&
+        logs.length === 0 &&
+        !error &&
+        !successMsg;
+
+    if (showFullPageSkeleton) {
+        return <AttendancePageSkeleton />;
+    }
+
     return (
-        <div className="container mx-auto max-w-7xl px-3 sm:px-4 lg:px-6 py-6 sm:py-8">
-            <div className="mb-6 sm:mb-8">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">{tt('title')}</h1>
-                <p className="text-sm sm:text-base text-gray-600">{tt('subtitle')}</p>
+        <div
+            className="min-h-screen bg-app-background pb-12 font-cairo text-app-text"
+            dir={isRtl ? 'rtl' : 'ltr'}
+        >
+            <div className="container mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
+            <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0 flex-1">
+                    <Button
+                        variant="ghost"
+                        onClick={() => navigate('/')}
+                        className="mb-4 border-app-border text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text"
+                        icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}
+                    >
+                        {i18nT(lang, 'home')}
+                    </Button>
+                    <h1 className="text-[22px] font-extrabold tracking-tight text-app-text sm:text-[28px]">
+                        {tt('title')}
+                    </h1>
+                    <p className="mt-1 text-[12px] leading-snug text-app-text-secondary sm:text-[13px]">
+                        {tt('subtitle')}
+                    </p>
+                </div>
             </div>
 
             {error && (
@@ -379,18 +418,31 @@ const AttendancePage = () => {
                 </div>
             )}
 
-            {/* Tabs */}
+            {/* Tabs — same chip style language as project filters */}
             {isManagerOrAdmin && (
-                <div className="flex border-b border-gray-200 mb-5 sm:mb-6">
+                <div className={`mb-6 flex flex-wrap gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <button
-                        className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeTab === 'my_attendance' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        type="button"
+                        className={`rounded-app-input px-4 py-2.5 text-sm font-bold transition-colors ${
+                            activeTab === 'my_attendance'
+                                ? 'bg-app-primary text-white shadow-app-soft'
+                                : 'border border-app-border bg-app-surface-variant text-app-text-secondary hover:bg-app-border/40'
+                        }`}
                         onClick={() => setActiveTab('my_attendance')}
                     >
                         {tt('myAttendance')}
                     </button>
                     <button
-                        className={`py-2 px-4 font-medium text-sm focus:outline-none ${activeTab === 'summary' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
-                        onClick={() => { setActiveTab('summary'); setPage(1); }}
+                        type="button"
+                        className={`rounded-app-input px-4 py-2.5 text-sm font-bold transition-colors ${
+                            activeTab === 'summary'
+                                ? 'bg-app-primary text-white shadow-app-soft'
+                                : 'border border-app-border bg-app-surface-variant text-app-text-secondary hover:bg-app-border/40'
+                        }`}
+                        onClick={() => {
+                            setActiveTab('summary');
+                            setPage(1);
+                        }}
                     >
                         {tt('attendanceSummary')}
                     </button>
@@ -399,53 +451,62 @@ const AttendancePage = () => {
 
             {/* Admin Report Section - Only visible in Summary Tab for Admins/Managers */}
             {isManagerOrAdmin && activeTab === 'summary' && (
-                <Card className="mb-8 border-l-4 border-purple-500">
-                    <Card.Content className="p-4 sm:p-6">
-                        <div className="flex flex-col sm:flex-row justify-between items-end gap-4">
-                            <div>
-                                <h2 className="text-lg sm:text-xl font-bold text-gray-800 mb-1">{tt('generateMonthly')}</h2>
-                                <p className="text-sm text-gray-600">{tt('downloadForAll')}</p>
+                <Card className="mb-8 shadow-app-card">
+                    <Card.Content className="p-5 sm:p-6">
+                        <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                            <div className="min-w-0">
+                                <h2 className="text-[18px] font-extrabold tracking-tight text-app-text">
+                                    {tt('generateMonthly')}
+                                </h2>
+                                <p className="mt-0.5 text-[12px] text-app-text-secondary">{tt('downloadForAll')}</p>
                             </div>
-                            <div className="flex flex-wrap items-end gap-4 w-full sm:w-auto">
+                            <div className={`flex w-full flex-wrap items-end gap-4 sm:w-auto ${isRtl ? 'sm:flex-row-reverse' : ''}`}>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('month')}</label>
+                                    <label htmlFor="report-month" className="mb-1 block text-xs font-semibold text-app-text-secondary">
+                                        {tt('month')}
+                                    </label>
                                     <select
+                                        id="report-month"
                                         value={reportMonth}
                                         onChange={(e) => {
                                             setReportMonth(parseInt(e.target.value, 10));
                                             setPage(1);
                                         }}
-                                        className="block w-32 rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 border"
+                                        className="block w-36 rounded-app-input border border-app-border bg-app-surface py-2.5 pl-3 pr-3 text-sm font-semibold text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                     >
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                            <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('default', { month: 'long' })}</option>
+                                        {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                            <option key={m} value={m}>
+                                                {new Date(2000, m - 1, 1).toLocaleString(locale, { month: 'long' })}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('year')}</label>
+                                    <label htmlFor="report-year" className="mb-1 block text-xs font-semibold text-app-text-secondary">
+                                        {tt('year')}
+                                    </label>
                                     <select
+                                        id="report-year"
                                         value={reportYear}
                                         onChange={(e) => {
                                             setReportYear(parseInt(e.target.value, 10));
                                             setPage(1);
                                         }}
-                                        className="block w-24 rounded-lg border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 border"
+                                        className="block w-28 rounded-app-input border border-app-border bg-app-surface py-2.5 pl-3 pr-3 text-sm font-semibold text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                     >
-                                        {[2024, 2025, 2026, 2027].map(y => (
-                                            <option key={y} value={y}>{y}</option>
+                                        {yearOptions.map((y) => (
+                                            <option key={y} value={y}>
+                                                {y}
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
                                 <Button
+                                    variant="secondary"
                                     onClick={handleDownloadReport}
                                     disabled={downloading}
-                                    className="w-full sm:w-auto"
-                                    icon={
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
-                                    }
+                                    className="w-full shadow-app-soft sm:w-auto"
+                                    icon={<DownloadRounded sx={{ fontSize: 22 }} />}
                                 >
                                     {downloading ? tt('downloading') : tt('downloadExcel')}
                                 </Button>
@@ -455,47 +516,70 @@ const AttendancePage = () => {
                 </Card>
             )}
 
-            {/* List Content */}
-            <Card>
-                <Card.Content className="p-0 overflow-hidden">
+            {/* Records table */}
+            <Card className="shadow-app-card">
+                <Card.Content className="overflow-hidden p-0">
                     {loading ? (
-                        <div className="p-12 text-center">
-                            <Spinner size="lg" color="primary" />
-                            <p className="mt-4 text-gray-500">{tt('loadingRecords')}</p>
-                        </div>
+                        <AttendanceTableSkeleton />
                     ) : (
                         <>
                             {activeTab === 'my_attendance' ? (
                                 // My Attendance Table
                                 logs.length === 0 ? (
-                                    <div className="p-12 text-center text-gray-500">
-                                        <p>{tt('noPersonalRecords')}</p>
+                                    <div className="p-12 text-center text-app-text-secondary">
+                                        <p className="text-sm font-medium">{tt('noPersonalRecords')}</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-50">
+                                    <div className="overflow-x-auto rounded-app-input border border-app-divider">
+                                        <table className="min-w-full border-collapse divide-y divide-app-divider">
+                                            <thead className="bg-app-surface-variant">
                                                 <tr>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('date')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkIn')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkOut')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('duration')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('status')}</th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('date')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkIn')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkOut')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('duration')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('status')}
+                                                    </th>
                                                     {isManagerOrAdmin && (
-                                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('actions')}</th>
+                                                        <th className="px-4 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                            {tt('actions')}
+                                                        </th>
                                                     )}
                                                 </tr>
                                             </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-app-divider bg-app-surface">
                                                 {logs.map((log) => (
-                                                    <tr key={log._id} className="hover:bg-gray-50">
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{formatDate(log.date)}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">{tt('active')}</span>}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
+                                                    <tr key={log._id} className="transition-colors hover:bg-app-primary/[0.04]">
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm font-semibold text-app-text sm:px-6">
+                                                            {formatDate(log.date)}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {formatTime(log.checkIn)}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {log.checkOut ? (
+                                                                formatTime(log.checkOut)
+                                                            ) : (
+                                                                <span className="font-semibold text-emerald-800">{tt('active')}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 sm:px-6">
+                                                            <Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge>
+                                                        </td>
                                                         {isManagerOrAdmin && (
-                                                            <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right">
+                                                            <td className="whitespace-nowrap px-4 py-4 text-right sm:px-6">
                                                                 <Button
                                                                     type="button"
                                                                     variant="secondary"
@@ -515,45 +599,79 @@ const AttendancePage = () => {
                             ) : (
                                 // All Attendance Table (Summary)
                                 allLogs.length === 0 ? (
-                                    <div className="p-12 text-center text-gray-500">
-                                        <p>{tt('noRecords')}</p>
+                                    <div className="p-12 text-center text-app-text-secondary">
+                                        <p className="text-sm font-medium">{tt('noRecords')}</p>
                                     </div>
                                 ) : (
-                                    <div className="overflow-x-auto">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                            <thead className="bg-gray-50">
+                                    <div className="overflow-x-auto rounded-app-input border border-app-divider">
+                                        <table className="min-w-full border-collapse divide-y divide-app-divider">
+                                            <thead className="bg-app-surface-variant">
                                                 <tr>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('user')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('role')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('date')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkIn')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('checkOut')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('duration')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('status')}</th>
-                                                    <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">{tt('actions')}</th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('user')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('role')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('date')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkIn')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkOut')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('duration')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('status')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('actions')}
+                                                    </th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="bg-white divide-y divide-gray-200">
+                                            <tbody className="divide-y divide-app-divider bg-app-surface">
                                                 {allLogs.map((log) => (
-                                                    <tr key={log._id} className="hover:bg-gray-50">
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                                                            <div className="flex items-center">
-                                                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
+                                                    <tr key={log._id} className="transition-colors hover:bg-app-primary/[0.04]">
+                                                        <td className="whitespace-nowrap px-4 py-4 sm:px-6">
+                                                            <div className={`flex items-center gap-3 ${isRtl ? 'flex-row-reverse' : ''}`}>
+                                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-app-primary/12 text-xs font-bold text-app-primary">
                                                                     {log.user?.name ? log.user.name.slice(0, 2).toUpperCase() : '??'}
                                                                 </div>
-                                                                <div className="ms-3">
-                                                                    <div className="text-sm font-medium text-gray-900">{log.user?.name || tt('unknown')}</div>
-                                                                    <div className="text-xs text-gray-500">{log.user?.email}</div>
+                                                                <div className="min-w-0">
+                                                                    <div className="text-sm font-semibold text-app-text">
+                                                                        {log.user?.name || tt('unknown')}
+                                                                    </div>
+                                                                    <div className="truncate text-xs text-app-text-secondary">{log.user?.email}</div>
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">{log.user?.role || '-'}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatDate(log.date)}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(log.checkIn)}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.checkOut ? formatTime(log.checkOut) : <span className="text-green-600 font-medium">{tt('active')}</span>}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}</td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap"><Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge></td>
-                                                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right">
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm capitalize text-app-text-secondary sm:px-6">
+                                                            {log.user?.role || '-'}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-app-text sm:px-6">
+                                                            {formatDate(log.date)}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {formatTime(log.checkIn)}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {log.checkOut ? (
+                                                                formatTime(log.checkOut)
+                                                            ) : (
+                                                                <span className="font-semibold text-emerald-800">{tt('active')}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 sm:px-6">
+                                                            <Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge>
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-4 text-right sm:px-6">
                                                             <Button
                                                                 type="button"
                                                                 variant="secondary"
@@ -576,7 +694,7 @@ const AttendancePage = () => {
 
                 {/* Pagination for Summary Tab */}
                 {activeTab === 'summary' && !loading && totalPages > 1 && (
-                    <Card.Footer className="px-4 sm:px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                    <Card.Footer className="flex items-center justify-between border-t border-app-divider px-4 py-4 sm:px-6">
                         <Button
                             variant="secondary"
                             disabled={page === 1}
@@ -585,7 +703,7 @@ const AttendancePage = () => {
                         >
                             {tt('previous')}
                         </Button>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm font-medium text-app-text-secondary">
                             {tt('pageOf', { page, total: totalPages })}
                         </span>
                         <Button
@@ -600,28 +718,33 @@ const AttendancePage = () => {
                 )}
             </Card>
 
-            <Modal isOpen={editOpen} onClose={closeEditModal} size="lg">
-                <Modal.Header onClose={closeEditModal}>{tt('editAttendance')}</Modal.Header>
+            <Modal isOpen={editOpen} onClose={closeEditModal} size="lg" className="font-cairo">
+                <Modal.Header onClose={closeEditModal} className="border-app-divider">
+                    {tt('editAttendance')}
+                </Modal.Header>
                 <Modal.Content>
                     {editRecord && (
                         <div className="space-y-4">
-                            <p className="text-sm text-gray-600">
-                                <span className="font-medium text-gray-800">{editRecord.user?.name || user?.name}</span>
+                            <p className="text-sm text-app-text-secondary">
+                                <span className="font-semibold text-app-text">{editRecord.user?.name || user?.name}</span>
                                 {' · '}
                                 {editRecord.user?.email || user?.email}
                                 {' · '}
-                                {tt('date')}: <span className="font-mono">{editRecord.date}</span>
+                                {tt('date')}: <span className="font-mono text-app-text">{editRecord.date}</span>
                             </p>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('checkIn')}</label>
+                                <label className="mb-1 block text-sm font-semibold text-app-text" htmlFor="edit-check-in">
+                                    {tt('checkIn')}
+                                </label>
                                 <input
+                                    id="edit-check-in"
                                     type="datetime-local"
                                     value={editCheckIn}
                                     onChange={(e) => setEditCheckIn(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                 />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
                                 <input
                                     id="edit-open-session"
                                     type="checkbox"
@@ -630,29 +753,35 @@ const AttendancePage = () => {
                                         setEditOpenSession(e.target.checked);
                                         if (e.target.checked) setEditCheckOut('');
                                     }}
-                                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    className="h-4 w-4 rounded border-app-border text-app-primary focus:ring-app-primary"
                                 />
-                                <label htmlFor="edit-open-session" className="text-sm text-gray-700">
+                                <label htmlFor="edit-open-session" className="text-sm text-app-text">
                                     {tt('openSession')}
                                 </label>
                             </div>
                             {!editOpenSession && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">{tt('checkOut')}</label>
+                                    <label className="mb-1 block text-sm font-semibold text-app-text" htmlFor="edit-check-out">
+                                        {tt('checkOut')}
+                                    </label>
                                     <input
+                                        id="edit-check-out"
                                         type="datetime-local"
                                         value={editCheckOut}
                                         onChange={(e) => setEditCheckOut(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                        className="w-full rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                     />
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('status')}</label>
+                                <label className="mb-1 block text-sm font-semibold text-app-text" htmlFor="edit-status">
+                                    {tt('status')}
+                                </label>
                                 <select
+                                    id="edit-status"
                                     value={editStatus}
                                     onChange={(e) => setEditStatus(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm font-medium text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                 >
                                     <option value="present">present</option>
                                     <option value="half-day">half-day</option>
@@ -660,19 +789,22 @@ const AttendancePage = () => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">{tt('note')}</label>
+                                <label className="mb-1 block text-sm font-semibold text-app-text" htmlFor="edit-note">
+                                    {tt('note')}
+                                </label>
                                 <textarea
+                                    id="edit-note"
                                     value={editNote}
                                     onChange={(e) => setEditNote(e.target.value)}
                                     rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                                    className="w-full rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                     placeholder={tt('optionalNote')}
                                 />
                             </div>
                         </div>
                     )}
                 </Modal.Content>
-                <Modal.Footer>
+                <Modal.Footer className="border-app-divider">
                     <Button type="button" variant="secondary" onClick={closeEditModal} disabled={savingEdit}>
                         {tt('cancel')}
                     </Button>
@@ -681,6 +813,7 @@ const AttendancePage = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
+            </div>
         </div>
     );
 };

@@ -1,10 +1,10 @@
 {
-  "short_name": "ABSAI TMS",
-  "name": "ABSAI Ticket Management System",
+  "short_name": "tik.",
+  "name": "tik. Management System",
   "description": "Manage your projects and tickets efficiently with real-time notifications",
   "icons": [
     {
-      "src": "absai-logo.png",
+      "src": "logo1.webp",
       "sizes": "64x64 32x32 24x24 16x16",
       "type": "image/png",
       "purpose": "any"
@@ -36,14 +36,14 @@
       "short_name": "New Ticket",
       "description": "Create a new ticket",
       "url": "/project/new-ticket",
-      "icons": [{ "src": "absai-logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "logo1.webp", "sizes": "96x96" }]
     },
     {
       "name": "Chat",
       "short_name": "Chat",
       "description": "Open chat",
       "url": "/chat",
-      "icons": [{ "src": "absai-logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "logo1.webp", "sizes": "96x96" }]
     }
   ],
   "prefer_related_applications": false

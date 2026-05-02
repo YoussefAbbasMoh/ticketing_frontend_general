@@ -253,7 +253,7 @@ const VoiceRecorder = ({ onRecorded, recording, setRecording, disabled = false }
           type="button"
           onClick={startRecording}
           disabled={disabled}
-          className="p-2 sm:p-2.5 text-gray-500 hover:text-secondary hover:bg-secondary/10 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+          className="flex-shrink-0 rounded-lg p-2 text-app-text-secondary transition-all hover:bg-orange/10 hover:text-orange disabled:cursor-not-allowed disabled:opacity-50 sm:p-2.5"
           title="Record voice message"
         >
           <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

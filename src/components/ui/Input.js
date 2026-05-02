@@ -13,12 +13,11 @@ const Input = ({
   ...props 
 }) => {
   const inputClasses = `
-    w-full px-4 py-2.5 text-base
-    border-2 rounded-lg
+    w-full rounded-app-input border px-4 py-[14px] text-[14px] text-app-text
     transition-all duration-200
-    focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent
-    disabled:bg-gray-100 disabled:cursor-not-allowed
-    ${error ? 'border-red-500' : 'border-gray-300 hover:border-gray-400'}
+    focus:outline-none focus:ring-2 focus:ring-[#080936]/20 focus:border-app-primary
+    disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-app-surface-variant
+    ${error ? 'border-app-error' : 'border-app-border bg-app-surface hover:border-app-text-tertiary'}
     ${icon ? 'pl-11' : ''}
     ${className}
   `;
@@ -26,14 +25,14 @@ const Input = ({
   return (
     <div className={`${fullWidth ? 'w-full' : ''}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+        <label className="mb-s8 block text-[13px] font-semibold text-app-text-secondary">
           {label}
           {required && <span className="text-red-500 ml-1">*</span>}
         </label>
       )}
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-secondary">
             {icon}
           </div>
         )}
@@ -45,7 +44,7 @@ const Input = ({
         />
       </div>
       {(error || helperText) && (
-        <p className={`mt-1.5 text-sm ${error ? 'text-red-500' : 'text-gray-500'}`}>
+        <p className={`mt-1.5 text-[13px] ${error ? 'text-app-error' : 'text-app-text-secondary'}`}>
           {error || helperText}
         </p>
       )}

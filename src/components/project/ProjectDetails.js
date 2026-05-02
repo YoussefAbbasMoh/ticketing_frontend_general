@@ -1,4 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import AddRounded from '@mui/icons-material/AddRounded';
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
+import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
+import ChatRounded from '@mui/icons-material/ChatRounded';
+import CloseRounded from '@mui/icons-material/CloseRounded';
+import ConfirmationNumberOutlined from '@mui/icons-material/ConfirmationNumberOutlined';
+import EditRounded from '@mui/icons-material/EditRounded';
+import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
+import SearchRounded from '@mui/icons-material/SearchRounded';
+import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
+import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import { CircularProgress } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectAPI, ticketAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,7 +19,7 @@ import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
-import Spinner from '../ui/Spinner';
+import ProjectDetailsSkeleton from './ProjectDetailsSkeleton';
 import { getStoredLanguage } from '../../i18n';
 
 const TEXT = {
@@ -157,6 +169,7 @@ const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fatalError, setFatalError] = useState('');
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -173,8 +186,52 @@ const ProjectDetails = () => {
   };
 
   useEffect(() => {
-    fetchProjectDetails();
-    fetchTickets();
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setFatalError('');
+      setError('');
+      setProject(null);
+      setTickets([]);
+
+      const [pRes, tRes] = await Promise.allSettled([
+        projectAPI.getProject(projectId),
+        ticketAPI.getMyTickets(projectId),
+      ]);
+
+      if (cancelled) return;
+
+      if (pRes.status === 'fulfilled') {
+        const d = pRes.value?.data;
+        const proj = d?.project || d;
+        if (proj && (proj._id || proj.id)) {
+          setProject(proj);
+        } else {
+          setFatalError(tx('failedProjectDetails'));
+        }
+      } else {
+        setFatalError(tx('failedProjectDetails'));
+      }
+
+      if (tRes.status === 'fulfilled') {
+        const d = tRes.value?.data;
+        const ticketData = d?.tickets || d || [];
+        setTickets(Array.isArray(ticketData) ? ticketData : []);
+      } else {
+        setTickets([]);
+        if (pRes.status === 'fulfilled') {
+          setError(tx('failedTickets'));
+        }
+      }
+
+      setLoading(false);
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   useEffect(() => {
@@ -182,32 +239,6 @@ const ProjectDetails = () => {
     window.addEventListener('language-changed', onLanguageChanged);
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
-
-  const fetchProjectDetails = async () => {
-    try {
-      const response = await projectAPI.getProject(projectId);
-      setProject(response.data.project || response.data);
-      console.log('Project data:', response.data);
-    } catch (error) {
-      setError(tx('failedProjectDetails'));
-      console.error('Error fetching project:', error);
-    }
-  };
-
-  const fetchTickets = async () => {
-    try {
-      const response = await ticketAPI.getMyTickets(projectId);
-      const ticketData = response.data.tickets || response.data || [];
-      setTickets(Array.isArray(ticketData) ? ticketData : []);
-      console.log('Tickets data:', ticketData);
-    } catch (error) {
-      setError(tx('failedTickets'));
-      console.error('Error fetching tickets:', error);
-      setTickets([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -230,23 +261,14 @@ const ProjectDetails = () => {
     }
   };
 
+  const locale = lang === 'ar' ? 'ar-EG' : 'en-US';
+
   const formatDate = (dateString) => {
     if (!dateString) return tx('na');
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return new Date(dateString).toLocaleDateString(locale, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
-    });
-  };
-
-  const formatDateTime = (dateString) => {
-    if (!dateString) return tx('na');
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -260,10 +282,10 @@ const ProjectDetails = () => {
   };
 
   const getRemainingDaysColor = (days) => {
-    if (days < 0) return 'text-red-600 bg-red-50';
-    if (days <= 7) return 'text-orange-600 bg-orange-50';
-    if (days <= 30) return 'text-yellow-600 bg-yellow-50';
-    return 'text-green-600 bg-green-50';
+    if (days < 0) return 'border-red-800/30 bg-red-50 text-red-900';
+    if (days <= 7) return 'border-orange/35 bg-orange-50 text-orange-950';
+    if (days <= 30) return 'border-amber-800/30 bg-amber-50 text-amber-950';
+    return 'border-emerald-800/25 bg-emerald-50 text-emerald-950';
   };
 
   const getRemainingDaysText = (days) => {
@@ -321,9 +343,8 @@ const ProjectDetails = () => {
       const successMsg = tx('statusUpdated', { status: newStatus });
       setError(''); // Clear any errors
       // You could add a success state here if needed
-    } catch (error) {
-      setError(error.response?.data?.message || tx('failedStatusUpdate'));
-      console.error('Error updating status:', error);
+    } catch (err) {
+      setError(err.response?.data?.message || tx('failedStatusUpdate'));
     } finally {
       setUpdatingStatus(false);
     }
@@ -353,55 +374,62 @@ const ProjectDetails = () => {
   const daysText = getRemainingDaysText(remainingDays);
 
   if (loading) {
+    return <ProjectDetailsSkeleton />;
+  }
+
+  if (fatalError || !project) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen gap-4">
-        <Spinner size="xl" color="secondary" />
-        <p className="text-gray-600">{tx('loadingProjectDetails')}</p>
+      <div className="min-h-screen bg-app-background px-4 py-12 font-cairo">
+        <div className="mx-auto max-w-lg rounded-app border border-app-divider bg-app-surface p-8 shadow-app-card">
+          <Alert variant="error">{fatalError || tx('failedProjectDetails')}</Alert>
+          <Button variant="ghost" className="mt-6" onClick={() => navigate('/')} icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}>
+            {tx('backToProjects')}
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-12">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-6 sm:py-8 max-w-7xl">
+    <div className="min-h-screen bg-app-background pb-12 font-cairo text-app-text">
+      <div className="container mx-auto max-w-7xl px-3 py-6 sm:px-4 sm:py-8 lg:px-6">
         {/* Header */}
         <div className="mb-8">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}
-            className="mb-6 text-gray-600 hover:text-primary"
-            icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            }
+            className="mb-6 border-app-border text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text"
+            icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}
           >
             {tx('backToProjects')}
           </Button>
 
-          <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2 flex-wrap">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent">
-                  {project?.project_name}
+          <div className="mb-6 flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
+            <div className="min-w-0 flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-extrabold tracking-tight text-app-text sm:text-4xl">
+                  {project?.project_name || tx('untitledProject')}
                 </h1>
                 <Badge variant={getStatusColor(project?.status)} size="lg">
-                  {project?.status || tx('unknown')}
+                  {(project?.status || tx('unknown')).replace(/_/g, ' ')}
                 </Badge>
               </div>
-              <p className="text-gray-600 mb-3">{tx('projectOverview')}</p>
-              
-              {/* Status Changer - Admin Only */}
+              <p className="mb-4 text-[13px] leading-snug text-app-text-secondary">{tx('projectOverview')}</p>
+
               {isAdmin() && (
-                <div className="flex items-center gap-3">
-                  <label className="text-sm font-medium text-gray-700">{tx('changeStatus')}</label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <label htmlFor="project-status-select" className="text-sm font-semibold text-app-text">
+                    {tx('changeStatus')}
+                  </label>
                   <div className="relative">
                     <select
+                      id="project-status-select"
                       value={project?.status || ''}
                       onChange={(e) => handleStatusChange(e.target.value)}
                       disabled={updatingStatus}
-                      className={`px-4 py-2 pr-10 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200 text-sm font-medium ${
-                        updatingStatus ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer'
+                      aria-busy={updatingStatus}
+                      className={`rounded-app-input border border-app-border bg-app-surface py-2.5 pl-4 pr-10 text-sm font-semibold text-app-text shadow-app-soft transition-colors focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
+                        updatingStatus ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-app-text-tertiary'
                       }`}
                     >
                       <option value="active">{tx('active')}</option>
@@ -410,8 +438,8 @@ const ProjectDetails = () => {
                       <option value="cancelled">{tx('cancelled')}</option>
                     </select>
                     {updatingStatus && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <Spinner size="sm" color="secondary" />
+                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                        <CircularProgress size={18} sx={{ color: '#080936' }} />
                       </div>
                     )}
                   </div>
@@ -419,25 +447,20 @@ const ProjectDetails = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 flex-wrap gap-2 sm:gap-3">
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="lg"
                 onClick={async () => {
                   try {
                     await getProjectConversation(projectId);
                     navigate('/chat');
-                  } catch (error) {
-                    console.error('Error opening project chat:', error);
+                  } catch {
                     alert(tx('openProjectChatError'));
                   }
                 }}
-                className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                icon={
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                }
+                className="border-2 border-app-primary/25 shadow-app-soft hover:bg-app-primary/[0.06]"
+                icon={<ChatRounded sx={{ fontSize: 22 }} />}
               >
                 {tx('openProjectChat')}
               </Button>
@@ -445,12 +468,8 @@ const ProjectDetails = () => {
                 variant="secondary"
                 size="lg"
                 onClick={() => navigate(`/project/${projectId}/new-ticket`)}
-                className="shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-                icon={
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                }
+                className="shadow-app-soft"
+                icon={<AddRounded sx={{ fontSize: 22 }} />}
               >
                 {tx('newTicket')}
               </Button>
@@ -466,63 +485,57 @@ const ProjectDetails = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {/* Timeline Card */}
-          <Card hover>
+        {/* Stats — design tokens + MUI icons */}
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+          <Card className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-app-card">
             <Card.Content className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-app-input bg-app-primary/10 text-app-primary">
+                  <CalendarTodayOutlined sx={{ fontSize: 26 }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">{tx('timeline')}</h3>
+                <h3 className="text-base font-bold text-app-text">{tx('timeline')}</h3>
               </div>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">{tx('startDate')}</p>
-                  <p className="text-sm font-semibold text-gray-700">{formatDate(project?.start_date)}</p>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-app-text-secondary">{tx('startDate')}</p>
+                  <p className="text-sm font-semibold text-app-text">{formatDate(project?.start_date)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500 mb-1">{tx('endDate')}</p>
-                  <p className="text-sm font-semibold text-gray-700">{formatDate(project?.estimated_end_date)}</p>
+                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-app-text-secondary">{tx('endDate')}</p>
+                  <p className="text-sm font-semibold text-app-text">{formatDate(project?.estimated_end_date)}</p>
                 </div>
                 {remainingDays !== null && (
-                  <div className={`p-2 rounded-lg ${daysColor}`}>
-                    <p className="text-xs font-semibold">{daysText}</p>
+                  <div className={`rounded-app-input border-2 p-2.5 ${daysColor}`}>
+                    <p className="text-xs font-bold">{daysText}</p>
                   </div>
                 )}
               </div>
             </Card.Content>
           </Card>
 
-          {/* Team Members Card */}
-          <Card hover>
+          <Card className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-app-card">
             <Card.Content className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-app-input bg-emerald-50 text-emerald-800">
+                  <GroupsOutlined sx={{ fontSize: 26 }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">{tx('team')}</h3>
+                <h3 className="text-base font-bold text-app-text">{tx('team')}</h3>
               </div>
-              <p className="text-3xl font-bold text-primary mb-1">{project?.assigned_users?.length || 0}</p>
-              <p className="text-xs text-gray-500 mb-3">{tx('activeMembers')}</p>
+              <p className="mb-1 text-3xl font-extrabold tabular-nums text-app-text">{project?.assigned_users?.length || 0}</p>
+              <p className="mb-3 text-xs text-app-text-secondary">{tx('activeMembers')}</p>
               {project?.assigned_users && project.assigned_users.length > 0 && (
                 <div className="flex -space-x-2">
                   {project.assigned_users.slice(0, 5).map((user, index) => (
                     <div
                       key={index}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold border-2 border-white"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-app-surface bg-app-primary text-xs font-bold text-white"
                       title={user.name}
                     >
                       {getInitials(user.name)}
                     </div>
                   ))}
                   {project.assigned_users.length > 5 && (
-                    <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-700 text-xs font-bold border-2 border-white">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-app-surface bg-app-surface-variant text-xs font-bold text-app-text">
                       +{project.assigned_users.length - 5}
                     </div>
                   )}
@@ -531,185 +544,164 @@ const ProjectDetails = () => {
             </Card.Content>
           </Card>
 
-          {/* Total Tickets Card */}
-          <Card hover>
+          <Card className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-app-card">
             <Card.Content className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-app-input bg-sky-50 text-sky-900">
+                  <ConfirmationNumberOutlined sx={{ fontSize: 26 }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">{tx('tickets')}</h3>
+                <h3 className="text-base font-bold text-app-text">{tx('tickets')}</h3>
               </div>
-              <p className="text-3xl font-bold text-primary mb-1">{stats.total}</p>
-              <p className="text-xs text-gray-500">{tx('totalTickets')}</p>
+              <p className="mb-1 text-3xl font-extrabold tabular-nums text-app-text">{stats.total}</p>
+              <p className="text-xs text-app-text-secondary">{tx('totalTickets')}</p>
             </Card.Content>
           </Card>
 
-          {/* Open Tickets Card */}
-          <Card hover>
+          <Card className="transition-all duration-300 hover:-translate-y-0.5 hover:shadow-app-card">
             <Card.Content className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-app-input bg-orange/15 text-orange-dark">
+                  <ScheduleRounded sx={{ fontSize: 26 }} />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-800">{tx('open')}</h3>
+                <h3 className="text-base font-bold text-app-text">{tx('open')}</h3>
               </div>
-              <p className="text-3xl font-bold text-green-600 mb-1">{stats.open}</p>
-              <p className="text-xs text-gray-500">{tx('openTickets')}</p>
+              <p className="mb-1 text-3xl font-extrabold tabular-nums text-emerald-900">{stats.open}</p>
+              <p className="text-xs text-app-text-secondary">{tx('openTickets')}</p>
             </Card.Content>
           </Card>
         </div>
 
-        {/* Tickets Table */}
-        <Card>
-          <Card.Content className="p-6">
-            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-              <h2 className="text-2xl font-bold text-gray-800">{tx('allTickets')} ({filteredTickets.length})</h2>
+        {/* Tickets table */}
+        <Card className="shadow-app-card">
+          <Card.Content className="p-5 sm:p-6">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-[18px] font-extrabold tracking-tight text-app-text">
+                  {tx('allTickets')} ({filteredTickets.length})
+                </h2>
+              </div>
             </div>
 
-            {/* Search and Filter Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-              {/* Search Bar */}
-              <div className="relative flex-1 max-w-md">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative max-w-md flex-1">
+                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-tertiary">
+                  <SearchRounded sx={{ fontSize: 22 }} />
                 </div>
                 <input
-                  type="text"
+                  type="search"
                   placeholder={tx('searchByTicketId')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
+                  aria-label={tx('searchByTicketId')}
+                  className="w-full rounded-app-input border border-app-border bg-app-surface py-2.5 pl-10 pr-10 text-sm font-medium text-app-text shadow-app-soft transition-colors hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                 />
                 {searchQuery && (
                   <button
+                    type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-text-tertiary hover:text-app-text"
+                    aria-label="Clear search"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <CloseRounded sx={{ fontSize: 22 }} />
                   </button>
                 )}
               </div>
 
-              {/* Filter Buttons */}
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setFilter('all')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    filter === 'all'
-                      ? 'bg-primary text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tx('all')}
-                </button>
-                <button
-                  onClick={() => setFilter('open')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    filter === 'open'
-                      ? 'bg-green-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tx('open')} ({stats.open})
-                </button>
-                <button
-                  onClick={() => setFilter('in_progress')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    filter === 'in_progress'
-                      ? 'bg-yellow-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tx('inProgress')} ({stats.inProgress})
-                </button>
-                <button
-                  onClick={() => setFilter('pending')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    filter === 'pending'
-                      ? 'bg-orange-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tx('pending')} ({stats.pending})
-                </button>
-                <button
-                  onClick={() => setFilter('resolved')}
-                  className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                    filter === 'resolved'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tx('resolved')} ({stats.resolved})
-                </button>
+                {[
+                  { key: 'all', label: tx('all'), activeClass: 'bg-app-primary text-white shadow-app-soft' },
+                  { key: 'open', label: `${tx('open')} (${stats.open})`, activeClass: 'bg-emerald-800 text-white shadow-app-soft' },
+                  { key: 'in_progress', label: `${tx('inProgress')} (${stats.inProgress})`, activeClass: 'bg-amber-700 text-white shadow-app-soft' },
+                  { key: 'pending', label: `${tx('pending')} (${stats.pending})`, activeClass: 'bg-orange-dark text-white shadow-app-soft' },
+                  { key: 'resolved', label: `${tx('resolved')} (${stats.resolved})`, activeClass: 'bg-sky-800 text-white shadow-app-soft' },
+                ].map(({ key, label, activeClass }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key)}
+                    className={`rounded-app-input px-3 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                      filter === key
+                        ? activeClass
+                        : 'border border-app-border bg-app-surface-variant text-app-text-secondary hover:bg-app-border/40'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
 
             {filteredTickets.length === 0 ? (
-              <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <svg className="w-10 h-10 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+              <div className="rounded-app-input border-2 border-dashed border-app-border bg-app-background/80 py-14 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-app-primary/10 text-app-primary">
+                  <DescriptionOutlined sx={{ fontSize: 36 }} />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">{tx('noTicketsFound')}</h3>
-                <p className="text-gray-600 mb-6">
+                <h3 className="mb-2 text-lg font-bold text-app-text">{tx('noTicketsFound')}</h3>
+                <p className="mb-6 text-sm text-app-text-secondary">
                   {filter === 'all'
                     ? tx('createFirstTicketHint')
-                    : tx('noTicketsWithStatus', { status: filter })
-                  }
+                    : tx('noTicketsWithStatus', { status: filter.replace(/_/g, ' ') })}
                 </p>
                 {filter === 'all' && (
                   <Button
                     variant="secondary"
                     size="lg"
                     onClick={() => navigate(`/project/${projectId}/new-ticket`)}
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    }
+                    icon={<AddRounded sx={{ fontSize: 22 }} />}
                   >
                     {tx('createFirstTicket')}
                   </Button>
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div className="overflow-x-auto rounded-app-input border border-app-divider">
+                <table className="w-full min-w-[920px] border-collapse">
                   <thead>
-                    <tr className="bg-gray-50 border-b-2 border-gray-200">
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('ticketId')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('status')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider w-48 min-w-48">{tx('priority')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('sender')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('receiver')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('description')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('cc')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('created')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('endDate')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('comments')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">{tx('actions')}</th>
+                    <tr className="border-b border-app-divider bg-app-surface-variant">
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('ticketId')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('status')}
+                      </th>
+                      <th className="min-w-48 w-48 px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('priority')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('sender')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('receiver')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('description')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('cc')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('created')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('endDate')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('comments')}
+                      </th>
+                      <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary">
+                        {tx('actions')}
+                      </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="divide-y divide-app-divider bg-app-surface">
                     {filteredTickets.map((ticket) => (
                       <tr 
                         key={ticket._id} 
                         onClick={() => navigate(`/ticket/${ticket._id}/edit`)}
-                        className="hover:bg-blue-50 transition-colors cursor-pointer"
+                        className="cursor-pointer transition-colors hover:bg-app-primary/[0.04]"
                       >
                         <td className="px-4 py-4">
-                          <p className="text-sm font-semibold text-gray-900">{ticket.ticket || tx('na')}</p>
+                          <p className="text-sm font-semibold text-app-text">{ticket.ticket || tx('na')}</p>
                         </td>
                         <td className="px-4 py-4">
                           <Badge variant={getStatusColor(ticket.status)} size="sm">
@@ -731,22 +723,22 @@ const ProjectDetails = () => {
                                ticket.priority}
                             </Badge>
                           ) : (
-                            <span className="text-xs text-gray-400 italic">{tx('notSet')}</span>
+                            <span className="text-xs italic text-app-text-tertiary">{tx('notSet')}</span>
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-900">{ticket.requested_from || tx('na')}</p>
-                          <p className="text-xs text-gray-500">{ticket.requested_from_email || ''}</p>
+                          <p className="text-sm text-app-text">{ticket.requested_from || tx('na')}</p>
+                          <p className="text-xs text-app-text-secondary">{ticket.requested_from_email || ''}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-900">{ticket.requested_to || tx('na')}</p>
-                          <p className="text-xs text-gray-500">{ticket.requested_to_email || ''}</p>
+                          <p className="text-sm text-app-text">{ticket.requested_to || tx('na')}</p>
+                          <p className="text-xs text-app-text-secondary">{ticket.requested_to_email || ''}</p>
                         </td>
                         <td className="px-4 py-4">
                           <div className="max-w-xs">
                             {ticket.description ? (
                               <div>
-                                <p className={`text-sm text-gray-700 ${!expandedDescriptions[ticket._id] ? 'line-clamp-2' : ''}`}>
+                                <p className={`text-sm text-app-text ${!expandedDescriptions[ticket._id] ? 'line-clamp-2' : ''}`}>
                                   {ticket.description}
                                 </p>
                                 {ticket.description.length > 100 && (
@@ -755,7 +747,7 @@ const ProjectDetails = () => {
                                       e.stopPropagation();
                                       toggleDescription(ticket._id);
                                     }}
-                                    className="mt-1 text-xs text-secondary hover:text-secondary-700 font-medium flex items-center gap-1"
+                                    className="mt-1 flex items-center gap-1 text-xs font-semibold text-app-primary hover:text-app-primary-soft"
                                   >
                                     {expandedDescriptions[ticket._id] ? (
                                       <>
@@ -776,7 +768,7 @@ const ProjectDetails = () => {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400 italic">{tx('noDescription')}</span>
+                              <span className="text-sm italic text-app-text-tertiary">{tx('noDescription')}</span>
                             )}
                           </div>
                         </td>
@@ -784,24 +776,28 @@ const ProjectDetails = () => {
                           {ticket.cc && ticket.cc.length > 0 ? (
                             <div className="flex flex-col gap-1">
                               {ticket.cc.slice(0, 2).map((email, index) => (
-                                <span key={index} className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded">
+                                <span key={index} className="rounded-md bg-app-surface-variant px-2 py-0.5 text-xs text-app-text-secondary">
                                   {email}
                                 </span>
                               ))}
                               {ticket.cc.length > 2 && (
-                                <span className="text-xs text-gray-500">+{ticket.cc.length - 2} {tx('more')}</span>
+                                <span className="text-xs text-app-text-tertiary">
+                                  +{ticket.cc.length - 2} {tx('more')}
+                                </span>
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-gray-400">{tx('none')}</span>
+                            <span className="text-xs text-app-text-tertiary">{tx('none')}</span>
                           )}
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-700">{formatDate(ticket.date)}</p>
-                          <p className="text-xs text-gray-500">{ticket.time || ''}</p>
+                          <p className="text-sm text-app-text">{formatDate(ticket.date)}</p>
+                          <p className="text-xs text-app-text-secondary">{ticket.time || ''}</p>
                         </td>
                         <td className="px-4 py-4">
-                          <p className="text-sm text-gray-700">{ticket.end_date ? formatDate(ticket.end_date) : tx('notSet')}</p>
+                          <p className="text-sm text-app-text">
+                            {ticket.end_date ? formatDate(ticket.end_date) : tx('notSet')}
+                          </p>
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-2">
@@ -812,10 +808,8 @@ const ProjectDetails = () => {
                               
                               return totalComments > 0 ? (
                                 <div className="flex items-center gap-2">
-                                  <svg className="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                                  </svg>
-                                  <span className="text-sm font-semibold text-gray-700">
+                                  <ChatRounded sx={{ fontSize: 18, color: 'inherit' }} className="text-app-primary" />
+                                  <span className="text-sm font-semibold text-app-text">
                                     {totalComments} {totalComments === 1 ? tx('commentSingle') : tx('commentPlural')}
                                   </span>
                                   {hasLegacyComment && (
@@ -825,23 +819,23 @@ const ProjectDetails = () => {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-sm text-gray-400 italic">{tx('noComments')}</span>
+                                <span className="text-sm italic text-app-text-tertiary">{tx('noComments')}</span>
                               );
                             })()}
                           </div>
                         </td>
                         <td className="px-4 py-4">
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/ticket/${ticket._id}/edit`);
                             }}
-                            className="p-2 text-secondary hover:bg-secondary/10 rounded-lg transition-colors"
+                            className="rounded-app-input p-2 text-app-primary transition-colors hover:bg-app-primary/[0.08]"
                             title={tx('editTicket')}
+                            aria-label={tx('editTicket')}
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
+                            <EditRounded sx={{ fontSize: 22 }} />
                           </button>
                         </td>
                       </tr>

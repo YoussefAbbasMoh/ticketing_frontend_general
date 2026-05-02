@@ -21,21 +21,20 @@ import {
   Avatar,
   Paper,
   Fade,
-  Tooltip,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  CalendarToday as CalendarIcon,
-  Person as PersonIcon,
-  Group as GroupIcon,
-  CheckCircle as CheckIcon,
-} from '@mui/icons-material';
+import { alpha, useTheme } from '@mui/material/styles';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import GroupIcon from '@mui/icons-material/Group';
+import PersonIcon from '@mui/icons-material/Person';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { projectAPI, userAPI } from '../../services/api';
 
 const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
+  const theme = useTheme();
   const [formData, setFormData] = useState({
     project_name: '',
     start_date: new Date(),
@@ -83,10 +82,7 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
   const fetchUsers = async () => {
     try {
       const response = await userAPI.getAllUsers();
-      console.log('Fetched users:', response.data.users);
       setUsers(Array.isArray(response.data.users) ? response.data.users : []);
-      // setUsers(response.data.users);
-      console.log('Users:', users);
     } catch (error) {
       console.error('Error fetching users:', error);
       setUsers([]);
@@ -161,56 +157,87 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
   };
 
   const getRoleColor = (role) => {
-    const colors = {
-      admin: '#e91e63',
-      manager: '#2196f3',
-      developer: '#4caf50',
-      designer: '#ff9800',
+    const r = role?.toLowerCase();
+    const { palette } = theme;
+    const map = {
+      admin: palette.secondary.main,
+      manager: palette.info.main,
+      developer: palette.success.main,
+      designer: palette.warning.main,
     };
-    return colors[role?.toLowerCase()] || '#9e9e9e';
+    return map[r] || palette.text.disabled;
+  };
+
+  const sectionPaperSx = {
+    p: 2.5,
+    bgcolor: 'background.default',
+    borderRadius: 2,
+    border: '1px solid',
+    borderColor: 'divider',
+    boxShadow: 'none',
+  };
+
+  const fieldSurfaceSx = {
+    bgcolor: 'background.paper',
+    '& .MuiOutlinedInput-root': {
+      borderRadius: 2,
+    },
   };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <Dialog 
-        open={open} 
-        onClose={onClose} 
-        maxWidth="md" 
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 3,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          }
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+            boxShadow: '0 2px 12px rgba(8, 9, 54, 0.102), 0 1px 2px rgba(15, 23, 42, 0.06)',
+            overflow: 'hidden',
+            fontFamily: theme.typography.fontFamily,
+          },
         }}
       >
-        {/* Header */}
-        <DialogTitle 
-          sx={{ 
+        <DialogTitle
+          sx={{
             pb: 2,
-            pt: 3,
+            pt: 2.5,
             px: 3,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            position: 'relative',
+            bgcolor: 'background.paper',
+            borderBottom: '1px solid',
+            borderColor: 'divider',
           }}
         >
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Box display="flex" alignItems="center" gap={1.5}>
-              <Avatar 
-                sx={{ 
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                  width: 40,
-                  height: 40,
+          <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={2}>
+            <Box display="flex" alignItems="center" gap={1.5} minWidth={0}>
+              <Avatar
+                sx={{
+                  bgcolor: alpha(theme.palette.secondary.main, 0.12),
+                  color: 'secondary.main',
+                  width: 44,
+                  height: 44,
                 }}
               >
-                <GroupIcon />
+                <GroupIcon sx={{ fontSize: 24 }} />
               </Avatar>
-              <Box>
-                <Typography variant="h5" fontWeight={600}>
+              <Box minWidth={0}>
+                <Typography
+                  sx={{
+                    fontSize: 18,
+                    fontWeight: 800,
+                    lineHeight: 1.25,
+                    letterSpacing: '-0.02em',
+                    color: 'text.primary',
+                  }}
+                >
                   Create New Project
                 </Typography>
-                <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                <Typography sx={{ mt: 0.5, fontSize: 12, color: 'text.secondary', lineHeight: 1.4 }}>
                   Set up your project details and team
                 </Typography>
               </Box>
@@ -218,28 +245,26 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
             <IconButton
               onClick={onClose}
               disabled={loading}
-              sx={{ 
-                color: 'white',
-                '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' }
+              size="small"
+              sx={{
+                color: 'text.secondary',
+                mt: -0.5,
+                '&:hover': { bgcolor: 'action.hover' },
               }}
+              aria-label="Close"
             >
               <CloseIcon />
             </IconButton>
           </Box>
         </DialogTitle>
 
-        <Divider />
-
-        <DialogContent sx={{ px: 3, py: 3 }}>
+        <DialogContent sx={{ px: 3, py: 3, bgcolor: 'background.default' }}>
           {error && (
             <Fade in={Boolean(error)}>
-              <Alert 
-                severity="error" 
-                sx={{ 
-                  mb: 3,
-                  borderRadius: 2,
-                  boxShadow: '0 2px 8px rgba(211,47,47,0.15)',
-                }}
+              <Alert
+                severity="error"
+                variant="outlined"
+                sx={{ mb: 3, borderRadius: 2, borderColor: 'error.light', bgcolor: alpha(theme.palette.error.main, 0.06) }}
                 onClose={() => setError('')}
               >
                 {error}
@@ -249,13 +274,15 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
 
           {success && (
             <Fade in={success}>
-              <Alert 
-                icon={<CheckIcon />}
-                severity="success" 
-                sx={{ 
+              <Alert
+                icon={<CheckCircleIcon />}
+                severity="success"
+                variant="outlined"
+                sx={{
                   mb: 3,
                   borderRadius: 2,
-                  boxShadow: '0 2px 8px rgba(46,125,50,0.15)',
+                  borderColor: 'success.light',
+                  bgcolor: alpha(theme.palette.success.main, 0.08),
                 }}
               >
                 Project created successfully!
@@ -267,101 +294,64 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
             <Grid container spacing={3}>
               {/* Project Name */}
               <Grid item xs={12}>
-                <Paper 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2.5, 
-                    bgcolor: '#f8f9fa',
-                    borderRadius: 2,
-                    border: '1px solid #e0e0e0',
-                  }}
-                >
-                  <Typography 
-                    variant="subtitle2" 
-                    color="text.secondary" 
-                    gutterBottom
-                    sx={{ mb: 1.5, fontWeight: 600 }}
-                  >
-                    Project Information
+                <Paper elevation={0} sx={sectionPaperSx}>
+                  <Typography sx={{ mb: 1.5, fontSize: 13, fontWeight: 700, color: 'text.primary' }}>
+                    Project information
                   </Typography>
                   <TextField
                     fullWidth
-                    label="Project Name"
+                    label="Project name"
                     name="project_name"
                     value={formData.project_name}
                     onChange={handleChange}
                     required
-                    placeholder="e.g., Mobile App Development"
-                    sx={{
-                      bgcolor: 'white',
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 2,
-                      }
-                    }}
+                    placeholder="e.g. Mobile app rollout"
+                    sx={fieldSurfaceSx}
                   />
                 </Paper>
               </Grid>
 
               {/* Dates */}
               <Grid item xs={12}>
-                <Paper 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2.5, 
-                    bgcolor: '#f8f9fa',
-                    borderRadius: 2,
-                    border: '1px solid #e0e0e0',
-                  }}
-                >
+                <Paper elevation={0} sx={sectionPaperSx}>
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
-                    <CalendarIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                    <Typography 
-                      variant="subtitle2" 
-                      color="text.secondary"
-                      sx={{ fontWeight: 600 }}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1.5,
+                        bgcolor: alpha(theme.palette.primary.main, 0.08),
+                        color: 'primary.main',
+                      }}
                     >
-                      Project Timeline
+                      <CalendarTodayIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'text.primary' }}>
+                      Project timeline
                     </Typography>
                   </Box>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
                       <DatePicker
-                        label="Start Date"
+                        label="Start date"
                         value={formData.start_date}
                         onChange={(date) => handleDateChange('start_date', date)}
                         renderInput={(params) => (
-                          <TextField 
-                            {...params} 
-                            fullWidth 
-                            required 
-                            sx={{
-                              bgcolor: 'white',
-                              '& .MuiOutlinedInput-root': {
-                                borderRadius: 2,
-                              }
-                            }}
-                          />
+                          <TextField {...params} fullWidth required sx={fieldSurfaceSx} />
                         )}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6}>
                       <DatePicker
-                        label="Estimated End Date"
+                        label="Estimated end date"
                         value={formData.estimated_end_date}
                         onChange={(date) => handleDateChange('estimated_end_date', date)}
                         minDate={formData.start_date}
                         renderInput={(params) => (
-                          <TextField 
-                            {...params} 
-                            fullWidth 
-                            required 
-                            sx={{
-                              bgcolor: 'white',
-                              '& .MuiOutlinedInput-root': {
-                                borderRadius: 2,
-                              }
-                            }}
-                          />
+                          <TextField {...params} fullWidth required sx={fieldSurfaceSx} />
                         )}
                       />
                     </Grid>
@@ -371,35 +361,38 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
 
               {/* Team Members */}
               <Grid item xs={12}>
-                <Paper 
-                  elevation={0} 
-                  sx={{ 
-                    p: 2.5, 
-                    bgcolor: '#f8f9fa',
-                    borderRadius: 2,
-                    border: '1px solid #e0e0e0',
-                  }}
-                >
+                <Paper elevation={0} sx={sectionPaperSx}>
                   <Box display="flex" alignItems="center" gap={1} mb={2}>
-                    <PersonIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                    <Typography 
-                      variant="subtitle2" 
-                      color="text.secondary"
-                      sx={{ fontWeight: 600 }}
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1.5,
+                        bgcolor: alpha(theme.palette.info.main, 0.1),
+                        color: 'info.main',
+                      }}
                     >
-                      Team Members
+                      <PersonIcon sx={{ fontSize: 18 }} />
+                    </Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 700, color: 'text.primary' }}>
+                      Team members
                     </Typography>
                   </Box>
                   <FormControl fullWidth>
-                    <InputLabel>Assign Users</InputLabel>
+                    <InputLabel id="assign-users-label">Assign users</InputLabel>
                     <Select
                       multiple
+                      labelId="assign-users-label"
                       value={formData.assigned_users}
                       onChange={handleUserChange}
-                      label="Assign Users"
+                      label="Assign users"
                       sx={{
-                        bgcolor: 'white',
+                        bgcolor: 'background.paper',
                         borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': { borderColor: 'divider' },
                       }}
                       renderValue={(selected) => (
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -470,15 +463,20 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
                   </FormControl>
 
                   {formData.assigned_users.length > 0 && (
-                    <Box 
-                      mt={2} 
-                      p={1.5} 
-                      bgcolor="rgba(103, 126, 234, 0.08)" 
-                      borderRadius={2}
+                    <Box
+                      mt={2}
+                      p={1.5}
+                      sx={{
+                        borderRadius: 2,
+                        bgcolor: alpha(theme.palette.primary.main, 0.06),
+                        border: '1px solid',
+                        borderColor: alpha(theme.palette.primary.main, 0.12),
+                      }}
                     >
-                      <Typography variant="body2" color="primary" fontWeight={500}>
-                        <GroupIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }} />
-                        {formData.assigned_users.length} team member{formData.assigned_users.length !== 1 ? 's' : ''} selected
+                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>
+                        <GroupIcon sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle', opacity: 0.9 }} />
+                        {formData.assigned_users.length} team member
+                        {formData.assigned_users.length !== 1 ? 's' : ''} selected
                       </Typography>
                     </Box>
                   )}
@@ -488,18 +486,33 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
           </Box>
         </DialogContent>
 
-        <Divider />
+        <Divider sx={{ borderColor: 'divider' }} />
 
-        <DialogActions sx={{ px: 3, py: 2.5, gap: 1 }}>
-          <Button 
-            onClick={onClose} 
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2.5,
+            gap: 1.5,
+            bgcolor: 'background.paper',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Button
+            onClick={onClose}
             disabled={loading}
             variant="outlined"
-            sx={{ 
+            color="inherit"
+            sx={{
               borderRadius: 2,
               px: 3,
+              py: 1,
               textTransform: 'none',
               fontWeight: 600,
+              borderColor: 'divider',
+              color: 'text.secondary',
+              '&:hover': { borderColor: 'text.secondary', bgcolor: 'action.hover' },
             }}
           >
             Cancel
@@ -507,21 +520,20 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
           <Button
             onClick={handleSubmit}
             variant="contained"
+            color="primary"
             disabled={loading || success}
-            sx={{ 
+            sx={{
               borderRadius: 2,
               px: 3,
+              py: 1,
               textTransform: 'none',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              boxShadow: '0 4px 12px rgba(103, 126, 234, 0.4)',
-              '&:hover': {
-                boxShadow: '0 6px 16px rgba(103, 126, 234, 0.5)',
-              }
+              fontWeight: 700,
+              boxShadow: 'none',
+              '&:hover': { boxShadow: 'none', bgcolor: 'primary.dark' },
             }}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
           >
-            {loading ? 'Creating...' : success ? 'Created!' : 'Create Project'}
+            {loading ? 'Creating…' : success ? 'Created!' : 'Create project'}
           </Button>
         </DialogActions>
       </Dialog>

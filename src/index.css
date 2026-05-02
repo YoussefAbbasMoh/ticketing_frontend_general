@@ -10,11 +10,13 @@
 
 body {
   margin: 0;
-  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  /* Cairo may not apply under font-display: optional on slow networks — metrics-stable fallbacks reduce CLS */
+  font-family: 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #ffffff;
-  color: #0e1121;
+  /* App scaffold — matches AppColors.background */
+  background-color: #f4f5f9;
+  color: #0d1230;
 }
 
 html[dir='rtl'] body {
@@ -58,4 +60,13 @@ code {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Flutter AuthBackground._GridPainter — 48px grid, divider ~0.5px */
+.auth-grid-overlay {
+  background-color: transparent;
+  background-size: 48px 48px;
+  background-image:
+    linear-gradient(to right, rgb(226 230 239 / 0.55) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(226 230 239 / 0.55) 1px, transparent 1px);
 }

@@ -76,7 +76,7 @@ const NotificationBell = ({ lang: propLang }) => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-600 hover:text-secondary transition-colors"
+        className="relative p-2 text-app-text-secondary transition-colors hover:text-app-primary"
         aria-label={tx('notifications')}
       >
         <svg
@@ -101,25 +101,25 @@ const NotificationBell = ({ lang: propLang }) => {
 
       {isOpen && (
         <div
-          className={`absolute mt-2 w-80 md:w-96 bg-white rounded-lg shadow-xl border-2 border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col ${
+          className={`absolute z-50 mt-2 flex max-h-96 w-80 flex-col overflow-hidden rounded-app border border-app-divider bg-app-surface shadow-app-card md:w-96 ${
             isRtl ? 'left-0 text-right' : 'right-0 text-left'
           }`}
           dir={isRtl ? 'rtl' : 'ltr'}
         >
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-secondary to-secondary-700">
+          <div className="flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-app-primary to-navy-dark p-4">
             <h3 className="text-lg font-semibold text-white">{tx('notifications')}</h3>
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="text-xs text-white hover:text-gray-200 underline"
+                  className="text-xs text-white/90 underline hover:text-white"
                 >
                   {tx('markAllRead')}
                 </button>
               )}
               <button
                 onClick={() => setIsOpen(false)}
-                className="text-white hover:text-gray-200"
+                className="text-white/90 hover:text-white"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -151,19 +151,19 @@ const NotificationBell = ({ lang: propLang }) => {
                 <div
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !notification.read ? 'bg-blue-50' : ''
+                  className={`cursor-pointer border-b border-app-divider p-4 transition-colors hover:bg-app-surface-variant ${
+                    !notification.read ? 'bg-orange/5' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div
-                      className={`flex-shrink-0 w-2 h-2 rounded-full mt-2 ${
-                        !notification.read ? 'bg-secondary' : 'bg-gray-300'
+                      className={`mt-2 h-2 w-2 flex-shrink-0 rounded-full ${
+                        !notification.read ? 'bg-orange' : 'bg-app-border'
                       }`}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-semibold text-gray-800">
+                        <p className="text-sm font-semibold text-app-text">
                           {notification.title}
                         </p>
                         <button
@@ -171,20 +171,20 @@ const NotificationBell = ({ lang: propLang }) => {
                             e.stopPropagation();
                             removeNotification(notification.id);
                           }}
-                          className="text-gray-400 hover:text-red-500"
+                          className="text-app-text-tertiary hover:text-app-error"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                      <p className="mb-2 text-sm text-app-text-secondary">{notification.message}</p>
                       {notification.ticket && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-app-text-secondary">
                           {tx('ticket')}: {notification.ticket.ticket} | {notification.ticket.project}
                         </p>
                       )}
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="mt-1 text-xs text-app-text-tertiary">
                         {formatTime(notification.timestamp)}
                       </p>
                     </div>

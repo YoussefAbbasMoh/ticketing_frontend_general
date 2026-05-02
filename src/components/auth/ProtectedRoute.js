@@ -8,10 +8,10 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-900 flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-app-background font-cairo">
         <div className="text-center">
           <Spinner size="lg" />
-          <p className="mt-4 text-gray-400 text-lg">Loading...</p>
+          <p className="mt-s16 text-lg text-app-text-secondary">Loading...</p>
         </div>
       </div>
     );

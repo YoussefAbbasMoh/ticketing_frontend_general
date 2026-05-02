@@ -2,8 +2,8 @@
 // This keeps the app running in the background and handles notifications
 
 // Bump version when changing caching rules so old caches are deleted on activate
-const CACHE_NAME = 'absai-tms-v3';
-const RUNTIME_CACHE = 'absai-runtime-v3';
+const CACHE_NAME = 'absai-tms-v4';
+const RUNTIME_CACHE = 'absai-runtime-v4';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
@@ -11,7 +11,7 @@ const PRECACHE_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/notification-sound.mp3',
-  '/absai-logo.png',
+  '/logo4.webp',
   '/logo192.png',
   '/logo512.png'
 ];
@@ -85,6 +85,20 @@ self.addEventListener('fetch', (event) => {
   }
 
   const url = new URL(event.request.url);
+  const path = url.pathname;
+
+  // Do not intercept — browser goes to network. Fixes Next.js on :3000, Vite dev HMR, etc.
+  if (
+    path.startsWith('/_next/') ||
+    path.startsWith('/@') ||
+    path.startsWith('/src/') ||
+    path.includes('node_modules') ||
+    path.endsWith('.tsx') ||
+    path.endsWith('.ts') ||
+    (path.endsWith('.jsx') && path.startsWith('/src'))
+  ) {
+    return;
+  }
   
   // NEVER cache images, uploads, or API calls - always fetch fresh
   const shouldNotCache = 
@@ -126,7 +140,14 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response && response.status === 200 && response.type === 'basic') {
+          const poweredBy = response.headers.get('x-powered-by') || '';
+          const isNext = poweredBy.toLowerCase().includes('next');
+          if (
+            response &&
+            response.status === 200 &&
+            response.type === 'basic' &&
+            !isNext
+          ) {
             const responseToCache = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
               cache.put(event.request, responseToCache);
@@ -138,7 +159,9 @@ self.addEventListener('fetch', (event) => {
           return caches.match(event.request).then((cached) => {
             if (cached) return cached;
             if (event.request.mode === 'navigate') {
-              return caches.match('/index.html');
+              return caches.match('/index.html').then(
+                (page) => page || new Response('Offline', { status: 503 })
+              );
             }
             return new Response('Offline', { status: 503 });
           });
@@ -192,10 +215,12 @@ self.addEventListener('fetch', (event) => {
         });
       })
       .catch(() => {
-        // If both cache and network fail, return offline page if available
         if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+          return caches.match('/index.html').then(
+            (page) => page || new Response('Offline', { status: 503 })
+          );
         }
+        return new Response('Offline', { status: 503 });
       })
   );
 });
@@ -215,8 +240,8 @@ self.addEventListener('push', (event) => {
   let notificationData = {
     title: 'ABSAI TMS',
     body: 'You have a new notification',
-    icon: '/absai-logo.png',
-    badge: '/absai-logo.png',
+    icon: '/logo4.webp',
+    badge: '/logo4.webp',
     tag: 'absai-notification',
     requireInteraction: false,
     data: {}

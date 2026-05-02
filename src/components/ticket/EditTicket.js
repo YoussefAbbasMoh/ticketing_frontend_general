@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ticketAPI, projectAPI, uploadAPI, getImageUrl } from '../../services/api';
+import { ticketAPI, projectAPI, uploadAPI, getImageUrl, uploadTicketImagesViaBunny } from '../../services/api';
+import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -167,6 +168,7 @@ const EditTicket = () => {
   const [imagesToDelete, setImagesToDelete] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const { uploadFile } = useBunnyUpload();
   const [imagePreviewUrls, setImagePreviewUrls] = useState([]);
   const [activeTab, setActiveTab] = useState('details'); // 'details' or 'comments'
   const [lang, setLang] = useState(getStoredLanguage());
@@ -350,11 +352,18 @@ const EditTicket = () => {
 
   const handleExistingImageRemove = (index) => {
     const imageToRemove = existingImages[index];
-    const filename = imageToRemove.split('/').pop();
-    if (filename) {
-      setImagesToDelete(prev => [...prev, filename]);
+    const isStoredOnBackendDisk =
+      imageToRemove &&
+      typeof imageToRemove === 'string' &&
+      !/^https?:\/\//i.test(imageToRemove) &&
+      imageToRemove.includes('/uploads/tickets/');
+    if (isStoredOnBackendDisk) {
+      const filename = imageToRemove.split('/').pop();
+      if (filename) {
+        setImagesToDelete((prev) => [...prev, filename]);
+      }
     }
-    setExistingImages(prev => prev.filter((_, i) => i !== index));
+    setExistingImages((prev) => prev.filter((_, i) => i !== index));
   };
 
   useEffect(() => {
@@ -389,8 +398,7 @@ const EditTicket = () => {
       if (images.length > 0) {
         setUploadingImages(true);
         try {
-          const uploadResponse = await uploadAPI.uploadTicketImages(images);
-          newImageUrls = uploadResponse.data?.images || uploadResponse.data?.urls || [];
+          newImageUrls = await uploadTicketImagesViaBunny(images, uploadFile);
           if (!Array.isArray(newImageUrls)) {
             newImageUrls = [];
           }

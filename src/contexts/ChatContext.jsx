@@ -144,6 +144,12 @@ export const ChatProvider = ({ children }) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!user) {
+      socketService.disconnect();
+    }
+  }, [user]);
+
   const loadConversations = async () => {
     try {
       setLoading(true);

@@ -22,12 +22,10 @@ import {
   Checkbox,
   ListItemText,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  PersonAdd as PersonAddIcon,
-  CheckCircle as CheckIcon,
-  Group as GroupIcon,
-} from '@mui/icons-material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import GroupIcon from '@mui/icons-material/Group';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import { userAPI, projectAPI } from '../../services/api';
 
 const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
@@ -199,7 +197,7 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
         {success && (
           <Fade in={success}>
             <Alert 
-              icon={<CheckIcon />}
+              icon={<CheckCircleIcon />}
               severity="success" 
               sx={{ 
                 mb: 3,

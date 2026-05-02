@@ -120,7 +120,7 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
     switch (message.type) {
       case 'text':
         return (
-          <p className={`whitespace-pre-wrap break-words ${isOwn ? 'text-white' : 'text-gray-800'}`}>
+          <p className={`whitespace-pre-wrap break-words ${isOwn ? 'text-white' : 'text-app-text'}`}>
             {message.content}
           </p>
         );
@@ -141,15 +141,15 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
                 loading="lazy"
               />
             ) : (
-              <div className="max-w-xs md:max-w-md rounded-lg bg-gray-100 p-8 flex flex-col items-center justify-center">
-                <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex max-w-xs flex-col items-center justify-center rounded-lg bg-app-surface-variant p-8 md:max-w-md">
+                <svg className="mb-2 h-12 w-12 text-app-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p className="text-sm text-gray-500">Image unavailable</p>
+                <p className="text-sm text-app-text-secondary">Image unavailable</p>
               </div>
             )}
             {message.content && (
-              <p className={`mt-2 ${isOwn ? 'text-white' : 'text-gray-800'}`}>
+              <p className={`mt-2 ${isOwn ? 'text-white' : 'text-app-text'}`}>
                 {message.content}
               </p>
             )}
@@ -169,15 +169,15 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
                 Your browser does not support the video tag.
               </video>
             ) : (
-              <div className="max-w-xs md:max-w-md rounded-lg bg-gray-100 p-8 flex flex-col items-center justify-center">
-                <svg className="w-12 h-12 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex max-w-xs flex-col items-center justify-center rounded-lg bg-app-surface-variant p-8 md:max-w-md">
+                <svg className="mb-2 h-12 w-12 text-app-text-tertiary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                <p className="text-sm text-gray-500">Video unavailable</p>
+                <p className="text-sm text-app-text-secondary">Video unavailable</p>
               </div>
             )}
             {message.content && (
-              <p className={`mt-2 ${isOwn ? 'text-white' : 'text-gray-800'}`}>
+              <p className={`mt-2 ${isOwn ? 'text-white' : 'text-app-text'}`}>
                 {message.content}
               </p>
             )}
@@ -205,14 +205,14 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
             )}
 
             {/* Custom audio player UI */}
-            <div className={`flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg ${isOwn ? 'bg-white/10' : 'bg-gray-50'
+            <div className={`flex items-center gap-2 rounded-lg p-2 sm:gap-2.5 sm:p-2.5 ${isOwn ? 'bg-white/10' : 'bg-app-surface-variant'
               }`}>
               {/* Play/Pause Button */}
               <button
                 onClick={togglePlayPause}
-                className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all ${isOwn
-                  ? 'bg-white text-secondary hover:bg-white/90'
-                  : 'bg-secondary text-white hover:bg-secondary-700'
+                className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full transition-all sm:h-9 sm:w-9 ${isOwn
+                  ? 'bg-white text-orange hover:bg-white/90'
+                  : 'bg-orange text-white hover:bg-orange-dark'
                   }`}
               >
                 {isPlaying ? (
@@ -234,16 +234,16 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
                   max="100"
                   value={duration ? (currentTime / duration) * 100 : 0}
                   onChange={handleSeek}
-                  className={`w-full h-1 sm:h-1.5 rounded-full appearance-none cursor-pointer ${isOwn
+                  className={`h-1 w-full cursor-pointer appearance-none rounded-full sm:h-1.5 ${isOwn
                     ? 'bg-white/30 [&::-webkit-slider-thumb]:bg-white'
-                    : 'bg-gray-300 [&::-webkit-slider-thumb]:bg-secondary'
-                    } [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:h-2.5 sm:[&::-webkit-slider-thumb]:w-3 sm:[&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:cursor-pointer`}
+                    : 'bg-app-border [&::-webkit-slider-thumb]:bg-orange'
+                    } [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:w-2.5 [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full sm:[&::-webkit-slider-thumb]:h-3 sm:[&::-webkit-slider-thumb]:w-3`}
                 />
                 <div className="flex justify-between text-xs">
-                  <span className={isOwn ? 'text-white/80' : 'text-gray-600'}>
+                  <span className={isOwn ? 'text-white/80' : 'text-app-text-secondary'}>
                     {formatAudioTime(currentTime)}
                   </span>
-                  <span className={isOwn ? 'text-white/80' : 'text-gray-600'}>
+                  <span className={isOwn ? 'text-white/80' : 'text-app-text-secondary'}>
                     {formatAudioTime(duration || message.duration)}
                   </span>
                 </div>
@@ -252,7 +252,7 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
               {/* Microphone Icon */}
               <div className="flex-shrink-0 hidden sm:block">
                 <svg
-                  className={`w-4 h-4 ${isOwn ? 'text-white/70' : 'text-gray-500'}`}
+                  className={`h-4 w-4 ${isOwn ? 'text-white/70' : 'text-app-text-secondary'}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -266,12 +266,12 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
 
       case 'file':
         return (
-          <div className={`flex items-center gap-2 sm:gap-2.5 p-2 sm:p-2.5 rounded-lg min-w-[180px] sm:min-w-[200px] max-w-xs ${isOwn ? 'bg-white/10' : 'bg-gray-50'
+          <div className={`flex min-w-[180px] max-w-xs items-center gap-2 rounded-lg p-2 sm:min-w-[200px] sm:gap-2.5 sm:p-2.5 ${isOwn ? 'bg-white/10' : 'bg-app-surface-variant'
             }`}>
-            <div className={`flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center ${isOwn ? 'bg-white/20' : 'bg-secondary/10'
+            <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg sm:h-9 sm:w-9 ${isOwn ? 'bg-white/20' : 'bg-orange/10'
               }`}>
               <svg
-                className={`w-4 h-4 sm:w-5 sm:h-5 ${isOwn ? 'text-white' : 'text-secondary'}`}
+                className={`h-4 w-4 sm:h-5 sm:w-5 ${isOwn ? 'text-white' : 'text-orange'}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -280,10 +280,10 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`text-sm sm:text-base font-medium truncate ${isOwn ? 'text-white' : 'text-gray-800'}`}>
+              <p className={`truncate text-sm font-medium sm:text-base ${isOwn ? 'text-white' : 'text-app-text'}`}>
                 {message.fileName || 'File'}
               </p>
-              <p className={`text-xs ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+              <p className={`text-xs ${isOwn ? 'text-white/70' : 'text-app-text-secondary'}`}>
                 {formatFileSize(message.fileSize)}
               </p>
             </div>
@@ -291,9 +291,9 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
               <a
                 href={fileUrl}
                 download={message.fileName}
-                className={`flex-shrink-0 p-1.5 sm:p-2 rounded-lg transition-colors ${isOwn
-                  ? 'hover:bg-white/20 text-white'
-                  : 'hover:bg-gray-200 text-secondary'
+                className={`flex-shrink-0 rounded-lg p-1.5 transition-colors sm:p-2 ${isOwn
+                  ? 'text-white hover:bg-white/20'
+                  : 'text-orange hover:bg-app-surface-variant'
                   }`}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -309,7 +309,7 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
 
       default:
         return (
-          <p className={isOwn ? 'text-white' : 'text-gray-800'}>
+          <p className={isOwn ? 'text-white' : 'text-app-text'}>
             {message.content || 'Message'}
           </p>
         );
@@ -324,9 +324,9 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
         {/* Reply Preview - Enhanced Thread UI */}
         {message.replyTo && (
           <div
-            className={`mb-2 px-3 py-2 rounded-lg text-xs border-l-4 cursor-pointer transition-all hover:bg-opacity-90 ${isOwn
-              ? 'bg-secondary/10 border-secondary-400 hover:bg-secondary/20'
-              : 'bg-gray-100 border-gray-400 hover:bg-gray-200'
+            className={`mb-2 cursor-pointer rounded-lg border-l-4 px-3 py-2 text-xs transition-all hover:bg-opacity-90 ${isOwn
+              ? 'border-orange bg-orange/10 hover:bg-orange/20'
+              : 'border-app-border bg-app-surface-variant hover:bg-app-background'
               } max-w-full`}
             onClick={(e) => {
               e.stopPropagation();
@@ -335,23 +335,23 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
               if (replyElement) {
                 replyElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 // Highlight briefly
-                replyElement.classList.add('ring-2', 'ring-secondary', 'ring-opacity-50');
+                replyElement.classList.add('ring-2', 'ring-orange', 'ring-opacity-50');
                 setTimeout(() => {
-                  replyElement.classList.remove('ring-2', 'ring-secondary', 'ring-opacity-50');
+                  replyElement.classList.remove('ring-2', 'ring-orange', 'ring-opacity-50');
                 }, 2000);
               }
             }}
             title="Click to view original message"
           >
             <div className="flex items-start gap-2">
-              <svg className="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="mt-0.5 h-3 w-3 flex-shrink-0 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-secondary truncate">
+                <div className="truncate font-semibold text-orange">
                   {message.replyTo.senderName || message.replyTo.sender?.name || 'User'}
                 </div>
-                <div className="text-gray-600 truncate mt-0.5">
+                <div className="mt-0.5 truncate text-app-text-secondary">
                   {message.replyTo.type === 'text'
                     ? message.replyTo.content
                     : `[${message.replyTo.type.charAt(0).toUpperCase() + message.replyTo.type.slice(1)}]`
@@ -370,10 +370,10 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
           className="relative transition-all duration-300"
         >
           <div
-            className={`rounded-2xl ${message.type === 'text' ? 'px-3 sm:px-4 py-2' : 'p-2 sm:p-3'
+            className={`rounded-2xl ${message.type === 'text' ? 'px-3 py-2 sm:px-4' : 'p-2 sm:p-3'
               } ${isOwn
-                ? 'bg-gradient-to-br from-secondary to-secondary-700 text-white shadow-md'
-                : 'bg-white text-gray-800 border border-gray-200 shadow-sm'
+                ? 'bg-gradient-to-br from-orange to-orange-dark text-white shadow-md'
+                : 'border border-app-border bg-app-surface text-app-text shadow-app-soft'
               } transition-all hover:shadow-lg`}
           >
             {renderMessageContent()}
@@ -381,12 +381,12 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
             {/* Timestamp and Status */}
             <div className={`flex items-center gap-1 mt-1.5 ${message.type === 'text' ? '' : 'px-1'
               }`}>
-              <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-gray-500'}`}>
+              <span className={`text-xs ${isOwn ? 'text-white/70' : 'text-app-text-secondary'}`}>
                 {formatTime(message.createdAt)}
               </span>
 
               {message.isEdited && (
-                <span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-gray-400'}`}>
+                <span className={`text-[10px] ${isOwn ? 'text-white/60' : 'text-app-text-tertiary'}`}>
                   (edited)
                 </span>
               )}
@@ -423,19 +423,19 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
 
               {/* Menu */}
               <div
-                className="fixed bg-white border-2 border-gray-300 rounded-xl shadow-2xl z-50 py-2 min-w-[160px] overflow-hidden"
+                className="fixed z-50 min-w-[160px] overflow-hidden rounded-app border border-app-divider bg-app-surface py-2 shadow-app-card"
                 style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
               >
                 <button
                   onClick={() => { onReply && onReply(); setShowContextMenu(false); }}
-                  className="w-full text-left px-4 py-2.5 hover:bg-secondary/10 text-sm text-gray-700 flex items-center gap-3 transition-colors"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-app-text transition-colors hover:bg-app-primary/10"
                 >
                   <span className="text-base">↩️</span>
                   <span className="font-medium">Reply</span>
                 </button>
                 <button
                   onClick={() => { onReplyInThread && onReplyInThread(); setShowContextMenu(false); }}
-                  className="w-full text-left px-4 py-2.5 hover:bg-secondary/10 text-sm text-gray-700 flex items-center gap-3 transition-colors"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-app-text transition-colors hover:bg-app-primary/10"
                 >
                   <span className="text-base">💬</span>
                   <span className="font-medium">Reply in Thread</span>
@@ -443,30 +443,30 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
                 {isOwn && message.type === 'text' && (
                   <button
                     onClick={() => { onEdit && onEdit(); setShowContextMenu(false); }}
-                    className="w-full text-left px-4 py-2.5 hover:bg-secondary/10 text-sm text-gray-700 flex items-center gap-3 transition-colors"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-app-text transition-colors hover:bg-app-primary/10"
                   >
                     <span className="text-base">✏️</span>
                     <span className="font-medium">Edit</span>
                   </button>
                 )}
-                <div className="border-t border-gray-200 my-1"></div>
+                <div className="my-1 border-t border-app-divider"></div>
                 <button
                   onClick={() => { onReact && onReact(message, '👍'); setShowContextMenu(false); }}
-                  className="w-full text-left px-4 py-2.5 hover:bg-secondary/10 text-sm text-gray-700 flex items-center gap-3 transition-colors"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-app-text transition-colors hover:bg-app-primary/10"
                 >
                   <span className="text-base">👍</span>
                   <span className="font-medium">Like</span>
                 </button>
                 <button
                   onClick={() => { onReact && onReact(message, '❤️'); setShowContextMenu(false); }}
-                  className="w-full text-left px-4 py-2.5 hover:bg-secondary/10 text-sm text-gray-700 flex items-center gap-3 transition-colors"
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-app-text transition-colors hover:bg-app-primary/10"
                 >
                   <span className="text-base">❤️</span>
                   <span className="font-medium">Love</span>
                 </button>
                 {isOwn && (
                   <>
-                    <div className="border-t border-gray-200 my-1"></div>
+                    <div className="my-1 border-t border-app-divider"></div>
                     <button
                       onClick={() => { onDelete && onDelete(); setShowContextMenu(false); }}
                       className="w-full text-left px-4 py-2.5 hover:bg-red-50 text-sm text-red-600 flex items-center gap-3 transition-colors"
@@ -485,7 +485,7 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
         {message.reactions && message.reactions.length > 0 && (
           <div className={`flex -space-x-1 mt-1 ${isOwn ? 'mr-1' : 'ml-1'}`}>
             {message.reactions.map((r, i) => (
-              <div key={i} className="bg-white border rounded-full px-1 text-xs shadow-sm flex items-center justify-center z-10" title={r.user?.name || 'User'}>
+              <div key={i} className="z-10 flex items-center justify-center rounded-full border border-app-border bg-app-surface px-1 text-xs shadow-app-soft" title={r.user?.name || 'User'}>
                 {r.emoji}
               </div>
             ))}
@@ -496,8 +496,8 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
         {message.threadCount > 0 && (
           <button
             onClick={() => onReplyInThread && onReplyInThread()}
-            className={`mt-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all hover:bg-secondary/10 ${isOwn ? 'ml-auto' : 'mr-auto'
-              } text-secondary border border-secondary/30 hover:border-secondary/50`}
+            className={`mt-2 flex items-center gap-1.5 rounded-lg border border-orange/30 px-2.5 py-1 text-xs font-medium text-orange transition-all hover:border-orange/50 hover:bg-orange/10 ${isOwn ? 'ml-auto' : 'mr-auto'
+              }`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

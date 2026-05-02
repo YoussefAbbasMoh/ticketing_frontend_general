@@ -107,28 +107,28 @@ const AppDrawer = ({ open, onClose }) => {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 ${isRtl ? 'right-0' : 'left-0'} h-full w-72 bg-primary z-50 transform transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'
-          }`}
+        className={`fixed top-0 ${isRtl ? 'right-0' : 'left-0'} z-50 h-full w-72 transform border-app-divider bg-app-surface shadow-app-card transition-transform duration-300 ease-in-out ${open ? 'translate-x-0' : isRtl ? 'translate-x-full' : '-translate-x-full'
+          } ${isRtl ? 'border-l' : 'border-r'}`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex h-full flex-col">
           {/* User Profile Section */}
-          <div className="p-6 border-b border-gray-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-secondary to-secondary-700 flex items-center justify-center text-white font-bold text-lg">
+          <div className="border-b border-app-divider p-s24">
+            <div className="mb-s16 flex items-center gap-3">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-app-primary text-lg font-bold text-app-on-primary">
                 {getInitials(user?.name)}
               </div>
-              <div className="flex-1">
-                <h3 className="text-white font-semibold text-lg">
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-lg font-semibold text-app-text">
                   {activeCompanyName || user?.name}
                 </h3>
-                <p className="text-gray-400 text-sm">{activeRoleLabel}</p>
+                <p className="truncate text-sm text-app-text-secondary">{activeRoleLabel}</p>
                 {activeCompanyName && (
-                  <p className="text-gray-500 text-xs mt-0.5">{user?.name}</p>
+                  <p className="mt-0.5 truncate text-xs text-app-text-tertiary">{user?.name}</p>
                 )}
               </div>
             </div>
             {user?.email && (
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
+              <div className="flex items-center gap-2 text-sm text-app-text-secondary">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
@@ -138,34 +138,37 @@ const AppDrawer = ({ open, onClose }) => {
           </div>
 
           {/* Navigation Menu */}
-          <nav className="flex-1 py-4">
+          <nav className="flex-1 py-s16">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
                 <button
                   key={item.text}
                   onClick={() => handleNavigation(item.path)}
-                  className={`w-full flex items-center gap-4 px-6 py-4 transition-all ${isActive
+                  className={`flex w-full items-center gap-4 px-s24 py-s16 font-cairo transition-colors ${
+                    isActive
                       ? isRtl
-                        ? 'bg-secondary text-white border-r-4 border-secondary-700'
-                        : 'bg-secondary text-white border-l-4 border-secondary-700'
+                        ? 'border-r-4 border-app-primary bg-app-primary/[0.08] font-semibold text-app-primary'
+                        : 'border-l-4 border-app-primary bg-app-primary/[0.08] font-semibold text-app-primary'
                       : isRtl
-                        ? 'text-gray-300 hover:bg-gray-800 hover:text-white border-r-4 border-transparent'
-                        : 'text-gray-300 hover:bg-gray-800 hover:text-white border-l-4 border-transparent'
-                    }`}
+                        ? 'border-r-4 border-transparent text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text'
+                        : 'border-l-4 border-transparent text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text'
+                  }`}
                 >
-                  <span className={isActive ? 'text-white' : ''}>{item.icon}</span>
-                  <span className="font-medium">{item.text}</span>
+                  <span className={isActive ? 'text-app-primary [&_svg]:stroke-current' : '[&_svg]:stroke-current'}>
+                    {item.icon}
+                  </span>
+                  <span>{item.text}</span>
                 </button>
               );
             })}
           </nav>
 
           {/* Logout Section */}
-          <div className="p-4 border-t border-gray-700">
+          <div className="border-t border-app-divider p-s16">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-4 px-6 py-4 text-gray-300 hover:bg-red-900 hover:text-white rounded-lg transition-all"
+              className="flex w-full items-center gap-4 rounded-app-input px-s24 py-s16 font-cairo text-app-text-secondary transition-colors hover:bg-app-error/10 hover:text-app-error"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />

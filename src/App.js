@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
@@ -8,40 +8,52 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { getStoredLanguage } from './i18n';
 
-// Components
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import Login from './components/auth/Login';
-import ForgotPassword from './components/auth/ForgotPassword';
-import RegisterCompany from './components/auth/RegisterCompany';
-import AcceptInvite from './components/auth/AcceptInvite';
-import Home from './components/home/Home';
-import ProjectDetails from './components/project/ProjectDetails';
-import NewTicket from './components/ticket/NewTicket';
-import EditTicket from './components/ticket/EditTicket';
-import Settings from './components/settings/Settings';
-import Chat from './components/chat/Chat';
-import AttendancePage from './components/attendance/AttendancePage';
-import SubscriptionPage from './components/subscription/SubscriptionPage';
+import RouteFallback from './components/app/RouteFallback';
+
+const Login = lazy(() => import('./components/auth/Login'));
+const ForgotPassword = lazy(() => import('./components/auth/ForgotPassword'));
+const RegisterCompany = lazy(() => import('./components/auth/RegisterCompany'));
+const AcceptInvite = lazy(() => import('./components/auth/AcceptInvite'));
+const Home = lazy(() => import('./components/home/Home'));
+const ProjectDetails = lazy(() => import('./components/project/ProjectDetails'));
+const NewTicket = lazy(() => import('./components/ticket/NewTicket'));
+const EditTicket = lazy(() => import('./components/ticket/EditTicket'));
+const Settings = lazy(() => import('./components/settings/Settings'));
+const Chat = lazy(() => import('./components/chat/Chat'));
+const AttendancePage = lazy(() => import('./components/attendance/AttendancePage'));
+const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
+const LandingPage = lazy(() =>
+  import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
+);
 
 function AppRoutes() {
   const { user } = useAuth();
   const activeCompanyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'no-company';
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes key={activeCompanyKey}>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/register-company" element={user ? <Navigate to="/" replace /> : <RegisterCompany />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
 
-      <Route path="/" element={
-        <ProtectedRoute>
-          <Layout>
-            <Home />
-          </Layout>
-        </ProtectedRoute>
-      } />
+      <Route
+        path="/"
+        element={
+          user ? (
+            <ProtectedRoute>
+              <Layout>
+                <Home />
+              </Layout>
+            </ProtectedRoute>
+          ) : (
+            <LandingPage />
+          )
+        }
+      />
 
       <Route path="/project/:projectId" element={
         <ProtectedRoute>
@@ -101,6 +113,7 @@ function AppRoutes() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

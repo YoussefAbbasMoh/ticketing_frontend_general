@@ -1,9 +1,9 @@
-import { Menu, X } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
 import { LinkButton } from '@/landing/components/ui/Button';
 import { TikLogoFull } from '@/landing/components/ui/TikLogo';
 import { useLandingLang } from '@/landing/LandingLangContext';
 import type { LandingLang } from '@/landing/lib/landingCopy';
+import { Menu, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
 export function Navbar() {
   const { lang, setLang, copy } = useLandingLang();

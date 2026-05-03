@@ -1,17 +1,17 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
-import theme from './theme';
+import { ThemeProvider } from '@mui/material/styles';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { getStoredLanguage } from './i18n';
+import theme from './theme';
 
-import Layout from './components/layout/Layout';
-import ProtectedRoute from './components/auth/ProtectedRoute';
 import RouteFallback from './components/app/RouteFallback';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import Layout from './components/layout/Layout';
 
 const Login = lazy(() => import('./components/auth/Login'));
 const ForgotPassword = lazy(() => import('./components/auth/ForgotPassword'));
@@ -25,6 +25,7 @@ const Settings = lazy(() => import('./components/settings/Settings'));
 const Chat = lazy(() => import('./components/chat/Chat'));
 const AttendancePage = lazy(() => import('./components/attendance/AttendancePage'));
 const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
+const WorkspaceCalendarPage = lazy(() => import('./components/calendar/WorkspaceCalendarPage'));
 const LandingPage = lazy(() =>
   import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
@@ -100,6 +101,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <AttendancePage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/workspace-calendar" element={
+        <ProtectedRoute>
+          <Layout>
+            <WorkspaceCalendarPage />
           </Layout>
         </ProtectedRoute>
       } />

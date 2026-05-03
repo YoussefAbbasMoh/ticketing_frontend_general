@@ -6,7 +6,7 @@ import React from 'react';
  */
 export function AuthPageLayout({ children }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-app-background font-cairo text-app-text">
+    <div className="relative min-h-screen overflow-x-hidden bg-app-background font-cairo text-app-text">
       <div
         className="pointer-events-none absolute -right-20 -top-28 h-[min(380px,85vw)] w-[min(380px,85vw)] rounded-full md:-right-24 md:-top-32"
         style={{

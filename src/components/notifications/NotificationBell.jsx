@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import NotificationsRounded from '@mui/icons-material/NotificationsRounded';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { getStoredLanguage } from '../../i18n';
@@ -75,25 +76,15 @@ const NotificationBell = ({ lang: propLang }) => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-app-text-secondary transition-colors hover:text-app-primary"
+        className="relative flex h-[42px] w-[42px] flex-shrink-0 items-center justify-center rounded-app-input bg-app-surface text-app-text shadow-app-soft transition-colors hover:bg-app-surface-variant hover:text-app-primary"
         aria-label={tx('notifications')}
+        title={tx('notifications')}
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-          />
-        </svg>
+        <NotificationsRounded sx={{ fontSize: 20 }} aria-hidden />
         {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white">
+          <span className="absolute top-0.5 end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-app-error px-0.5 text-[10px] font-bold leading-none text-white shadow-sm">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { StaggeredText } from '@/components/ui/StaggeredText';
 import { LinkButton } from '@/landing/components/ui/Button';
 import { useLandingLang } from '@/landing/LandingLangContext';
 
@@ -27,7 +28,15 @@ export function CTA() {
             <h2 className="font-cairo text-[clamp(28px,4vw,48px)] font-extrabold tracking-tight text-white">
               {c.title} <span className="text-orange">{c.titleAccent}</span>
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl font-cairo text-lg text-white/70">{c.description}</p>
+            <p className="mx-auto mt-4 max-w-2xl font-cairo text-lg text-white/70">
+              <StaggeredText
+                text={c.description}
+                splitBy="words"
+                delay={0.06}
+                stagger={0.028}
+                duration={0.48}
+              />
+            </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <LinkButton variant="primary" href="#signup" className="px-8 py-4 text-base">
                 {c.primary}

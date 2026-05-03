@@ -206,6 +206,15 @@ export const authAPI = {
     }),
   switchCompany: (companyId) => api.post('/auth/switch-company', { companyId }),
   registerCompany: (payload) => loginApi.post('/auth/register-company', payload),
+  verifyRegistrationOtp: ({ email, otp, companyId, token: fcmToken }) =>
+    loginApi.post('/auth/verify-registration-otp', {
+      email,
+      otp,
+      ...(companyId ? { companyId } : {}),
+      ...(fcmToken ? { token: fcmToken } : {}),
+    }),
+  resendRegistrationOtp: (email, password) =>
+    loginApi.post('/auth/resend-registration-otp', { email, password }),
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   verifyOTP: (email, otp, newPassword) =>
     api.post('/auth/verify-otp', { email, otp, newPassword }),
@@ -352,8 +361,10 @@ export const chatAPI = {
 
 // Attendance API
 export const attendanceAPI = {
-  checkIn: () => api.post('/attendance/check-in'),
-  checkOut: () => api.post('/attendance/check-out'),
+  /** Optional body: { latitude, longitude } (or lat, lng) from Geolocation API */
+  checkIn: (body = {}) => api.post('/attendance/check-in', body),
+  /** Optional body: { latitude, longitude } plus any existing fields (e.g. tasksDone for mobile) */
+  checkOut: (body = {}) => api.post('/attendance/check-out', body),
   getMyAttendance: (limit, config = {}) =>
     api.get('/attendance/my-attendance', {
       ...config,

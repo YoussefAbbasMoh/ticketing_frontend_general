@@ -2,13 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Brand scrollbars — matches designTokens.json (primary / surfaceVariant) */
+:root {
+  --app-scrollbar-size: 10px;
+  --app-scrollbar-track: #eef0f5;
+  --app-scrollbar-thumb: #080936;
+  --app-scrollbar-thumb-hover: #141b52;
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-scrollbar-thumb) var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--app-scrollbar-size);
+  height: var(--app-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--app-scrollbar-track);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--app-scrollbar-thumb);
+  border-radius: 9999px;
+  border: 2px solid var(--app-scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--app-scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--app-scrollbar-track);
+}
+
+/* Single vertical scrollbar: document scrolls on html, not body + inner panes */
+html {
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 body {
+  overflow-x: hidden;
+  overflow-y: hidden;
   margin: 0;
   /* Cairo may not apply under font-display: optional on slow networks — metrics-stable fallbacks reduce CLS */
   font-family: 'Cairo', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -36,6 +78,7 @@ code {
 
 #root {
   min-height: 100vh;
+  overflow: visible;
 }
 
 /* Custom animations */

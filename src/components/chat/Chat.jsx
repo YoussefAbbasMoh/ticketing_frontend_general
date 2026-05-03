@@ -68,7 +68,7 @@ const Chat = () => {
   const showChatWindow = !isMobile || activeConversation;
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 overflow-hidden bg-app-background font-cairo">
+    <div className="relative flex h-[calc(100dvh-var(--app-header-height,64px))] w-full shrink-0 overflow-hidden bg-app-background font-cairo">
       {/* Chat List - Full width on mobile, fixed width on desktop */}
       <div
         className={`

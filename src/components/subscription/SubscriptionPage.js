@@ -312,7 +312,7 @@ const SubscriptionPage = () => {
 
   if (loading) {
     return (
-      <div className="flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden bg-app-background">
+      <div className="flex w-full min-h-[50vh] flex-col items-center justify-center bg-app-background py-16">
         <div className="text-center">
           <Spinner size="xl" color="secondary" />
           <p className="mt-3 text-app-text-secondary">{t(lang, 'loadingPlans')}</p>
@@ -322,9 +322,8 @@ const SubscriptionPage = () => {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-gradient-to-br from-app-background to-app-surface-variant">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="container mx-auto max-w-6xl px-3 pt-3 pb-16 sm:px-4 sm:pt-4 lg:px-6">
+    <div className="w-full bg-gradient-to-br from-app-background to-app-surface-variant">
+      <div className="container mx-auto max-w-6xl px-3 pt-3 pb-16 sm:px-4 sm:pt-4 lg:px-6">
           <div className="mb-6">
             <h1 className="mb-2 text-3xl font-bold bg-gradient-to-r from-secondary to-secondary-700 bg-clip-text text-transparent">
               {t(lang, 'subscription')}
@@ -408,10 +407,14 @@ const SubscriptionPage = () => {
               const isFree = plan.id === 'free';
               const isBusy = payingPlanId === plan.id;
 
+              const paidHoverClasses = isFree
+                ? ''
+                : 'cursor-default transition-all duration-200 ease-out hover:-translate-y-1 hover:border-app-primary hover:shadow-app-card';
+
               return (
                 <Card
                   key={plan.id}
-                  className={`border-2 ${isCurrent ? 'border-secondary shadow-lg' : 'border-gray-200'}`}
+                  className={`border-2 ${isCurrent ? 'border-secondary shadow-lg' : 'border-gray-200'} ${paidHoverClasses}`}
                 >
                   <Card.Content className="p-6">
                     <div className="mb-4 flex items-center justify-between">
@@ -455,7 +458,6 @@ const SubscriptionPage = () => {
             })}
           </div>
         </div>
-      </div>
     </div>
   );
 };

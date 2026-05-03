@@ -1,16 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import DownloadRounded from '@mui/icons-material/DownloadRounded';
+import MapRounded from '@mui/icons-material/MapRounded';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { attendanceAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import Card from '../ui/Card';
+import { getStoredLanguage, t as i18nT } from '../../i18n';
+import { attendanceAPI } from '../../services/api';
+import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
-import Alert from '../ui/Alert';
+import Card from '../ui/Card';
 import Modal from '../ui/Modal';
 import AttendancePageSkeleton, { AttendanceTableSkeleton } from './AttendancePageSkeleton';
-import { getStoredLanguage, t as i18nT } from '../../i18n';
 
 /** For datetime-local inputs (browser local timezone) */
 const toLocalDateTimeValue = (iso) => {
@@ -73,7 +74,11 @@ const TEXT = {
         optionalNote: 'Optional note',
         cancel: 'Cancel',
         saving: 'Saving...',
-        saveChanges: 'Save changes'
+        saveChanges: 'Save changes',
+        checkInLocation: 'Check-in location',
+        checkOutLocation: 'Check-out location',
+        openInMaps: 'Open in Maps',
+        openMapButton: 'Map'
     },
     ar: {
         title: 'الحضور',
@@ -119,7 +124,11 @@ const TEXT = {
         optionalNote: 'ملاحظة اختيارية',
         cancel: 'إلغاء',
         saving: 'جارٍ الحفظ...',
-        saveChanges: 'حفظ التغييرات'
+        saveChanges: 'حفظ التغييرات',
+        checkInLocation: 'موقع تسجيل الحضور',
+        checkOutLocation: 'موقع تسجيل الانصراف',
+        openInMaps: 'فتح في الخرائط',
+        openMapButton: 'خريطة'
     }
 };
 
@@ -129,10 +138,41 @@ const formatText = (template, vars = {}) =>
         template
     );
 
+/** @param {unknown} lat @param {unknown} lng */
+const hasCoords = (lat, lng) =>
+    lat != null &&
+    lng != null &&
+    Number.isFinite(Number(lat)) &&
+    Number.isFinite(Number(lng));
+
+const AttendanceLocationCell = ({ lat, lng, buttonLabel, ariaLabel, isRtl }) => {
+    if (!hasCoords(lat, lng)) {
+        return <span className="text-xs text-app-text-tertiary">—</span>;
+    }
+    const a = Number(lat);
+    const b = Number(lng);
+    const href = `https://www.google.com/maps?q=${encodeURIComponent(`${a},${b}`)}`;
+    const openMaps = () => {
+        window.open(href, '_blank', 'noopener,noreferrer');
+    };
+    return (
+        <button
+            type="button"
+            onClick={openMaps}
+            title={ariaLabel}
+            aria-label={ariaLabel}
+            className={`inline-flex min-h-[40px] min-w-[40px] items-center justify-center gap-1.5 rounded-xl border border-app-border/90 bg-app-surface-variant/80 px-3 py-2 text-xs font-bold text-app-primary shadow-sm transition-colors hover:border-app-primary/40 hover:bg-app-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-app-primary/30 active:scale-[0.98] sm:min-h-0 sm:px-3.5 ${isRtl ? 'flex-row-reverse' : ''}`}
+        >
+            <MapRounded sx={{ fontSize: 18 }} aria-hidden />
+            <span>{buttonLabel}</span>
+        </button>
+    );
+};
+
 const AttendancePage = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const isManagerOrAdmin = user?.role === 'admin' || user?.role === 'manager';
+    const { user, isAdmin, canManageCompanyTeam } = useAuth();
+    const canUseAttendanceSummary = isAdmin() || canManageCompanyTeam();
     const [lang, setLang] = useState(getStoredLanguage());
     const locale = lang === 'ar' ? 'ar-EG' : 'en-US';
     const isRtl = lang === 'ar';
@@ -172,12 +212,18 @@ const AttendancePage = () => {
     const [successMsg, setSuccessMsg] = useState('');
 
     useEffect(() => {
+        if (!canUseAttendanceSummary && activeTab === 'summary') {
+            setActiveTab('my_attendance');
+        }
+    }, [canUseAttendanceSummary, activeTab]);
+
+    useEffect(() => {
         if (activeTab === 'my_attendance') {
             fetchMyLogs();
-        } else if (activeTab === 'summary' && isManagerOrAdmin) {
+        } else if (activeTab === 'summary' && canUseAttendanceSummary) {
             fetchAllLogs();
         }
-    }, [activeTab, page, reportMonth, reportYear]);
+    }, [activeTab, page, reportMonth, reportYear, canUseAttendanceSummary]);
 
     useEffect(() => {
         const onLanguageChanged = () => setLang(getStoredLanguage());
@@ -261,7 +307,7 @@ const AttendancePage = () => {
             setSuccessMsg(tt('updatedSuccessfully'));
             closeEditModal();
             await fetchMyLogs();
-            if (isManagerOrAdmin) {
+            if (canUseAttendanceSummary) {
                 await fetchAllLogs();
             }
         } catch (err) {
@@ -357,9 +403,21 @@ const AttendancePage = () => {
         }
     };
 
+    /** Calendar day from API is `YYYY-MM-DD`; parse as local date so it never shifts by timezone. */
     const formatDate = (dateStr) => {
-        if (!dateStr) return '-';
-        return new Date(dateStr).toLocaleDateString(locale, {
+        if (dateStr == null || dateStr === '') return '-';
+        const s = typeof dateStr === 'string' ? dateStr.trim() : '';
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+            const [y, m, d] = s.split('-').map((x) => parseInt(x, 10));
+            return new Date(y, m - 1, d).toLocaleDateString(locale, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            });
+        }
+        const parsed = new Date(dateStr);
+        if (Number.isNaN(parsed.getTime())) return '-';
+        return parsed.toLocaleDateString(locale, {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
@@ -418,8 +476,14 @@ const AttendancePage = () => {
                 </div>
             )}
 
+            {!canUseAttendanceSummary && (
+                <h2 className="mb-4 text-lg font-bold tracking-tight text-app-text sm:text-xl">
+                    {tt('myAttendance')}
+                </h2>
+            )}
+
             {/* Tabs — same chip style language as project filters */}
-            {isManagerOrAdmin && (
+            {canUseAttendanceSummary && (
                 <div className={`mb-6 flex flex-wrap gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
                     <button
                         type="button"
@@ -450,7 +514,7 @@ const AttendancePage = () => {
             )}
 
             {/* Admin Report Section - Only visible in Summary Tab for Admins/Managers */}
-            {isManagerOrAdmin && activeTab === 'summary' && (
+            {canUseAttendanceSummary && activeTab === 'summary' && (
                 <Card className="mb-8 shadow-app-card">
                     <Card.Content className="p-5 sm:p-6">
                         <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
@@ -543,13 +607,22 @@ const AttendancePage = () => {
                                                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                         {tt('checkOut')}
                                                     </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkInLocation')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkOutLocation')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('note')}
+                                                    </th>
                                                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                         {tt('duration')}
                                                     </th>
                                                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                         {tt('status')}
                                                     </th>
-                                                    {isManagerOrAdmin && (
+                                                    {canUseAttendanceSummary && (
                                                         <th className="px-4 py-3 text-right text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                             {tt('actions')}
                                                         </th>
@@ -572,13 +645,38 @@ const AttendancePage = () => {
                                                                 <span className="font-semibold text-emerald-800">{tt('active')}</span>
                                                             )}
                                                         </td>
+                                                        <td className="px-4 py-4 align-top sm:px-6">
+                                                            <AttendanceLocationCell
+                                                                lat={log.checkInLatitude}
+                                                                lng={log.checkInLongitude}
+                                                                buttonLabel={tt('openMapButton')}
+                                                                ariaLabel={tt('openInMaps')}
+                                                                isRtl={isRtl}
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-4 align-top sm:px-6">
+                                                            <AttendanceLocationCell
+                                                                lat={log.checkOutLatitude}
+                                                                lng={log.checkOutLongitude}
+                                                                buttonLabel={tt('openMapButton')}
+                                                                ariaLabel={tt('openInMaps')}
+                                                                isRtl={isRtl}
+                                                            />
+                                                        </td>
+                                                        <td className="max-w-[14rem] px-4 py-4 text-start text-sm leading-snug text-app-text-secondary sm:max-w-xs sm:px-6">
+                                                            {log.note?.trim() ? (
+                                                                <span className="text-app-text">{log.note.trim()}</span>
+                                                            ) : (
+                                                                <span className="text-app-text-tertiary">—</span>
+                                                            )}
+                                                        </td>
                                                         <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
                                                             {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 sm:px-6">
                                                             <Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge>
                                                         </td>
-                                                        {isManagerOrAdmin && (
+                                                        {canUseAttendanceSummary && (
                                                             <td className="whitespace-nowrap px-4 py-4 text-right sm:px-6">
                                                                 <Button
                                                                     type="button"
@@ -622,6 +720,15 @@ const AttendancePage = () => {
                                                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                         {tt('checkOut')}
                                                     </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkInLocation')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('checkOutLocation')}
+                                                    </th>
+                                                    <th className="px-4 py-3 text-start text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
+                                                        {tt('note')}
+                                                    </th>
                                                     <th className="px-4 py-3 text-left text-[11px] font-extrabold uppercase tracking-wider text-app-text-secondary sm:px-6">
                                                         {tt('duration')}
                                                     </th>
@@ -663,6 +770,31 @@ const AttendancePage = () => {
                                                                 formatTime(log.checkOut)
                                                             ) : (
                                                                 <span className="font-semibold text-emerald-800">{tt('active')}</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-4 align-top sm:px-6">
+                                                            <AttendanceLocationCell
+                                                                lat={log.checkInLatitude}
+                                                                lng={log.checkInLongitude}
+                                                                buttonLabel={tt('openMapButton')}
+                                                                ariaLabel={tt('openInMaps')}
+                                                                isRtl={isRtl}
+                                                            />
+                                                        </td>
+                                                        <td className="px-4 py-4 align-top sm:px-6">
+                                                            <AttendanceLocationCell
+                                                                lat={log.checkOutLatitude}
+                                                                lng={log.checkOutLongitude}
+                                                                buttonLabel={tt('openMapButton')}
+                                                                ariaLabel={tt('openInMaps')}
+                                                                isRtl={isRtl}
+                                                            />
+                                                        </td>
+                                                        <td className="max-w-[12rem] px-4 py-4 text-start text-sm leading-snug text-app-text-secondary sm:max-w-xs sm:px-6">
+                                                            {log.note?.trim() ? (
+                                                                <span className="text-app-text">{log.note.trim()}</span>
+                                                            ) : (
+                                                                <span className="text-app-text-tertiary">—</span>
                                                             )}
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
@@ -732,6 +864,38 @@ const AttendancePage = () => {
                                 {' · '}
                                 {tt('date')}: <span className="font-mono text-app-text">{editRecord.date}</span>
                             </p>
+                            {canUseAttendanceSummary && (
+                                <div
+                                    className={`rounded-app-input border border-app-border/80 bg-app-surface-variant/60 p-4 text-sm ${isRtl ? 'text-right' : 'text-start'}`}
+                                >
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <div className="mb-1 text-[11px] font-semibold text-app-text-secondary">
+                                                {tt('checkInLocation')}
+                                            </div>
+                                            <AttendanceLocationCell
+                                                lat={editRecord.checkInLatitude}
+                                                lng={editRecord.checkInLongitude}
+                                                buttonLabel={tt('openMapButton')}
+                                                ariaLabel={tt('openInMaps')}
+                                                isRtl={isRtl}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div className="mb-1 text-[11px] font-semibold text-app-text-secondary">
+                                                {tt('checkOutLocation')}
+                                            </div>
+                                            <AttendanceLocationCell
+                                                lat={editRecord.checkOutLatitude}
+                                                lng={editRecord.checkOutLongitude}
+                                                buttonLabel={tt('openMapButton')}
+                                                ariaLabel={tt('openInMaps')}
+                                                isRtl={isRtl}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             <div>
                                 <label className="mb-1 block text-sm font-semibold text-app-text" htmlFor="edit-check-in">
                                     {tt('checkIn')}

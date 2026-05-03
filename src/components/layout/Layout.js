@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Box, useTheme } from '@mui/material';
+import React, { useState } from 'react';
 import AppBar from './AppBar';
 import AppDrawer from './AppDrawer';
 
@@ -38,35 +38,22 @@ const Layout = ({ children }) => {
         component="main"
         sx={{
           flexGrow: 1,
-          minHeight: 0,
-          height: `calc(100dvh - ${headerHeightPx}px)`,
-          maxHeight: `calc(100dvh - ${headerHeightPx}px)`,
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          /* At least one viewport below header so full-height routes (e.g. Chat) fill the pane;
+             content taller than that grows the page — only html scrolls (see index.css). */
+          minHeight: `calc(100dvh - ${headerHeightPx}px)`,
           '@supports not (height: 100dvh)': {
-            height: `calc(100vh - ${headerHeightPx}px)`,
-            maxHeight: `calc(100vh - ${headerHeightPx}px)`,
+            minHeight: `calc(100vh - ${headerHeightPx}px)`,
           },
           backgroundColor: theme.palette.background.default,
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
-          width: '100%',
-          maxWidth: '100%',
+          overflow: 'visible',
         }}
       >
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            width: '100%',
-            maxWidth: '100%',
-          }}
-        >
-          {children}
-        </div>
+        {children}
       </Box>
     </Box>
   );

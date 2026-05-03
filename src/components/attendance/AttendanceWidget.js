@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { attendanceAPI } from '../../services/api';
-import Spinner from '../ui/Spinner';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getStoredLanguage } from '../../i18n';
+import { attendanceAPI } from '../../services/api';
+import Button from '../ui/Button';
+import Modal from '../ui/Modal';
+import Spinner from '../ui/Spinner';
 
 const TEXT = {
     en: {
@@ -31,6 +33,11 @@ const TEXT = {
         checkInChip: 'Check In',
         checkOutChip: 'Check Out',
         greatWork: 'Great work today! See you tomorrow 🎉',
+        checkoutNoteTitle: 'Check-out note',
+        checkoutNoteSubtitle: 'Add what you worked on today.',
+        checkoutNoteHint: 'Example: Fixed checkout bug, reviewed 3 PRs…',
+        checkoutSkipNote: 'Skip for now',
+        checkoutSubmitting: 'Checking out…',
     },
     ar: {
         failedCheckIn: 'فشل تسجيل الحضور',
@@ -59,8 +66,32 @@ const TEXT = {
         checkInChip: 'تسجيل دخول',
         checkOutChip: 'تسجيل خروج',
         greatWork: 'عمل رائع اليوم! نراك غدًا 🎉',
+        checkoutNoteTitle: 'ملاحظة الانصراف',
+        checkoutNoteSubtitle: 'أضف ما أنجزته اليوم.',
+        checkoutNoteHint: 'مثال: أصلحت خطأ في النظام، وراجعت 3 طلبات دمج…',
+        checkoutSkipNote: 'تخطي الآن',
+        checkoutSubmitting: 'جارٍ تسجيل الانصراف…',
     },
 };
+
+/** Best-effort GPS coords; resolves null if denied, unsupported, or timeout. */
+const getCurrentPositionCoords = () =>
+    new Promise((resolve) => {
+        if (typeof navigator === 'undefined' || !navigator.geolocation) {
+            resolve(null);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                resolve({
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                });
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+    });
 
 /** Sessions whose check-in falls on the user's local calendar day (matches the date shown in the UI). */
 const getLocalDayBounds = () => {
@@ -98,6 +129,9 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
     /** At least one closed session today (enables another check-in on the same day) */
     const [hasCompletedSessionToday, setHasCompletedSessionToday] = useState(false);
     const [error, setError] = useState('');
+    const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+    const [checkoutNote, setCheckoutNote] = useState('');
+    const [checkoutSubmitting, setCheckoutSubmitting] = useState(false);
     const [currentTime, setCurrentTime] = useState(new Date());
     const [lang, setLang] = useState(getStoredLanguage());
     const tx = (key) => TEXT[lang]?.[key] || TEXT.en[key] || key;
@@ -172,7 +206,8 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
     const handleCheckIn = async () => {
         try {
             setLoading(true);
-            await attendanceAPI.checkIn();
+            const loc = await getCurrentPositionCoords();
+            await attendanceAPI.checkIn(loc ? { latitude: loc.latitude, longitude: loc.longitude } : {});
             await fetchStatus();
         } catch (err) {
             setError(err.response?.data?.message || tx('failedCheckIn'));
@@ -180,14 +215,34 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
         }
     };
 
-    const handleCheckOut = async () => {
+    const closeCheckoutDialog = () => {
+        if (checkoutSubmitting) return;
+        setCheckoutDialogOpen(false);
+        setCheckoutNote('');
+    };
+
+    const submitCheckOut = async (noteText) => {
         try {
+            setCheckoutSubmitting(true);
             setLoading(true);
-            await attendanceAPI.checkOut();
+            setError('');
+            const loc = await getCurrentPositionCoords();
+            const body = {};
+            const trimmed = noteText != null ? String(noteText).trim() : '';
+            if (trimmed) body.tasksDone = trimmed;
+            if (loc) {
+                body.latitude = loc.latitude;
+                body.longitude = loc.longitude;
+            }
+            await attendanceAPI.checkOut(body);
+            setCheckoutDialogOpen(false);
+            setCheckoutNote('');
             await fetchStatus();
         } catch (err) {
             setError(err.response?.data?.message || tx('failedCheckOut'));
             setLoading(false);
+        } finally {
+            setCheckoutSubmitting(false);
         }
     };
 
@@ -271,6 +326,7 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
     const isRtl = lang === 'ar';
 
     return (
+        <>
         <div
             className={`relative mb-8 overflow-hidden rounded-3xl shadow-[0_12px_30px_rgba(8,9,54,0.28)] ${isRtl ? 'text-right' : 'text-left'}`}
             dir={isRtl ? 'rtl' : 'ltr'}
@@ -333,7 +389,11 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
                     {isLive ? (
                         <button
                             type="button"
-                            onClick={handleCheckOut}
+                            onClick={() => {
+                                setError('');
+                                setCheckoutNote('');
+                                setCheckoutDialogOpen(true);
+                            }}
                             disabled={loading}
                             className="flex w-full items-center justify-center gap-2.5 rounded-app-input bg-app-error py-4 text-[15px] font-bold text-white shadow-[0_6px_16px_rgba(220,38,38,0.45)] transition hover:brightness-110 disabled:opacity-60"
                         >
@@ -389,6 +449,50 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
                 )}
             </div>
         </div>
+
+        <Modal isOpen={checkoutDialogOpen} onClose={closeCheckoutDialog} size="md" className="font-cairo">
+            <div dir={isRtl ? 'rtl' : 'ltr'}>
+            <Modal.Header onClose={closeCheckoutDialog}>{tx('checkoutNoteTitle')}</Modal.Header>
+            <Modal.Content>
+                <p className="text-sm leading-relaxed text-app-text-secondary">{tx('checkoutNoteSubtitle')}</p>
+                <label htmlFor="checkout-note" className="sr-only">
+                    {tx('checkoutNoteHint')}
+                </label>
+                <textarea
+                    id="checkout-note"
+                    value={checkoutNote}
+                    onChange={(e) => setCheckoutNote(e.target.value)}
+                    placeholder={tx('checkoutNoteHint')}
+                    rows={4}
+                    disabled={checkoutSubmitting}
+                    className="mt-4 w-full resize-y rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm text-app-text shadow-app-soft placeholder:text-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 disabled:opacity-60"
+                />
+            </Modal.Content>
+            <Modal.Footer
+                className={`flex flex-col-reverse gap-3 sm:flex-row sm:justify-end ${isRtl ? 'sm:flex-row-reverse' : ''}`}
+            >
+                <Button
+                    type="button"
+                    variant="outline"
+                    disabled={checkoutSubmitting}
+                    onClick={() => submitCheckOut('')}
+                    className="w-full sm:w-auto"
+                >
+                    {tx('checkoutSkipNote')}
+                </Button>
+                <Button
+                    type="button"
+                    variant="danger"
+                    disabled={checkoutSubmitting}
+                    onClick={() => submitCheckOut(checkoutNote)}
+                    className="w-full sm:w-auto"
+                >
+                    {checkoutSubmitting ? tx('checkoutSubmitting') : tx('checkOut')}
+                </Button>
+            </Modal.Footer>
+            </div>
+        </Modal>
+        </>
     );
 };
 

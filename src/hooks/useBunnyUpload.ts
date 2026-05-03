@@ -3,6 +3,7 @@ import axios from 'axios';
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'heic', 'heif', 'webp']);
 
+
 const readEnv = (key) => String(import.meta.env?.[key] || '').trim();
 const sanitizeDestinationPath = (destinationPath = '') => {
   const trimmed = String(destinationPath || '').trim();

@@ -1,4 +1,3 @@
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import ChevronLeftRounded from '@mui/icons-material/ChevronLeftRounded';
 import ChevronRightRounded from '@mui/icons-material/ChevronRightRounded';
 import EventAvailableRounded from '@mui/icons-material/EventAvailableRounded';
@@ -27,6 +26,7 @@ import { getStoredLanguage, t } from '../../i18n';
 import { attendanceAPI, projectAPI } from '../../services/api';
 import Alert from '../ui/Alert';
 import Button from '../ui/Button';
+import NavBackIcon from '../ui/NavBackIcon';
 import Spinner from '../ui/Spinner';
 
 /** @typedef {{ title: string; color: string; kind: 'projectStart' | 'projectDue' | 'attendance' }} CalendarEventItem */
@@ -234,7 +234,7 @@ const WorkspaceCalendarPage = () => {
               variant="ghost"
               onClick={() => navigate('/')}
               className="mb-3 border-app-border text-app-text-secondary hover:bg-app-surface hover:text-app-text"
-              icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}
+              icon={<NavBackIcon />}
             >
               {t(lang, 'home')}
             </Button>

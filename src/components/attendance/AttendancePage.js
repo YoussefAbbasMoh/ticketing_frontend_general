@@ -1,14 +1,17 @@
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import DownloadRounded from '@mui/icons-material/DownloadRounded';
 import MapRounded from '@mui/icons-material/MapRounded';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
+import { useMySubscriptionPlan } from '../../hooks/useMySubscriptionPlan';
 import { getStoredLanguage, t as i18nT } from '../../i18n';
-import { attendanceAPI } from '../../services/api';
+import { attendanceAPI, getAxiosErrorMessage } from '../../services/api';
+import { openFreePlanBlockedDialog } from '../../utils/freePlanGate';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import Button from '../ui/Button';
+import NavBackIcon from '../ui/NavBackIcon';
 import Card from '../ui/Card';
 import Modal from '../ui/Modal';
 import AttendancePageSkeleton, { AttendanceTableSkeleton } from './AttendancePageSkeleton';
@@ -171,8 +174,11 @@ const AttendanceLocationCell = ({ lat, lng, buttonLabel, ariaLabel, isRtl }) => 
 
 const AttendancePage = () => {
     const navigate = useNavigate();
-    const { user, isAdmin, canManageCompanyTeam } = useAuth();
-    const canUseAttendanceSummary = isAdmin() || canManageCompanyTeam();
+    const { alertDialog } = useToast();
+    const { user, canSeeSubscriptionNav } = useAuth();
+    const canUseAttendanceSummary = canSeeSubscriptionNav();
+    const companyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'default';
+    const { isFreePlan } = useMySubscriptionPlan(companyKey);
     const [lang, setLang] = useState(getStoredLanguage());
     const locale = lang === 'ar' ? 'ar-EG' : 'en-US';
     const isRtl = lang === 'ar';
@@ -236,8 +242,8 @@ const AttendancePage = () => {
             setLoading(true);
             const response = await attendanceAPI.getMyAttendance(50);
             setLogs(response.data.logs || []);
-        } catch {
-            setError(tt('failedFetchHistory'));
+        } catch (err) {
+            setError(getAxiosErrorMessage(err, tt('failedFetchHistory')));
         } finally {
             setLoading(false);
         }
@@ -260,6 +266,10 @@ const AttendancePage = () => {
     };
 
     const openEditModal = (log) => {
+        if (canUseAttendanceSummary && isFreePlan) {
+            openFreePlanBlockedDialog(alertDialog, navigate, canUseAttendanceSummary);
+            return;
+        }
         setEditRecord(log);
         setEditCheckIn(toLocalDateTimeValue(log.checkIn));
         setEditCheckOut(log.checkOut ? toLocalDateTimeValue(log.checkOut) : '');
@@ -279,6 +289,10 @@ const AttendancePage = () => {
 
     const handleSaveEdit = async () => {
         if (!editRecord?._id) return;
+        if (canUseAttendanceSummary && isFreePlan) {
+            openFreePlanBlockedDialog(alertDialog, navigate, canUseAttendanceSummary);
+            return;
+        }
         const checkInIso = fromLocalDateTimeValue(editCheckIn);
         if (!checkInIso) {
             setError(tt('checkInRequired'));
@@ -329,6 +343,10 @@ const AttendancePage = () => {
     };
 
     const handleDownloadReport = async () => {
+        if (canUseAttendanceSummary && isFreePlan) {
+            openFreePlanBlockedDialog(alertDialog, navigate, canUseAttendanceSummary);
+            return;
+        }
         try {
             setDownloading(true);
             setError('');
@@ -452,7 +470,7 @@ const AttendancePage = () => {
                         variant="ghost"
                         onClick={() => navigate('/')}
                         className="mb-4 border-app-border text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text"
-                        icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}
+                        icon={<NavBackIcon />}
                     >
                         {i18nT(lang, 'home')}
                     </Button>

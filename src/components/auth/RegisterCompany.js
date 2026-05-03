@@ -5,6 +5,7 @@ import { authAPI } from '../../services/api';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
+import AuthPasswordInput from './AuthPasswordInput';
 import {
   authInputClass,
   authLabelClass,
@@ -320,16 +321,15 @@ const RegisterCompany = () => {
                 <label htmlFor="password" className={authLabelClass}>
                   {t(lang, 'password')}
                 </label>
-                <input
+                <AuthPasswordInput
+                  lang={lang}
                   id="password"
                   name="password"
-                  type="password"
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
                   required
                   disabled={loading}
-                  className={authInputClass}
                   placeholder={t(lang, 'placeholderPasswordMin8')}
                 />
               </div>

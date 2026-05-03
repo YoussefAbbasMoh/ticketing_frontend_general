@@ -326,10 +326,11 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         {/* Search */}
         <div className="relative mb-3">
           <svg
-            className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 transform text-app-text-tertiary ${isRtl ? 'right-3' : 'left-3'}`}
+            className="pointer-events-none absolute start-3 top-1/2 z-0 h-5 w-5 -translate-y-1/2 text-app-text-tertiary"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
+            aria-hidden
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -338,16 +339,18 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             placeholder={tx('searchConversations')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full rounded-app-input border border-app-border bg-app-surface py-2.5 text-app-text transition-all duration-200 focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${isRtl ? 'pr-10 pl-10' : 'pl-10 pr-10'}`}
+            className={`w-full rounded-app-input border border-app-border bg-app-surface py-2.5 ps-10 text-app-text transition-all duration-200 focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
+              searchQuery ? 'pe-11' : 'pe-4'
+            }`}
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className={`absolute top-1/2 -translate-y-1/2 transform text-app-text-tertiary hover:text-app-text ${isRtl ? 'left-3' : 'right-3'}`}
+              className="absolute end-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-app-input text-app-text-tertiary hover:bg-app-surface-variant hover:text-app-text"
               aria-label={tx('clearSearch')}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

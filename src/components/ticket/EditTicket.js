@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ticketAPI, projectAPI, uploadAPI, getImageUrl, uploadTicketImagesViaBunny } from '../../services/api';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
+import { useIsRtl } from '../../hooks/useIsRtl';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -145,6 +146,7 @@ const TEXT = {
 };
 
 const EditTicket = () => {
+  const isRtl = useIsRtl();
   const { ticketId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -500,7 +502,13 @@ const EditTicket = () => {
             onClick={() => navigate(`/project/${ticket.project}`)}
             className="mb-4 text-gray-600 hover:text-secondary"
             icon={
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className={`w-5 h-5 ${isRtl ? '-scale-x-100' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             }

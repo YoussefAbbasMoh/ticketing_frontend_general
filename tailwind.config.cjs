@@ -73,17 +73,54 @@ module.exports = {
       },
       keyframes: {
         'hero-orb-right': {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-30px)' },
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '33%': { transform: 'translate(-12px, -24px) scale(1.03)' },
+          '66%': { transform: 'translate(8px, 12px) scale(0.98)' },
         },
         'hero-orb-left': {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(16px, -18px) scale(1.04)' },
+        },
+        marquee: {
+          '0%': { transform: 'translateX(0)' },
+          '100%': { transform: 'translateX(-50%)' },
+        },
+        'float-y': {
           '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(20px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        'float-y-alt': {
+          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+          '50%': { transform: 'translateY(-14px) rotate(4deg)' },
+        },
+        drift: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '50%': { transform: 'translateX(18px)' },
+        },
+        'phone-sway': {
+          '0%, 100%': { transform: 'translateY(0) rotate(-0.8deg)' },
+          '50%': { transform: 'translateY(-12px) rotate(1deg)' },
+        },
+        twinkle: {
+          '0%, 100%': { opacity: '0.35' },
+          '50%': { opacity: '0.9' },
+        },
+        'spin-slow': {
+          '0%': { transform: 'rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg)' },
         },
       },
       animation: {
-        'hero-orb-right': 'hero-orb-right 8s ease-in-out infinite',
-        'hero-orb-left': 'hero-orb-left 8s ease-in-out infinite',
+        'hero-orb-right': 'hero-orb-right 14s ease-in-out infinite',
+        'hero-orb-left': 'hero-orb-left 12s ease-in-out infinite',
+        marquee: 'marquee 42s linear infinite',
+        'float-y': 'float-y 7s ease-in-out infinite',
+        'float-y-slow': 'float-y 11s ease-in-out infinite',
+        'float-y-alt': 'float-y-alt 9s ease-in-out infinite',
+        drift: 'drift 13s ease-in-out infinite',
+        'phone-sway': 'phone-sway 9s ease-in-out infinite',
+        twinkle: 'twinkle 5s ease-in-out infinite',
+        'spin-slow': 'spin-slow 28s linear infinite',
       },
     },
   },

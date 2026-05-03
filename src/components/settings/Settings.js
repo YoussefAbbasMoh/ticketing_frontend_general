@@ -117,7 +117,14 @@ const TEXT = {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { user, isAdmin, canManageCompanyTeam, canInviteUsersToCompany, updateUser } = useAuth();
+  const {
+    user,
+    isAdmin,
+    canManageCompanyTeam,
+    canInviteUsersToCompany,
+    canSeeSubscriptionNav,
+    updateUser,
+  } = useAuth();
 
   const showTeamSection = () => isAdmin() || canManageCompanyTeam();
   const [profileData, setProfileData] = useState({
@@ -449,13 +456,15 @@ const Settings = () => {
                     <p className="text-xs text-amber-700 mt-2">{subscriptionInfo.notice}</p>
                   )}
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => navigate('/subscription')}
-                  className="w-full sm:w-auto"
-                >
-                  {tx('manageSubscription')}
-                </Button>
+                {canSeeSubscriptionNav() && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate('/subscription')}
+                    className="w-full sm:w-auto"
+                  >
+                    {tx('manageSubscription')}
+                  </Button>
+                )}
               </div>
             </Card.Content>
           </Card>

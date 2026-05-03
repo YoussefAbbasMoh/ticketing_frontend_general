@@ -52,6 +52,7 @@ const TEXT = {
     completed: 'Completed',
     onHold: 'On Hold',
     searchProjectsPlaceholder: 'Search projects by name...',
+    clearSearch: 'Clear search',
     foundProjects: 'Found {{count}} {{label}} matching "{{query}}"',
     projectSingle: 'project',
     projectPlural: 'projects',
@@ -104,6 +105,7 @@ const TEXT = {
     completed: 'مكتمل',
     onHold: 'معلّق',
     searchProjectsPlaceholder: 'ابحث عن مشروع بالاسم...',
+    clearSearch: 'مسح البحث',
     foundProjects: 'تم العثور على {{count}} {{label}} مطابق لـ "{{query}}"',
     projectSingle: 'مشروع',
     projectPlural: 'مشاريع',
@@ -482,23 +484,26 @@ const Home = () => {
           <div id="projects-section" className="scroll-mt-24">
             <div className="mb-6">
               <div className="relative max-w-md">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-tertiary">
-                  <SearchRounded sx={{ fontSize: 22 }} />
+                <div className="pointer-events-none absolute start-3 top-1/2 z-0 -translate-y-1/2 text-app-text-tertiary">
+                  <SearchRounded sx={{ fontSize: 22, display: 'block' }} />
                 </div>
                 <input
                   type="text"
                   placeholder={tx('searchProjectsPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-app-input border border-app-border bg-app-surface py-3 pl-10 pr-4 text-base text-app-text transition-all duration-200 hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
+                  className={`w-full rounded-app-input border border-app-border bg-app-surface py-3 ps-10 text-base text-app-text transition-all duration-200 hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
+                    searchQuery ? 'pe-11' : 'pe-4'
+                  }`}
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-text-tertiary hover:text-app-text"
+                    className="absolute end-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-app-input text-app-text-tertiary hover:bg-app-surface-variant hover:text-app-text"
+                    aria-label={tx('clearSearch')}
                   >
-                    <CloseRounded sx={{ fontSize: 22 }} />
+                    <CloseRounded sx={{ fontSize: 20, display: 'block' }} />
                   </button>
                 )}
               </div>

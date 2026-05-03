@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
+import AuthPasswordInput from './AuthPasswordInput';
 import {
   authInputClass,
   authLabelClass,
@@ -247,16 +248,15 @@ const Login = () => {
               <label htmlFor="password" className={authLabelClass}>
                 {t(lang, 'password')}
               </label>
-              <input
+              <AuthPasswordInput
+                lang={lang}
                 id="password"
                 name="password"
-                type="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
                 autoComplete="current-password"
                 disabled={loading}
-                className={authInputClass}
                 placeholder={t(lang, 'password')}
               />
             </div>

@@ -12,7 +12,7 @@ export function TrustedTicker() {
           {copy.trusted.prefix}
         </p>
         <div className="flex min-w-0 flex-1 overflow-hidden">
-          <div className="flex animate-marquee whitespace-nowrap">
+          <div className="landing-ambient-animate flex animate-marquee whitespace-nowrap">
             {doubled.map((label, i) => (
               <span
                 key={`${label}-${i}`}

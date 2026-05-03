@@ -3,11 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { chatAPI, getAxiosErrorMessage } from '../../services/api';
+import { useMySubscriptionPlan } from '../../hooks/useMySubscriptionPlan';
+import { openFreePlanBlockedDialog } from '../../utils/freePlanGate';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
 import Spinner from '../ui/Spinner';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
+import { useIsRtl } from '../../hooks/useIsRtl';
 import { getStoredLanguage } from '../../i18n';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -23,9 +26,12 @@ const THREAD_SUB = {
 };
 
 const ChatWindow = ({ conversation, onBack }) => {
+  const isRtl = useIsRtl();
   const navigate = useNavigate();
   const { toast, alertDialog } = useToast();
-  const { user } = useAuth();
+  const { user, canSeeSubscriptionNav } = useAuth();
+  const companyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'default';
+  const { canUploadChatAttachments } = useMySubscriptionPlan(companyKey);
   const { messages, sendMessage, sendFileMessage, loadMessages, markAsRead } = useChat();
   const { uploadFile, uploadVideo } = useBunnyUpload();
   const [loading, setLoading] = useState(false);
@@ -203,6 +209,11 @@ const ChatWindow = ({ conversation, onBack }) => {
   const handleSendFile = async (type, file) => {
     if (!conversation?._id) return;
 
+    if (!canUploadChatAttachments) {
+      openFreePlanBlockedDialog(alertDialog, navigate, canSeeSubscriptionNav());
+      return;
+    }
+
     try {
       // Voice remains on legacy multipart path.
       if (type === 'voice') {
@@ -245,13 +256,7 @@ const ChatWindow = ({ conversation, onBack }) => {
         status === 403 &&
         /free plan|upgrade your subscription|not available on/i.test(msg)
       ) {
-        alertDialog({
-          title: 'Subscription required',
-          message: msg,
-          confirmText: 'View plans',
-          cancelText: 'Close',
-          onConfirm: () => navigate('/subscription'),
-        });
+        openFreePlanBlockedDialog(alertDialog, navigate, canSeeSubscriptionNav());
       } else {
         toast(msg, { severity: 'error' });
       }
@@ -368,7 +373,13 @@ const ChatWindow = ({ conversation, onBack }) => {
                 className="rounded-app-input p-2 transition-colors hover:bg-app-surface-variant"
                 aria-label="Back to conversations"
               >
-                <svg className="h-5 w-5 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className={`h-5 w-5 text-app-text-secondary ${isRtl ? '-scale-x-100' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
               </button>
@@ -556,6 +567,10 @@ const ChatWindow = ({ conversation, onBack }) => {
             onCancelReply={() => setReplyTo(null)}
             editingMessage={editingMessage}
             onCancelEdit={() => setEditingMessage(null)}
+            attachmentsAllowed={canUploadChatAttachments}
+            onAttachmentsNotAllowed={() =>
+              openFreePlanBlockedDialog(alertDialog, navigate, canSeeSubscriptionNav())
+            }
           />
         </div>
       </div>

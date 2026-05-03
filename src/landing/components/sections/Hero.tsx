@@ -1,12 +1,14 @@
+import { HeroAmbientLayer } from '@/landing/components/effects/HeroAmbientLayer';
+import { HeroParallaxVisuals, useHeroParallaxMotion } from '@/landing/components/effects/HeroParallaxMotion';
 import { LinkButton } from '@/landing/components/ui/Button';
 import { PhoneMockup } from '@/landing/components/ui/PhoneMockup';
 import { useLandingLang } from '@/landing/LandingLangContext';
 
 /**
- * No framer-motion here — animated hero text starting at opacity 0 hurts LCP.
- * Decorative motion uses CSS-only floating orbs (Tailwind keyframes).
+ * Headline stays static for LCP. CSS orbs + framer mouse parallax on decor only.
  */
 export function Hero() {
+  const { reduce, springX, springY, onPointerMove, onPointerLeave } = useHeroParallaxMotion();
   const { copy } = useLandingLang();
   const h = copy.hero;
   const stats = [
@@ -19,6 +21,8 @@ export function Hero() {
     <section
       id="hero"
       className="relative overflow-hidden pt-28 pb-16 lg:pt-32 lg:pb-24"
+      onPointerMove={onPointerMove}
+      onPointerLeave={onPointerLeave}
     >
       <div
         aria-hidden
@@ -28,6 +32,10 @@ export function Hero() {
         aria-hidden
         className="pointer-events-none absolute -left-20 bottom-0 h-[400px] w-[400px] animate-hero-orb-left rounded-full bg-navy/40 blur-[100px] will-change-transform"
       />
+
+      <HeroAmbientLayer />
+
+      <HeroParallaxVisuals springX={springX} springY={springY} reduce={reduce} />
 
       <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-4 lg:grid-cols-2 lg:items-center lg:gap-8 lg:px-8">
         <div className="max-w-xl">
@@ -67,7 +75,9 @@ export function Hero() {
         </div>
 
         <div className="relative hidden min-h-[520px] lg:block">
-          <PhoneMockup />
+          <div className="landing-ambient-animate flex min-h-[520px] items-center justify-center animate-phone-sway">
+            <PhoneMockup />
+          </div>
         </div>
       </div>
     </section>

@@ -1,7 +1,8 @@
 import { createTheme } from '@mui/material/styles';
 import { colors, radii, typography } from './theme/designTokens.js';
 
-const theme = createTheme({
+/** Shared MUI options; pass `direction` so icons and layout mirror with `document.dir`. */
+const themeOptions = {
   palette: {
     mode: 'light',
     primary: {
@@ -154,6 +155,14 @@ const theme = createTheme({
       },
     },
   },
-});
+};
 
+export function createAppTheme(direction = 'ltr') {
+  return createTheme({
+    direction,
+    ...themeOptions,
+  });
+}
+
+const theme = createAppTheme('ltr');
 export default theme;

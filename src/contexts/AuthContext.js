@@ -152,6 +152,11 @@ export const AuthProvider = ({ children }) => {
     return Boolean(m.isOwner) || ['admin', 'manager'].includes(m.companyRole);
   };
 
+  /** Owner, company admin/manager, or global admin/manager — subscription nav + attendance team summary. */
+  const canSeeSubscriptionNav = () => {
+    return isAdmin() || canManageCompanyTeam();
+  };
+
   const isCompanyOwner = () => {
     const activeId = resolveActiveCompanyId();
     if (!user?.companies?.length || !activeId) return false;
@@ -181,6 +186,7 @@ export const AuthProvider = ({ children }) => {
     switchActiveCompany,
     isAdmin,
     canManageCompanyTeam,
+    canSeeSubscriptionNav,
     isCompanyOwner,
     canInviteUsersToCompany,
     loading,

@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 
+import { LandingAmbientBackdrop } from '@/landing/components/effects/LandingAmbientBackdrop';
+import { LandingScrollParallaxBackdrop } from '@/landing/components/effects/LandingScrollParallaxBackdrop';
 import { Navbar } from '@/landing/components/layout/Navbar';
 
 import { Hero } from '@/landing/components/sections/Hero';
@@ -113,6 +115,10 @@ function LandingPageInner() {
         aria-hidden
 
       />
+
+      <LandingAmbientBackdrop />
+
+      <LandingScrollParallaxBackdrop />
 
       <div className="relative z-10">
 

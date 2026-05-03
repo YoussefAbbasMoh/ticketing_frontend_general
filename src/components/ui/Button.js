@@ -13,7 +13,7 @@ const Button = ({
   ...props 
 }) => {
   const baseClasses =
-    'inline-flex items-center justify-center font-semibold rounded-app-btn transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-app-background disabled:opacity-50 disabled:cursor-not-allowed font-cairo';
+    'inline-flex items-center justify-center gap-2 font-semibold rounded-app-btn transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-app-background disabled:opacity-50 disabled:cursor-not-allowed font-cairo';
 
   const variants = {
     primary:
@@ -43,7 +43,7 @@ const Button = ({
       className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${widthClass} ${className}`}
       {...props}
     >
-      {icon && <span className="mr-2">{icon}</span>}
+      {icon && <span className="inline-flex shrink-0">{icon}</span>}
       {children}
     </button>
   );

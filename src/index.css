@@ -113,3 +113,10 @@ code {
     linear-gradient(to right, rgb(226 230 239 / 0.55) 1px, transparent 1px),
     linear-gradient(to bottom, rgb(226 230 239 / 0.55) 1px, transparent 1px);
 }
+
+/* Landing marketing: pause decorative motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .tik-marketing .landing-ambient-animate {
+    animation: none !important;
+  }
+}

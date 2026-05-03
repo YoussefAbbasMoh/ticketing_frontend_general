@@ -11,7 +11,9 @@ const MessageInput = ({
   replyTo = null,
   onCancelReply,
   editingMessage = null,
-  onCancelEdit
+  onCancelEdit,
+  attachmentsAllowed = true,
+  onAttachmentsNotAllowed
 }) => {
   const { toast } = useToast();
   const [message, setMessage] = useState('');
@@ -67,6 +69,10 @@ const MessageInput = ({
     }
   }, [showOptions, showEmojiPicker]);
 
+  useEffect(() => {
+    if (!attachmentsAllowed) setShowOptions(false);
+  }, [attachmentsAllowed]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (message.trim() && !disabled && !uploading) {
@@ -92,6 +98,12 @@ const MessageInput = ({
   const handleFileSelect = async (type, e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    if (!attachmentsAllowed) {
+      e.target.value = '';
+      onAttachmentsNotAllowed?.();
+      return;
+    }
 
     // Validate file size (50MB max)
     const maxSize = 50 * 1024 * 1024;
@@ -188,6 +200,10 @@ const MessageInput = ({
   };
 
   const handleVoiceRecorded = async (audioBlob) => {
+    if (!attachmentsAllowed) {
+      onAttachmentsNotAllowed?.();
+      return;
+    }
     try {
       await onSendFile('voice', audioBlob);
     } catch (error) {
@@ -258,13 +274,19 @@ const MessageInput = ({
           <div className="relative" ref={optionsRef}>
             <button
               type="button"
-              onClick={() => setShowOptions(!showOptions)}
+              onClick={() => {
+                if (!attachmentsAllowed) {
+                  onAttachmentsNotAllowed?.();
+                  return;
+                }
+                setShowOptions(!showOptions);
+              }}
               disabled={disabled || uploading || recording || editingMessage}
               className={`flex-shrink-0 rounded-lg p-2 transition-all sm:p-2.5 ${showOptions
                   ? 'bg-orange/10 text-orange'
                   : 'text-app-text-secondary hover:bg-app-surface-variant hover:text-orange'
-                } disabled:cursor-not-allowed disabled:opacity-50`}
-              title="Attach file"
+                } disabled:cursor-not-allowed disabled:opacity-50 ${!attachmentsAllowed ? 'opacity-60' : ''}`}
+              title={attachmentsAllowed ? 'Attach file' : 'File attachments require a paid plan'}
             >
               <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -425,6 +447,8 @@ const MessageInput = ({
               recording={recording}
               setRecording={setRecording}
               disabled={disabled || uploading}
+              recordingBlocked={!attachmentsAllowed}
+              onRecordingBlocked={onAttachmentsNotAllowed}
             />
           )}
         </div>

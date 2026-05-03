@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import AddRounded from '@mui/icons-material/AddRounded';
-import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded';
 import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 import ChatRounded from '@mui/icons-material/ChatRounded';
 import CloseRounded from '@mui/icons-material/CloseRounded';
@@ -17,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
 import { useToast } from '../../contexts/ToastContext';
 import Button from '../ui/Button';
+import NavBackIcon from '../ui/NavBackIcon';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
@@ -384,7 +384,7 @@ const ProjectDetails = () => {
       <div className="min-h-screen bg-app-background px-4 py-12 font-cairo">
         <div className="mx-auto max-w-lg rounded-app border border-app-divider bg-app-surface p-8 shadow-app-card">
           <Alert variant="error">{fatalError || tx('failedProjectDetails')}</Alert>
-          <Button variant="ghost" className="mt-6" onClick={() => navigate('/')} icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}>
+          <Button variant="ghost" className="mt-6" onClick={() => navigate('/')} icon={<NavBackIcon />}>
             {tx('backToProjects')}
           </Button>
         </div>
@@ -401,7 +401,7 @@ const ProjectDetails = () => {
             variant="ghost"
             onClick={() => navigate('/')}
             className="mb-6 border-app-border text-app-text-secondary hover:bg-app-surface-variant hover:text-app-text"
-            icon={<ArrowBackRounded sx={{ fontSize: 22 }} />}
+            icon={<NavBackIcon />}
           >
             {tx('backToProjects')}
           </Button>
@@ -430,7 +430,7 @@ const ProjectDetails = () => {
                       onChange={(e) => handleStatusChange(e.target.value)}
                       disabled={updatingStatus}
                       aria-busy={updatingStatus}
-                      className={`rounded-app-input border border-app-border bg-app-surface py-2.5 pl-4 pr-10 text-sm font-semibold text-app-text shadow-app-soft transition-colors focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
+                      className={`rounded-app-input border border-app-border bg-app-surface py-2.5 ps-4 pe-10 text-sm font-semibold text-app-text shadow-app-soft transition-colors focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
                         updatingStatus ? 'cursor-not-allowed opacity-70' : 'cursor-pointer hover:border-app-text-tertiary'
                       }`}
                     >
@@ -440,7 +440,7 @@ const ProjectDetails = () => {
                       <option value="cancelled">{tx('cancelled')}</option>
                     </select>
                     {updatingStatus && (
-                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                      <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
                         <CircularProgress size={18} sx={{ color: '#080936' }} />
                       </div>
                     )}
@@ -588,8 +588,8 @@ const ProjectDetails = () => {
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="relative max-w-md flex-1">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2 text-app-text-tertiary">
-                  <SearchRounded sx={{ fontSize: 22 }} />
+                <div className="pointer-events-none absolute start-3 top-1/2 z-0 -translate-y-1/2 text-app-text-tertiary">
+                  <SearchRounded sx={{ fontSize: 22, display: 'block' }} />
                 </div>
                 <input
                   type="search"
@@ -597,16 +597,18 @@ const ProjectDetails = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   aria-label={tx('searchByTicketId')}
-                  className="w-full rounded-app-input border border-app-border bg-app-surface py-2.5 pl-10 pr-10 text-sm font-medium text-app-text shadow-app-soft transition-colors hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
+                  className={`w-full rounded-app-input border border-app-border bg-app-surface py-2.5 ps-10 text-sm font-medium text-app-text shadow-app-soft transition-colors hover:border-app-text-tertiary focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${
+                    searchQuery ? 'pe-11' : 'pe-4'
+                  }`}
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-app-text-tertiary hover:text-app-text"
+                    className="absolute end-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-app-input text-app-text-tertiary hover:bg-app-surface-variant hover:text-app-text"
                     aria-label="Clear search"
                   >
-                    <CloseRounded sx={{ fontSize: 22 }} />
+                    <CloseRounded sx={{ fontSize: 20, display: 'block' }} />
                   </button>
                 )}
               </div>

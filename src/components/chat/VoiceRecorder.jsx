@@ -1,7 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 
-const VoiceRecorder = ({ onRecorded, recording, setRecording, disabled = false }) => {
+const VoiceRecorder = ({
+  onRecorded,
+  recording,
+  setRecording,
+  disabled = false,
+  recordingBlocked = false,
+  onRecordingBlocked
+}) => {
   const { toast } = useToast();
   const [duration, setDuration] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -257,10 +264,16 @@ const VoiceRecorder = ({ onRecorded, recording, setRecording, disabled = false }
       ) : (
         <button
           type="button"
-          onClick={startRecording}
+          onClick={() => {
+            if (recordingBlocked) {
+              onRecordingBlocked?.();
+              return;
+            }
+            startRecording();
+          }}
           disabled={disabled}
-          className="flex-shrink-0 rounded-lg p-2 text-app-text-secondary transition-all hover:bg-orange/10 hover:text-orange disabled:cursor-not-allowed disabled:opacity-50 sm:p-2.5"
-          title="Record voice message"
+          className={`flex-shrink-0 rounded-lg p-2 text-app-text-secondary transition-all hover:bg-orange/10 hover:text-orange disabled:cursor-not-allowed disabled:opacity-50 sm:p-2.5 ${recordingBlocked ? 'opacity-60' : ''}`}
+          title={recordingBlocked ? 'Voice messages require a paid plan' : 'Record voice message'}
         >
           <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />

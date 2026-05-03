@@ -1,13 +1,13 @@
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { getStoredLanguage } from './i18n';
-import theme from './theme';
+import { createAppTheme } from './theme';
 
 import RouteFallback from './components/app/RouteFallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
@@ -29,6 +29,14 @@ const WorkspaceCalendarPage = lazy(() => import('./components/calendar/Workspace
 const LandingPage = lazy(() =>
   import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
+
+function SubscriptionRouteGate() {
+  const { canSeeSubscriptionNav } = useAuth();
+  if (!canSeeSubscriptionNav()) {
+    return <Navigate to="/" replace />;
+  }
+  return <SubscriptionPage />;
+}
 
 function AppRoutes() {
   const { user } = useAuth();
@@ -116,7 +124,7 @@ function AppRoutes() {
       <Route path="/subscription" element={
         <ProtectedRoute>
           <Layout>
-            <SubscriptionPage />
+            <SubscriptionRouteGate />
           </Layout>
         </ProtectedRoute>
       } />
@@ -129,6 +137,8 @@ function AppRoutes() {
 
 function App() {
   const [lang, setLang] = useState(getStoredLanguage());
+  const isArabic = String(lang || 'en').toLowerCase().startsWith('ar');
+  const theme = useMemo(() => createAppTheme(isArabic ? 'rtl' : 'ltr'), [isArabic]);
 
   useEffect(() => {
     const applyDirection = (nextLang) => {

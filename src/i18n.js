@@ -27,6 +27,8 @@ const dictionaries = {
     signInSubtitle: 'Sign in to your account - ABSAI',
     emailAddress: 'Email Address',
     password: 'Password',
+    showPassword: 'Show password',
+    hidePassword: 'Hide password',
     company: 'Company',
     signIn: 'Sign In',
     signingIn: 'Signing in...',
@@ -116,7 +118,14 @@ const dictionaries = {
     calendarLegendProjectDue: 'Project due',
     calendarLegendAttendance: 'Attendance',
     calendarSelectedDay: 'Selected day',
-    calendarEventColumn: 'Event'
+    calendarEventColumn: 'Event',
+    planFeatureBlockedTitle: 'Not available on your plan',
+    planFeatureBlockedBody:
+      'The Free plan does not include this feature. Upgrade to a paid plan to unlock it.',
+    planFeatureBlockedViewPlans: 'View plans',
+    planFeatureBlockedClose: 'Close',
+    planFeatureBlockedAskAdmin:
+      'Ask your company owner or an admin to upgrade the subscription if you need this.'
   },
   ar: {
     appTitle: 'نظام إدارة التذاكر',
@@ -146,6 +155,8 @@ const dictionaries = {
     signInSubtitle: 'سجّل الدخول إلى حسابك - ABSAI',
     emailAddress: 'البريد الإلكتروني',
     password: 'كلمة المرور',
+    showPassword: 'إظهار كلمة المرور',
+    hidePassword: 'إخفاء كلمة المرور',
     company: 'الشركة',
     signIn: 'تسجيل الدخول',
     signingIn: 'جارٍ تسجيل الدخول...',
@@ -235,7 +246,14 @@ const dictionaries = {
     calendarLegendProjectDue: 'استحقاق المشروع',
     calendarLegendAttendance: 'الحضور',
     calendarSelectedDay: 'اليوم المحدد',
-    calendarEventColumn: 'الحدث'
+    calendarEventColumn: 'الحدث',
+    planFeatureBlockedTitle: 'غير متاح في خطتك الحالية',
+    planFeatureBlockedBody:
+      'الباقة المجانية لا تتضمن هذه الميزة. ترقية إلى باقة مدفوعة لتفعيلها.',
+    planFeatureBlockedViewPlans: 'عرض الباقات',
+    planFeatureBlockedClose: 'إغلاق',
+    planFeatureBlockedAskAdmin:
+      'اطلب من مالك الشركة أو المسؤول ترقية الاشتراك إذا كنت بحاجة إلى هذه الميزة.'
   }
 };
 

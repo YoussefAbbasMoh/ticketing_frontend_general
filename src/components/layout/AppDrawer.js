@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { getStoredLanguage, t } from '../../i18n';
 
 const AppDrawer = ({ open, onClose }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, canSeeSubscriptionNav } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [lang, setLang] = useState(getStoredLanguage());
@@ -20,7 +20,7 @@ const AppDrawer = ({ open, onClose }) => {
     ? 'owner'
     : (activeMembership?.companyRole || user?.title || '');
 
-  const menuItems = [
+  const menuItemsAll = [
     {
       text: t(lang, 'home'),
       path: '/',
@@ -68,6 +68,10 @@ const AppDrawer = ({ open, onClose }) => {
       )
     },
   ];
+
+  const menuItems = menuItemsAll.filter(
+    (item) => item.path !== '/subscription' || canSeeSubscriptionNav()
+  );
 
   const handleNavigation = (path) => {
     navigate(path);

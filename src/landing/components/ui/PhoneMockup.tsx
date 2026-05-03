@@ -1,14 +1,18 @@
 import { CheckSquare, MessageCircle, Settings, Ticket } from 'lucide-react';
+import { useLandingLang } from '@/landing/LandingLangContext';
 import { TikLogoIcon } from './TikLogo';
 
-const tickets = [
-  { id: '#1842', status: 'OPEN', title: 'Client onboarding checklist', tone: 'bg-orange/20 text-orange' },
-  { id: '#1840', status: 'REVIEW', title: 'Q4 logistics report', tone: 'bg-amber-500/20 text-amber-300' },
-  { id: '#1838', status: 'DONE', title: 'Payroll export — Oct', tone: 'bg-emerald-500/20 text-emerald-300' },
-];
+const toneByVariant = {
+  open: 'bg-orange/20 text-orange',
+  review: 'bg-amber-500/20 text-amber-300',
+  done: 'bg-emerald-500/20 text-emerald-300',
+} as const;
 
 /** CSS-only — avoids pulling framer-motion into the LCP / hero chunk. */
 export function PhoneMockup() {
+  const { copy } = useLandingLang();
+  const m = copy.phoneMockup;
+
   return (
     <div className="relative mx-auto w-full max-w-[320px]">
       <div className="relative overflow-hidden rounded-[2.5rem] border border-white/15 bg-gradient-to-b from-navy to-navy-dark p-1 shadow-[0_0_60px_rgba(255,78,13,0.15)]">
@@ -16,28 +20,28 @@ export function PhoneMockup() {
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TikLogoIcon size={28} />
-              <span className="font-cairo text-sm font-bold text-white">
+              <span className="font-cairo text-sm font-bold text-white" translate="no">
                 tik<span className="text-orange">.</span>
               </span>
             </div>
             <div className="h-8 w-8 shrink-0 rounded-full bg-white/10 ring-2 ring-orange/30" />
           </div>
-          <p className="font-cairo text-lg font-bold text-white">My Tickets</p>
+          <p className="font-cairo text-lg font-bold text-white">{m.myTickets}</p>
           <div className="mt-4 space-y-3">
-            {tickets.map((t) => (
+            {m.ticketRows.map((t) => (
               <div
                 key={t.id}
                 className="rounded-xl border border-white/10 bg-white/[0.05] p-3"
               >
-                <div className="flex items-center justify-between text-xs text-white/50">
-                  <span>{t.id}</span>
+                <div className="flex items-center justify-between gap-2 text-xs text-white/50">
+                  <span className="tabular-nums">{t.id}</span>
                   <span
-                    className={`rounded px-2 py-0.5 text-[10px] font-semibold ${t.tone}`}
+                    className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold ${toneByVariant[t.variant]}`}
                   >
                     {t.status}
                   </span>
                 </div>
-                <p className="mt-1 font-cairo text-sm text-white/90">{t.title}</p>
+                <p className="mt-1 font-cairo text-sm leading-snug text-white/90">{t.title}</p>
               </div>
             ))}
           </div>
@@ -50,31 +54,36 @@ export function PhoneMockup() {
         </div>
       </div>
 
-      <div className="absolute -right-2 top-8 hidden w-[200px] rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm md:block lg:-right-8">
+      <div className="absolute -end-2 top-8 hidden w-[200px] rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm md:block lg:-end-8">
         <p className="font-cairo text-xs font-semibold uppercase tracking-wider text-white/50">
-          This week
+          {m.weekTitle}
         </p>
-        <div className="mt-2 font-cairo text-sm text-white">
+        <div className="mt-2 space-y-1 font-cairo text-sm text-white">
           <p>
-            <span className="text-emerald-400">Resolved</span> 24
+            <span className="text-emerald-400">{m.statResolvedLabel}</span>{' '}
+            <span className="tabular-nums">{m.statResolvedValue}</span>
           </p>
           <p>
-            <span className="text-red-400">Overdue</span> 3
+            <span className="text-red-400">{m.statOverdueLabel}</span>{' '}
+            <span className="tabular-nums">{m.statOverdueValue}</span>
           </p>
           <p>
-            <span className="text-amber-300">In review</span> 7
+            <span className="text-amber-300">{m.statReviewLabel}</span>{' '}
+            <span className="tabular-nums">{m.statReviewValue}</span>
           </p>
         </div>
       </div>
 
-      <div className="absolute -left-4 bottom-16 hidden w-[220px] rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm md:block lg:-left-10">
+      <div className="absolute -start-4 bottom-16 hidden w-[220px] rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm md:block lg:-start-10">
         <p className="font-cairo text-xs font-semibold uppercase tracking-wider text-white/50">
-          Today&apos;s check-ins
+          {m.checkInsTitle}
         </p>
         <ul className="mt-2 space-y-1 font-cairo text-sm text-white/90">
-          <li>Ahmed — 9:02 AM ✓</li>
-          <li>Sara — 9:15 AM ✓</li>
-          <li className="text-red-300">Karim — Late</li>
+          {m.checkIns.map((row, i) => (
+            <li key={i} className={row.warning ? 'text-red-300' : undefined}>
+              {row.text}
+            </li>
+          ))}
         </ul>
       </div>
     </div>

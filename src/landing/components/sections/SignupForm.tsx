@@ -5,6 +5,7 @@ import {
   REGISTER_PREFILL_STORAGE_KEY,
   SELECTED_PLAN_STORAGE_KEY,
 } from '@/landing/lib/config';
+import { useLandingLang } from '@/landing/LandingLangContext';
 
 type FormValues = {
   companyName: string;
@@ -13,6 +14,9 @@ type FormValues = {
 };
 
 export function SignupForm() {
+  const { copy } = useLandingLang();
+  const s = copy.signup;
+
   const {
     register,
     handleSubmit,
@@ -47,11 +51,9 @@ export function SignupForm() {
       <div className="mx-auto max-w-lg px-4">
         <div className="rounded-2xl border border-white/[0.09] bg-white/[0.04] p-8 md:p-10">
           <h2 className="text-center font-cairo text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-            Start your 14-day free trial
+            {s.title}
           </h2>
-          <p className="mt-3 text-center font-cairo text-white/65">
-            No credit card required. Set up your company in under 20 minutes.
-          </p>
+          <p className="mt-3 text-center font-cairo text-white/65">{s.subtitle}</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
             <div>
@@ -59,14 +61,14 @@ export function SignupForm() {
                 htmlFor="companyName"
                 className="mb-2 block font-cairo text-sm font-medium text-white/80"
               >
-                Company name
+                {s.companyName}
               </label>
               <input
                 id="companyName"
                 autoComplete="organization"
                 className="w-full rounded-xl border border-white/15 bg-navy-dark/80 px-4 py-3 font-cairo text-white outline-none transition-colors focus:border-orange"
-                placeholder="Acme Logistics"
-                {...register('companyName', { required: 'Company name is required' })}
+                placeholder={s.phCompany}
+                {...register('companyName', { required: s.errCompany })}
               />
               {errors.companyName ? (
                 <p className="mt-1 font-cairo text-sm text-orange">
@@ -80,19 +82,19 @@ export function SignupForm() {
                 htmlFor="email"
                 className="mb-2 block font-cairo text-sm font-medium text-white/80"
               >
-                Work email
+                {s.workEmail}
               </label>
               <input
                 id="email"
                 type="email"
                 autoComplete="email"
                 className="w-full rounded-xl border border-white/15 bg-navy-dark/80 px-4 py-3 font-cairo text-white outline-none transition-colors focus:border-orange"
-                placeholder="you@company.com"
+                placeholder={s.phEmail}
                 {...register('email', {
-                  required: 'Email is required',
+                  required: s.errEmail,
                   pattern: {
                     value: /\S+@\S+\.\S+/,
-                    message: 'Enter a valid email',
+                    message: s.errEmailInvalid,
                   },
                 })}
               />
@@ -106,17 +108,17 @@ export function SignupForm() {
                 htmlFor="password"
                 className="mb-2 block font-cairo text-sm font-medium text-white/80"
               >
-                Password
+                {s.password}
               </label>
               <input
                 id="password"
                 type="password"
                 autoComplete="new-password"
                 className="w-full rounded-xl border border-white/15 bg-navy-dark/80 px-4 py-3 font-cairo text-white outline-none transition-colors focus:border-orange"
-                placeholder="At least 8 characters"
+                placeholder={s.phPassword}
                 {...register('password', {
-                  required: 'Password is required',
-                  minLength: { value: 8, message: 'Minimum 8 characters' },
+                  required: s.errPassword,
+                  minLength: { value: 8, message: s.errPasswordLen },
                 })}
               />
               {errors.password ? (
@@ -127,13 +129,11 @@ export function SignupForm() {
             </div>
 
             <Button type="submit" variant="primary" className="w-full py-3.5 text-base">
-              Create Free Account →
+              {s.submit}
             </Button>
           </form>
 
-          <p className="mt-6 text-center font-cairo text-xs text-white/45">
-            By signing up, you agree to our Terms of Service and Privacy Policy.
-          </p>
+          <p className="mt-6 text-center font-cairo text-xs text-white/45">{s.legal}</p>
         </div>
       </div>
     </section>

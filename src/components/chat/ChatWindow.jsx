@@ -1,14 +1,30 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { chatAPI } from '../../services/api';
+import { chatAPI, getAxiosErrorMessage } from '../../services/api';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
 import Spinner from '../ui/Spinner';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
+import { getStoredLanguage } from '../../i18n';
+import { useToast } from '../../contexts/ToastContext';
+
+const THREAD_SUB = {
+  en: {
+    groupConversation: 'Group conversation',
+    directMessage: 'Direct message',
+  },
+  ar: {
+    groupConversation: 'محادثة جماعية',
+    directMessage: 'رسالة مباشرة',
+  },
+};
 
 const ChatWindow = ({ conversation, onBack }) => {
+  const navigate = useNavigate();
+  const { toast, alertDialog } = useToast();
   const { user } = useAuth();
   const { messages, sendMessage, sendFileMessage, loadMessages, markAsRead } = useChat();
   const { uploadFile, uploadVideo } = useBunnyUpload();
@@ -25,6 +41,15 @@ const ChatWindow = ({ conversation, onBack }) => {
   const [editingMessage, setEditingMessage] = useState(null);
   const [showGroupMembers, setShowGroupMembers] = useState(false);
   const [threadMessage, setThreadMessage] = useState(null);
+  const [lang, setLang] = useState(getStoredLanguage());
+
+  useEffect(() => {
+    const onLanguageChanged = () => setLang(getStoredLanguage());
+    window.addEventListener('language-changed', onLanguageChanged);
+    return () => window.removeEventListener('language-changed', onLanguageChanged);
+  }, []);
+
+  const txThread = (key) => THREAD_SUB[lang]?.[key] || THREAD_SUB.en[key] || key;
 
   // Load messages when conversation changes
   useEffect(() => {
@@ -214,7 +239,23 @@ const ChatWindow = ({ conversation, onBack }) => {
       }, 100);
     } catch (error) {
       console.error('Send file error:', error);
-      alert(error?.message || 'Failed to send file. Please try again.');
+      const msg = getAxiosErrorMessage(error, 'Failed to send file. Please try again.');
+      const status = error.response?.status;
+      if (
+        status === 403 &&
+        /free plan|upgrade your subscription|not available on/i.test(msg)
+      ) {
+        alertDialog({
+          title: 'Subscription required',
+          message: msg,
+          confirmText: 'View plans',
+          cancelText: 'Close',
+          onConfirm: () => navigate('/subscription'),
+        });
+      } else {
+        toast(msg, { severity: 'error' });
+      }
+      throw error;
     }
   };
 
@@ -263,9 +304,17 @@ const ChatWindow = ({ conversation, onBack }) => {
 
   const otherParticipant = getOtherParticipant();
   const isProjectGroup = conversation?.isGroup && conversation?.project;
-  const displayName = isProjectGroup
-    ? (conversation.project?.project_name || conversation.groupName || 'Project Group')
+  const isGroupChat = Boolean(conversation?.isGroup);
+  const displayName = isGroupChat
+    ? (
+        conversation.groupName?.trim() ||
+        conversation.project?.project_name ||
+        'Project Group'
+      )
     : (otherParticipant?.name || 'Unknown User');
+  const threadSubtitle = isGroupChat
+    ? txThread('groupConversation')
+    : txThread('directMessage');
 
   // Format last seen or online status
   const getStatusText = () => {
@@ -291,7 +340,7 @@ const ChatWindow = ({ conversation, onBack }) => {
 
   if (!conversation) {
     return (
-      <div className="flex h-full-10% items-center justify-center bg-app-background">
+      <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-app-background">
         <div className="px-6 text-center">
           <div className="relative mb-6">
             <div className="absolute inset-0 rounded-full bg-app-primary/10 blur-2xl"></div>
@@ -309,9 +358,9 @@ const ChatWindow = ({ conversation, onBack }) => {
 
   return (
     <>
-      <div className="relative flex h-full w-full flex-col overflow-hidden bg-app-surface">
+      <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-app-surface">
         {/* Header */}
-        <div className="sticky top-0 z-20 flex flex-shrink-0 items-center justify-between border-b border-app-divider bg-app-surface p-3 shadow-app-soft sm:p-4">
+        <div className="sticky top-0 z-20 flex flex-shrink-0 items-center justify-between border-b border-app-divider bg-app-surface px-3 py-3 sm:px-4">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             {onBack && (
               <button
@@ -350,7 +399,7 @@ const ChatWindow = ({ conversation, onBack }) => {
               </div>
 
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="truncate text-sm font-semibold text-app-text sm:text-base">
                     {displayName}
                   </h3>
@@ -360,9 +409,9 @@ const ChatWindow = ({ conversation, onBack }) => {
                     </span>
                   )}
                 </div>
-                {/* Group Members Preview (for groups) */}
+                <p className="truncate text-xs text-app-text-secondary">{threadSubtitle}</p>
                 {isProjectGroup && (
-                  <div className="flex -space-x-1 mt-0.5 overflow-hidden">
+                  <div className="mt-0.5 flex -space-x-1 overflow-hidden">
                     {conversation.participants.slice(0, 5).map(p => (
                       <div key={p._id} className="relative flex h-4 w-4 items-center justify-center rounded-full border border-white bg-app-surface-variant text-[8px]" title={p.name}>
                         {p.name?.charAt(0) || '?'}
@@ -376,12 +425,12 @@ const ChatWindow = ({ conversation, onBack }) => {
                   </div>
                 )}
 
-                {statusText && !isProjectGroup && (
+                {statusText && !isGroupChat && (
                   <p className={`truncate text-xs ${typing ? 'font-medium text-orange' : 'text-app-text-secondary'}`}>
                     {statusText}
                   </p>
                 )}
-                {!isProjectGroup && !statusText && (
+                {!isGroupChat && !statusText && (
                   <p className="truncate text-xs text-app-text-secondary">{otherParticipant?.email}</p>
                 )}
               </div>
@@ -400,7 +449,7 @@ const ChatWindow = ({ conversation, onBack }) => {
           <div
             ref={messagesContainerRef}
             data-messages-container
-            className="h-full space-y-1 overflow-y-auto bg-gradient-to-b from-app-background to-app-surface p-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border sm:space-y-2 sm:p-3 md:p-4"
+            className="h-full space-y-1 overflow-y-auto bg-app-background p-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border sm:space-y-2 sm:p-3 md:p-4"
             onScroll={handleScroll}
           >
             {loading ? (
@@ -418,7 +467,7 @@ const ChatWindow = ({ conversation, onBack }) => {
                   </svg>
                 </div>
                 <h4 className="mb-1 font-semibold text-app-text">No messages yet</h4>
-                <p className="text-sm text-app-text-secondary">Start the conversation{!isProjectGroup && otherParticipant ? ` with ${otherParticipant.name}` : ''}!</p>
+                <p className="text-sm text-app-text-secondary">Start the conversation{!isGroupChat && otherParticipant ? ` with ${otherParticipant.name}` : ''}!</p>
               </div>
             ) : (
               <>

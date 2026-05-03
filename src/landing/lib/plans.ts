@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from './config';
+
 export type ApiPlan = {
   id: string;
   name: string;
@@ -6,8 +8,6 @@ export type ApiPlan = {
   billingPeriod: string;
   price: number;
   currency?: string;
-  /** If backend adds yearly pricing */
-  yearlyPrice?: number;
 };
 
 type PlansResponse = {
@@ -17,14 +17,14 @@ type PlansResponse = {
 export async function fetchSubscriptionPlans(
   lang: string = 'en'
 ): Promise<ApiPlan[] | null> {
-  const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '') ||
-    'https://ticketing-backend-general.vercel.app/api';
+  const base = getApiBaseUrl();
+  const normalizedLang = lang === 'ar' ? 'ar' : 'en';
 
   try {
     const res = await fetch(
-      `${base}/subscriptions/plans?lang=${encodeURIComponent(lang)}`,
+      `${base}/subscriptions/plans?lang=${encodeURIComponent(normalizedLang)}`,
       {
-        headers: { 'x-lang': lang },
+        headers: { 'x-lang': normalizedLang },
       }
     );
     if (!res.ok) return null;
@@ -46,11 +46,4 @@ export function sortPlansForLanding(plans: ApiPlan[]): ApiPlan[] {
     if (ib !== -1) return 1;
     return Number(a.price || 0) - Number(b.price || 0);
   });
-}
-
-export function annualDisplayPrice(plan: ApiPlan, monthly: number): number {
-  if (plan.yearlyPrice != null && plan.yearlyPrice > 0) {
-    return Math.round(plan.yearlyPrice);
-  }
-  return Math.round(monthly * 12 * 0.8);
 }

@@ -41,6 +41,23 @@ const dictionaries = {
     pleaseWait: 'Please wait...',
     createCompanyAccount: 'Create Company Account',
     setupWorkspace: 'Set up your workspace and start inviting your team.',
+    registerTrialTitle: 'Start your 14-day free trial',
+    registerTrialSubtitle:
+      'No credit card required. Set up your company in under 20 minutes.',
+    signupCompanyName: 'Company name',
+    signupWorkEmail: 'Work email',
+    placeholderCompanySignup: 'Acme Logistics',
+    placeholderWorkEmailSignup: 'you@company.com',
+    placeholderPasswordMin8: 'At least 8 characters',
+    createFreeAccount: 'Create Free Account →',
+    creatingFreeAccount: 'Creating account...',
+    signupLegalNotice:
+      'By signing up, you agree to our Terms of Service and Privacy Policy.',
+    valCompanyNameRequired: 'Company name is required',
+    valPasswordRequired: 'Password is required',
+    valEmailRequired: 'Email is required',
+    valEmailInvalidSignup: 'Enter a valid email',
+    valPasswordMin8: 'Minimum 8 characters',
     companyName: 'Company Name',
     workEmail: 'Work Email',
     confirmPassword: 'Confirm Password',
@@ -57,6 +74,7 @@ const dictionaries = {
     sendOtp: 'Send OTP',
     processing: 'Processing...',
     backToLogin: 'Back to Login',
+    backToLanding: 'Back to website',
     needHelpContactAdmin: 'Need help? Contact your system administrator.',
     acceptInvitation: 'Accept Invitation',
     setPasswordActivate: 'Set your password to activate your account',
@@ -109,6 +127,23 @@ const dictionaries = {
     pleaseWait: 'يرجى الانتظار...',
     createCompanyAccount: 'إنشاء حساب شركة',
     setupWorkspace: 'أنشئ مساحة عملك وابدأ بدعوة فريقك.',
+    registerTrialTitle: 'ابدأ تجربتك المجانية لمدة 14 يومًا',
+    registerTrialSubtitle:
+      'بدون بطاقة ائتمان. أنشئ شركتك في أقل من 20 دقيقة.',
+    signupCompanyName: 'اسم الشركة',
+    signupWorkEmail: 'بريد العمل',
+    placeholderCompanySignup: 'مثال: أكمي للخدمات اللوجستية',
+    placeholderWorkEmailSignup: 'you@company.com',
+    placeholderPasswordMin8: '8 أحرف على الأقل',
+    createFreeAccount: 'إنشاء حساب مجاني ←',
+    creatingFreeAccount: 'جارٍ إنشاء الحساب...',
+    signupLegalNotice:
+      'بالتسجيل، أنت توافق على شروط الخدمة وسياسة الخصوصية.',
+    valCompanyNameRequired: 'اسم الشركة مطلوب',
+    valPasswordRequired: 'كلمة المرور مطلوبة',
+    valEmailRequired: 'البريد الإلكتروني مطلوب',
+    valEmailInvalidSignup: 'أدخل بريدًا إلكترونيًا صالحًا',
+    valPasswordMin8: '8 أحرف كحد أدنى',
     companyName: 'اسم الشركة',
     workEmail: 'بريد العمل',
     confirmPassword: 'تأكيد كلمة المرور',
@@ -125,6 +160,7 @@ const dictionaries = {
     sendOtp: 'إرسال رمز التحقق',
     processing: 'جارٍ التنفيذ...',
     backToLogin: 'العودة لتسجيل الدخول',
+    backToLanding: 'العودة إلى الموقع',
     needHelpContactAdmin: 'تحتاج مساعدة؟ تواصل مع مسؤول النظام.',
     acceptInvitation: 'قبول الدعوة',
     setPasswordActivate: 'قم بتعيين كلمة المرور لتفعيل حسابك',
@@ -138,12 +174,12 @@ const dictionaries = {
 };
 
 export const getStoredLanguage = () => {
-  const raw = (localStorage.getItem('lang') || localStorage.getItem('language') || 'ar').toLowerCase();
+  const raw = (localStorage.getItem('lang') || localStorage.getItem('language') || 'en').toLowerCase();
   return raw.startsWith('ar') ? 'ar' : 'en';
 };
 
 export const setStoredLanguage = (lang) => {
-  const normalized = String(lang || 'ar').toLowerCase().startsWith('ar') ? 'ar' : 'en';
+  const normalized = String(lang || 'en').toLowerCase().startsWith('ar') ? 'ar' : 'en';
   localStorage.setItem('lang', normalized);
   localStorage.setItem('language', normalized);
   window.dispatchEvent(new CustomEvent('language-changed', { detail: { lang: normalized } }));

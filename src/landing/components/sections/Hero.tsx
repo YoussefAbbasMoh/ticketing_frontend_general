@@ -1,11 +1,20 @@
 import { LinkButton } from '@/landing/components/ui/Button';
 import { PhoneMockup } from '@/landing/components/ui/PhoneMockup';
+import { useLandingLang } from '@/landing/LandingLangContext';
 
 /**
  * No framer-motion here — animated hero text starting at opacity 0 hurts LCP.
  * Decorative motion uses CSS-only floating orbs (Tailwind keyframes).
  */
 export function Hero() {
+  const { copy } = useLandingLang();
+  const h = copy.hero;
+  const stats = [
+    [h.stat1a, h.stat1b],
+    [h.stat2a, h.stat2b],
+    [h.stat3a, h.stat3b],
+  ];
+
   return (
     <section
       id="hero"
@@ -27,37 +36,28 @@ export function Hero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange opacity-40" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-orange" />
             </span>
-            <span className="font-cairo text-sm text-white/80">
-              Now available — Web & Mobile
-            </span>
+            <span className="font-cairo text-sm text-white/80">{h.badge}</span>
           </div>
 
           <h1 className="font-cairo text-[clamp(40px,8vw,96px)] font-extrabold leading-[1.02] tracking-tight text-white">
-            Your team.{' '}
-            <span className="text-orange">One place.</span> Zero chaos.
+            {h.titleBefore}{' '}
+            <span className="text-orange">{h.titleAccent}</span>
+            {h.titleAfter}
           </h1>
 
-          <p className="mt-6 font-cairo text-lg text-white/70 md:text-xl">
-            Tik replaces WhatsApp groups, paper attendance, and scattered tasks with structured
-            ticketing, real team messaging, and GPS-ready attendance — built for SMEs across Egypt
-            and MENA.
-          </p>
+          <p className="mt-6 font-cairo text-lg text-white/70 md:text-xl">{h.description}</p>
 
           <div className="mt-8 flex min-h-[52px] flex-col gap-3 sm:flex-row sm:flex-wrap">
             <LinkButton variant="primary" href="#signup" className="px-8 py-4 text-base">
-              Get Started Free →
+              {h.ctaPrimary}
             </LinkButton>
             <LinkButton variant="ghost" href="#platform" className="px-8 py-4 text-base">
-              See How It Works
+              {h.ctaSecondary}
             </LinkButton>
           </div>
 
           <div className="mt-12 grid min-h-[88px] grid-cols-1 gap-4 border-t border-white/10 pt-8 sm:grid-cols-3">
-            {[
-              ['3-in-1', 'Modules'],
-              ['14 days', 'Free trial'],
-              ['~20 min', 'Setup time'],
-            ].map(([a, b]) => (
+            {stats.map(([a, b]) => (
               <div key={a + b}>
                 <p className="font-cairo text-xl font-bold text-white">{a}</p>
                 <p className="font-cairo text-sm text-white/50">{b}</p>

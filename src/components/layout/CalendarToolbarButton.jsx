@@ -1,10 +1,11 @@
 import React from 'react';
-import CalendarMonthRounded from '@mui/icons-material/CalendarMonthRounded';
+import AccessTimeRounded from '@mui/icons-material/AccessTimeRounded';
 import { useNavigate } from 'react-router-dom';
 import { getStoredLanguage, t } from '../../i18n';
 
 /**
- * Opens attendance & history (same route as calendar icon in the app shell).
+ * Opens attendance (Flutter: Me → My Attendance uses Icons.access_time_rounded;
+ * same 42×42 surface + shadow treatment as WelcomeSection notification chip).
  */
 const CalendarToolbarButton = ({ lang: propLang }) => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const CalendarToolbarButton = ({ lang: propLang }) => {
       aria-label={label}
       title={label}
     >
-      <CalendarMonthRounded sx={{ fontSize: 22 }} aria-hidden />
+      <AccessTimeRounded sx={{ fontSize: 20 }} aria-hidden />
     </button>
   );
 };

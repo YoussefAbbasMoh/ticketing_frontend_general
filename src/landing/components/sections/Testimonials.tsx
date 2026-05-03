@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
 import { TestimonialCard } from '@/landing/components/ui/TestimonialCard';
+import { useLandingLang } from '@/landing/LandingLangContext';
 
 export function Testimonials() {
+  const { copy } = useLandingLang();
+  const t = copy.testimonials;
+
   return (
     <section id="testimonials" className="py-[120px]">
       <div className="mx-auto max-w-7xl px-4 lg:px-8">
@@ -12,27 +16,18 @@ export function Testimonials() {
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
           className="text-center font-cairo text-[clamp(32px,5vw,56px)] font-extrabold tracking-tight text-white"
         >
-          Teams that switched <span className="text-orange">to Tik.</span>
+          {t.title} <span className="text-orange">{t.titleAccent}</span>
         </motion.h2>
         <div className="mt-16 grid gap-8 lg:grid-cols-3">
-          <TestimonialCard
-            initials="KM"
-            name="Khaled Mansour"
-            role="Operations Manager, Cairo"
-            quote="We were running everything on WhatsApp groups. Tik gave us structure overnight. Now I can open one screen and know exactly what my team is working on and who checked in."
-          />
-          <TestimonialCard
-            initials="NH"
-            name="Nour Hassan"
-            role="HR Director, Alexandria"
-            quote="The attendance export alone saved our HR team 3 hours every month. No more manual Excel sheets. It just works, and my accountant loves the payroll-ready format."
-          />
-          <TestimonialCard
-            initials="SA"
-            name="Sara Abdelhady"
-            role="CEO, Digital Agency"
-            quote="As a growing agency with 40 people across two offices, we needed one place. Tik was set up in a single afternoon. The team adopted it immediately."
-          />
+          {t.cards.map((card) => (
+            <TestimonialCard
+              key={card.name}
+              initials={card.initials}
+              name={card.name}
+              role={card.role}
+              quote={card.quote}
+            />
+          ))}
         </div>
       </div>
     </section>

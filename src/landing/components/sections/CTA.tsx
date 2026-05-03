@@ -1,7 +1,11 @@
 import { motion } from 'framer-motion';
 import { LinkButton } from '@/landing/components/ui/Button';
+import { useLandingLang } from '@/landing/LandingLangContext';
 
 export function CTA() {
+  const { copy } = useLandingLang();
+  const c = copy.cta;
+
   return (
     <section className="py-[120px]">
       <div className="mx-auto max-w-5xl px-4 lg:px-8">
@@ -21,23 +25,18 @@ export function CTA() {
           />
           <div className="relative z-10">
             <h2 className="font-cairo text-[clamp(28px,4vw,48px)] font-extrabold tracking-tight text-white">
-              Ready to stop the <span className="text-orange">chaos?</span>
+              {c.title} <span className="text-orange">{c.titleAccent}</span>
             </h2>
-            <p className="mx-auto mt-4 max-w-2xl font-cairo text-lg text-white/70">
-              Join Egyptian and MENA teams who replaced scattered tools with one operations
-              hub — tickets, chat, and attendance in sync.
-            </p>
+            <p className="mx-auto mt-4 max-w-2xl font-cairo text-lg text-white/70">{c.description}</p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <LinkButton variant="primary" href="#signup" className="px-8 py-4 text-base">
-                Start Free Trial — No Card Needed →
+                {c.primary}
               </LinkButton>
               <LinkButton variant="ghost" href="#pricing" className="px-8 py-4 text-base">
-                View Pricing
+                {c.secondary}
               </LinkButton>
             </div>
-            <p className="mt-6 font-cairo text-sm text-white/45">
-              14-day free trial · All 3 modules included · Setup in 20 minutes · Web & Mobile
-            </p>
+            <p className="mt-6 font-cairo text-sm text-white/45">{c.footnote}</p>
           </div>
         </motion.div>
       </div>

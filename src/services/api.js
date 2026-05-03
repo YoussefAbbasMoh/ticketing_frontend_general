@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getStoredLanguage } from '../i18n';
 
 /** If set, used instead of `/auth/refresh` (e.g. `/auth/token/refresh`). */
 const AUTH_REFRESH_PATH =
@@ -16,6 +17,14 @@ const getApiBaseUrl = () => {
 };
 
 const API_BASE_URL = getApiBaseUrl();
+
+/** Prefer backend `message` on axios errors (plan limits, validation, access denied). */
+export function getAxiosErrorMessage(error, fallback = 'Something went wrong.') {
+  const fromBody = error?.response?.data?.message;
+  if (typeof fromBody === 'string' && fromBody.trim()) return fromBody.trim();
+  if (typeof error?.message === 'string' && error.message.trim()) return error.message.trim();
+  return fallback;
+}
 
 /**
  * Multipart uploads must not use `Content-Type: multipart/form-data` without a boundary.
@@ -55,7 +64,7 @@ export async function refreshAccessToken() {
     try {
       const token = localStorage.getItem('token');
       if (!token) return null;
-      const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+      const preferredLang = getStoredLanguage();
       const response = await axios.post(
         `${API_BASE_URL}${AUTH_REFRESH_PATH.startsWith('/') ? '' : '/'}${AUTH_REFRESH_PATH}`,
         {},
@@ -91,7 +100,7 @@ export async function refreshAccessToken() {
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    const preferredLang = getStoredLanguage();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -175,7 +184,7 @@ const loginApi = axios.create({
 loginApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    const preferredLang = getStoredLanguage();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -243,7 +252,7 @@ export const ticketAPI = {
   // Image upload endpoint
   uploadImages: (formData) => {
     const token = localStorage.getItem('token');
-    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    const preferredLang = getStoredLanguage();
     return axios.post(`${API_BASE_URL}/upload/ticket-images`, formData, {
       ...formDataRequestConfig,
       headers: {
@@ -311,7 +320,7 @@ export const chatAPI = {
     if (replyTo) formData.append('replyTo', replyTo);
 
     const token = localStorage.getItem('token');
-    const preferredLang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    const preferredLang = getStoredLanguage();
     return axios.post(`${API_BASE_URL}/chat/message/file`, formData, {
       ...formDataRequestConfig,
       headers: {
@@ -434,7 +443,7 @@ export const attendanceAPI = {
 // Subscription API
 export const subscriptionAPI = {
   getPlans: () => {
-    const lang = localStorage.getItem('lang') || localStorage.getItem('language') || 'ar';
+    const lang = getStoredLanguage();
     return api.get('/subscriptions/plans', {
       params: { lang },
       headers: { 'x-lang': lang },

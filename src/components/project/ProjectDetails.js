@@ -12,9 +12,10 @@ import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import { CircularProgress } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { projectAPI, ticketAPI } from '../../services/api';
+import { projectAPI, ticketAPI, getAxiosErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
+import { useToast } from '../../contexts/ToastContext';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
@@ -164,6 +165,7 @@ const TEXT = {
 const ProjectDetails = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { isAdmin } = useAuth();
   const { getProjectConversation } = useChat();
   const [project, setProject] = useState(null);
@@ -455,8 +457,10 @@ const ProjectDetails = () => {
                   try {
                     await getProjectConversation(projectId);
                     navigate('/chat');
-                  } catch {
-                    alert(tx('openProjectChatError'));
+                  } catch (error) {
+                    toast(getAxiosErrorMessage(error, tx('openProjectChatError')), {
+                      severity: 'error',
+                    });
                   }
                 }}
                 className="border-2 border-app-primary/25 shadow-app-soft hover:bg-app-primary/[0.06]"

@@ -322,7 +322,15 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="mt-s24 text-center">
+          <div className="mt-s24 flex flex-col gap-s16 text-center">
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              disabled={loading}
+              className="w-full rounded-app-input border border-app-border bg-app-surface py-3 text-[14px] font-semibold text-app-text shadow-none transition-colors hover:bg-app-surface-variant disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t(lang, 'backToLanding')}
+            </button>
             <button
               type="button"
               onClick={() => navigate('/register-company')}

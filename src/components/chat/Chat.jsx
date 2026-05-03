@@ -68,13 +68,13 @@ const Chat = () => {
   const showChatWindow = !isMobile || activeConversation;
 
   return (
-    <div className="relative flex h-screen w-full overflow-hidden bg-app-background font-cairo">
+    <div className="relative flex h-full min-h-0 w-full flex-1 overflow-hidden bg-app-background font-cairo">
       {/* Chat List - Full width on mobile, fixed width on desktop */}
-      <div 
+      <div
         className={`
           ${showChatList ? 'flex' : 'hidden'}
-          w-full md:w-80 lg:w-96 
-          flex-shrink-0 
+          w-full md:w-80 lg:w-96
+          min-h-0 flex-shrink-0 flex-col
           h-full
           transition-all duration-300 ease-in-out
           border-r border-app-divider
@@ -89,10 +89,10 @@ const Chat = () => {
       </div>
 
       {/* Chat Window - Full width on mobile, flex-1 on desktop */}
-      <div 
+      <div
         className={`
           ${showChatWindow ? 'flex' : 'hidden'}
-          flex-1 
+          min-h-0 flex-1 flex-col
           h-full
           w-full
           min-w-0

@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { SectionLabel } from '@/landing/components/ui/SectionLabel';
 import { Check, Globe, Smartphone } from 'lucide-react';
+import { useLandingLang } from '@/landing/LandingLangContext';
 
 const fadeSide = {
   initial: { opacity: 0, x: 60 },
@@ -10,6 +11,15 @@ const fadeSide = {
 };
 
 export function Platform() {
+  const { copy } = useLandingLang();
+  const p = copy.platform;
+
+  const pills = [
+    { icon: Globe, label: p.webApp },
+    { icon: Smartphone, label: p.iosApp },
+    { icon: Smartphone, label: p.androidApp },
+  ];
+
   return (
     <section id="platform" className="py-[120px]">
       <div className="mx-auto grid max-w-7xl gap-16 px-4 lg:grid-cols-2 lg:items-center lg:px-8">
@@ -19,21 +29,14 @@ export function Platform() {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
         >
-          <SectionLabel>Platform</SectionLabel>
+          <SectionLabel>{p.sectionLabel}</SectionLabel>
           <h2 className="mt-4 font-cairo text-[clamp(32px,5vw,56px)] font-extrabold tracking-tight text-white">
-            Web & Mobile.{' '}
-            <span className="text-orange">Everywhere your team is.</span>
+            {p.title}{' '}
+            <span className="text-orange">{p.titleAccent}</span>
           </h2>
-          <p className="mt-6 font-cairo text-lg text-white/65">
-            The same workspace on desktop and phone — so field teams, night shifts,
-            and office staff stay aligned in real time.
-          </p>
+          <p className="mt-6 font-cairo text-lg text-white/65">{p.description}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            {[
-              { icon: Globe, label: 'Web App' },
-              { icon: Smartphone, label: 'iOS App' },
-              { icon: Smartphone, label: 'Android App' },
-            ].map(({ icon: Icon, label }) => (
+            {pills.map(({ icon: Icon, label }) => (
               <span
                 key={label}
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 font-cairo text-sm text-white/85"
@@ -44,12 +47,7 @@ export function Platform() {
             ))}
           </div>
           <ul className="mt-10 space-y-4">
-            {[
-              'Real-time sync across devices',
-              'Push notifications for tickets & messages',
-              'GPS check-in for distributed teams',
-              'Offline-friendly workflows where it matters',
-            ].map((t) => (
+            {p.bullets.map((t) => (
               <li key={t} className="flex gap-3 font-cairo text-white/85">
                 <Check className="h-5 w-5 flex-shrink-0 text-orange" strokeWidth={2} />
                 {t}

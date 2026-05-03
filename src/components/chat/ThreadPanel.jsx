@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { chatAPI } from '../../services/api';
+import { chatAPI, getAxiosErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import MessageBubble from './MessageBubble';
 import Spinner from '../ui/Spinner';
 
 const ThreadPanel = ({ parentMessage, onClose }) => {
+    const { toast } = useToast();
     const { user } = useAuth();
     const [threadReplies, setThreadReplies] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -51,7 +53,9 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
             }
         } catch (error) {
             console.error('Send thread reply error:', error);
-            alert('Failed to send reply. Please try again.');
+            toast(getAxiosErrorMessage(error, 'Failed to send reply. Please try again.'), {
+                severity: 'error',
+            });
         } finally {
             setSending(false);
         }
@@ -82,7 +86,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="flex h-[80vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-app-surface shadow-app-card">
+            <div className="flex h-[min(90dvh,calc(100dvh-var(--app-header-height,64px)-2rem))] max-h-[calc(100dvh-var(--app-header-height,64px)-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-app-surface shadow-app-card">
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-app-divider bg-gradient-to-r from-orange/5 to-orange/10 p-4">
                     <div className="flex items-center gap-3">

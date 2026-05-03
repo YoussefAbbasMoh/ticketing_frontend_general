@@ -10,9 +10,10 @@ import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
 import { useNavigate } from 'react-router-dom';
-import { projectAPI, ticketAPI, subscriptionAPI } from '../../services/api';
+import { projectAPI, ticketAPI, subscriptionAPI, getAxiosErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
+import { useToast } from '../../contexts/ToastContext';
 import AttendanceWidget from '../attendance/AttendanceWidget';
 import AddProjectDialog from '../admin/AddProjectDialog';
 import AssignUsersDialog from '../admin/AssignUsersDialog';
@@ -150,6 +151,7 @@ const Home = () => {
   const [subscriptionStatus, setSubscriptionStatus] = useState('');
   const [lang, setLang] = useState(getStoredLanguage());
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const { getProjectConversation } = useChat();
   const activeCompanyId = user?.activeCompanyId ? String(user.activeCompanyId) : '';
@@ -639,7 +641,9 @@ const Home = () => {
                             navigate('/chat');
                           } catch (error) {
                             console.error('Error opening project chat:', error);
-                            alert(tx('openProjectChatError'));
+                            toast(getAxiosErrorMessage(error, tx('openProjectChatError')), {
+                              severity: 'error',
+                            });
                           }
                         }}
                         className="border-2 border-app-info text-app-info shadow-none hover:bg-app-info/10 hover:shadow-app-soft"

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import VoiceRecorder from './VoiceRecorder';
+import { useToast } from '../../contexts/ToastContext';
 
 const MessageInput = ({
   onSend,
@@ -12,6 +13,7 @@ const MessageInput = ({
   editingMessage = null,
   onCancelEdit
 }) => {
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -94,7 +96,7 @@ const MessageInput = ({
     // Validate file size (50MB max)
     const maxSize = 50 * 1024 * 1024;
     if (file.size > maxSize) {
-      alert('File size must be less than 50MB');
+      toast('File size must be less than 50MB', { severity: 'warning' });
       e.target.value = '';
       return;
     }
@@ -112,7 +114,7 @@ const MessageInput = ({
     };
 
     if (validations[type] && !validations[type].types.includes(file.type)) {
-      alert(validations[type].message);
+      toast(validations[type].message, { severity: 'warning' });
       e.target.value = '';
       return;
     }
@@ -128,7 +130,7 @@ const MessageInput = ({
         const duration = video.duration;
 
         if (duration > 300) { // 5 minutes max
-          alert('Video must be shorter than 5 minutes');
+          toast('Video must be shorter than 5 minutes', { severity: 'warning' });
           setUploading(false);
           e.target.value = '';
           return;
@@ -138,7 +140,7 @@ const MessageInput = ({
       };
 
       video.onerror = () => {
-        alert('Failed to load video file');
+        toast('Failed to load video file', { severity: 'error' });
         setUploading(false);
         e.target.value = '';
       };
@@ -180,7 +182,6 @@ const MessageInput = ({
       }, 500);
     } catch (error) {
       console.error('File upload error:', error);
-      alert('Failed to send file. Please try again.');
       setUploading(false);
       setUploadProgress(0);
     }
@@ -191,7 +192,6 @@ const MessageInput = ({
       await onSendFile('voice', audioBlob);
     } catch (error) {
       console.error('Voice send error:', error);
-      alert('Failed to send voice message. Please try again.');
     }
   };
 
@@ -204,7 +204,7 @@ const MessageInput = ({
   };
 
   return (
-    <div className="relative z-10 flex-shrink-0 border-t border-app-divider bg-app-surface">
+    <div className="relative z-10 flex-shrink-0 border-t border-app-divider bg-app-surface shadow-[0_-4px_12px_rgba(8,9,54,0.08)]">
       {/* Context Banner (Reply/Edit) */}
       {(replyTo || editingMessage) && (
         <div className="flex animate-slideUp items-center justify-between border-b border-app-divider bg-app-background px-4 py-2">

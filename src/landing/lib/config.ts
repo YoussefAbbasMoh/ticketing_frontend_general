@@ -9,11 +9,22 @@ export function getMainAppOrigin(): string {
   return String(raw).replace(/\/+$/, '');
 }
 
+const PRODUCTION_API_FALLBACK =
+  'https://ticketing-backend-general.vercel.app/api';
+
+/** VITE_API_BASE_URL, else localhost:9091 on local SPA host, else production API. */
 export function getApiBaseUrl(): string {
-  const raw =
-    import.meta.env.VITE_API_BASE_URL ||
-    'https://ticketing-backend-general.vercel.app/api';
-  return raw.replace(/\/+$/, '');
+  const fromEnv = import.meta.env.VITE_API_BASE_URL;
+  if (fromEnv != null && String(fromEnv).trim() !== '') {
+    return String(fromEnv).replace(/\/+$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:9091/api';
+    }
+  }
+  return PRODUCTION_API_FALLBACK.replace(/\/+$/, '');
 }
 
 /** Same key as RegisterCompany reads for landing → app handoff */

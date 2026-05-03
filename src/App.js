@@ -6,6 +6,7 @@ import theme from './theme';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { getStoredLanguage } from './i18n';
 
 import Layout from './components/layout/Layout';
@@ -122,7 +123,7 @@ function App() {
 
   useEffect(() => {
     const applyDirection = (nextLang) => {
-      const isArabic = String(nextLang || 'ar').toLowerCase().startsWith('ar');
+      const isArabic = String(nextLang || 'en').toLowerCase().startsWith('ar');
       document.documentElement.setAttribute('lang', isArabic ? 'ar' : 'en');
       document.documentElement.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
       document.body.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
@@ -153,15 +154,17 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <NotificationProvider>
-          <ChatProvider>
-            <Router>
-              <AppRoutes />
-            </Router>
-          </ChatProvider>
-        </NotificationProvider>
-      </AuthProvider>
+      <Router>
+        <ToastProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <ChatProvider>
+                <AppRoutes />
+              </ChatProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </Router>
     </ThemeProvider>
   );
 }

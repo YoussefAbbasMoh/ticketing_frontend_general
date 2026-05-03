@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { chatAPI, getImageUrl } from '../../services/api';
 import Spinner from '../ui/Spinner';
 import { getStoredLanguage } from '../../i18n';
+import { useToast } from '../../contexts/ToastContext';
 
 const TEXT = {
   en: {
@@ -17,6 +18,10 @@ const TEXT = {
     justNow: 'Just now',
     yesterday: 'Yesterday',
     messages: 'Messages',
+    chatTitle: 'Chat',
+    segmentAll: 'All',
+    segmentDirect: 'Direct',
+    segmentGroups: 'Groups',
     projectProcessed: 'Project conversations processed:\nCreated: {{created}}\nUpdated: {{updated}}\nExisting: {{existing}}',
     createProjectError: 'Error creating project conversations. Check console for details.',
     createProjectConversations: 'Create missing project conversations',
@@ -48,6 +53,10 @@ const TEXT = {
     justNow: 'الآن',
     yesterday: 'أمس',
     messages: 'الرسائل',
+    chatTitle: 'الدردشة',
+    segmentAll: 'الكل',
+    segmentDirect: 'مباشر',
+    segmentGroups: 'مجموعات',
     projectProcessed: 'تمت معالجة محادثات المشاريع:\nتم الإنشاء: {{created}}\nتم التحديث: {{updated}}\nموجودة مسبقًا: {{existing}}',
     createProjectError: 'حدث خطأ أثناء إنشاء محادثات المشاريع. راجع الـ console.',
     createProjectConversations: 'إنشاء محادثات المشاريع الناقصة',
@@ -71,9 +80,12 @@ const TEXT = {
 };
 
 const ChatList = ({ onSelectConversation, onCreateNew }) => {
+  const { toast } = useToast();
   const { user, isAdmin } = useAuth();
   const { conversations, loading, activeConversation, loadConversations } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
+  /** 0 = all, 1 = direct only, 2 = groups only (matches mobile app) */
+  const [segment, setSegment] = useState(0);
   const [creatingConversations, setCreatingConversations] = useState(false);
   const [lang, setLang] = useState(getStoredLanguage());
   const isRtl = lang === 'ar';
@@ -217,21 +229,30 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
     }
   };
 
-  // Memoize filtered conversations for better performance
+  const segmentFiltered = useMemo(() => {
+    if (!conversations?.length) return [];
+    if (segment === 1) return conversations.filter((c) => !c.isGroup);
+    if (segment === 2) return conversations.filter((c) => c.isGroup);
+    return conversations;
+  }, [conversations, segment]);
+
   const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
-    
+    if (!searchQuery.trim()) return segmentFiltered;
+
     const searchLower = searchQuery.toLowerCase();
-    return conversations.filter(conv => {
-      // For project groups, search by project name
-      if (conv.isGroup && conv.project) {
+    return segmentFiltered.filter((conv) => {
+      if (conv.isGroup) {
         return (
           conv.groupName?.toLowerCase().includes(searchLower) ||
           conv.project?.project_name?.toLowerCase().includes(searchLower) ||
-          conv.lastMessage?.content?.toLowerCase().includes(searchLower)
+          conv.lastMessage?.content?.toLowerCase().includes(searchLower) ||
+          conv.participants?.some(
+            (p) =>
+              (p?.name || '').toLowerCase().includes(searchLower) ||
+              (p?.email || '').toLowerCase().includes(searchLower)
+          )
         );
       }
-      // For 1-on-1 chats, search by participant name/email
       const other = getOtherParticipant(conv);
       return (
         other?.name?.toLowerCase().includes(searchLower) ||
@@ -239,21 +260,18 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         conv.lastMessage?.content?.toLowerCase().includes(searchLower)
       );
     });
-  }, [conversations, searchQuery, user]);
+  }, [segmentFiltered, searchQuery, user]);
 
   // Get active conversation ID for highlighting
   const activeConversationId = activeConversation?._id;
 
   return (
-    <div className={`relative flex h-full flex-col overflow-hidden bg-app-surface ${isRtl ? 'border-l' : 'border-r'} border-app-divider`}>
+    <div className={`relative flex h-full min-h-0 flex-col overflow-hidden bg-app-background ${isRtl ? 'border-l' : 'border-r'} border-app-divider`}>
       {/* Header */}
-      <div className="sticky top-0 z-20 flex-shrink-0 border-b border-app-divider bg-app-surface p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-2xl font-bold text-app-text">
-            <svg className="h-6 w-6 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            {tx('messages')}
+      <div className="sticky top-0 z-20 flex-shrink-0 border-b border-app-divider bg-app-background px-4 pb-3 pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-bold tracking-tight text-app-text sm:text-2xl">
+            {tx('chatTitle')}
           </h2>
           <div className="flex items-center gap-2">
             {isAdmin() && (
@@ -262,17 +280,18 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   try {
                     setCreatingConversations(true);
                     const response = await chatAPI.createProjectConversations();
-                    alert(
+                    toast(
                       tx('projectProcessed', {
                         created: response.data.created,
                         updated: response.data.updated,
                         existing: response.data.existing,
-                      })
+                      }),
+                      { severity: 'success', multiline: true }
                     );
                     loadConversations();
                   } catch (error) {
                     console.error('Error creating project conversations:', error);
-                    alert(tx('createProjectError'));
+                    toast(tx('createProjectError'), { severity: 'error' });
                   } finally {
                     setCreatingConversations(false);
                   }
@@ -305,11 +324,11 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         </div>
         
         {/* Search */}
-        <div className="relative">
-          <svg 
-            className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-app-text-tertiary" 
-            fill="none" 
-            stroke="currentColor" 
+        <div className="relative mb-3">
+          <svg
+            className={`absolute top-1/2 h-5 w-5 -translate-y-1/2 transform text-app-text-tertiary ${isRtl ? 'right-3' : 'left-3'}`}
+            fill="none"
+            stroke="currentColor"
             viewBox="0 0 24 24"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -319,12 +338,13 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             placeholder={tx('searchConversations')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full rounded-app-input border border-app-border bg-app-surface py-2.5 pl-10 pr-4 text-app-text transition-all duration-200 focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
+            className={`w-full rounded-app-input border border-app-border bg-app-surface py-2.5 text-app-text transition-all duration-200 focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 ${isRtl ? 'pr-10 pl-10' : 'pl-10 pr-10'}`}
           />
           {searchQuery && (
             <button
+              type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 transform text-app-text-tertiary hover:text-app-text"
+              className={`absolute top-1/2 -translate-y-1/2 transform text-app-text-tertiary hover:text-app-text ${isRtl ? 'left-3' : 'right-3'}`}
               aria-label={tx('clearSearch')}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,17 +354,35 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
           )}
         </div>
 
-        {/* Conversations count */}
-        {!loading && filteredConversations.length > 0 && (
-          <div className="mt-3 text-xs text-app-text-tertiary">
-            {filteredConversations.length} {filteredConversations.length === 1 ? tx('conversation') : tx('conversations')}
-            {searchQuery && ` ${tx('found')}`}
-          </div>
-        )}
+        {/* All / Direct / Groups */}
+        <div
+          className="flex rounded-full border border-app-border bg-app-surface p-0.5"
+          role="group"
+          aria-label={tx('chatTitle')}
+        >
+          {[
+            { key: 0, label: tx('segmentAll') },
+            { key: 1, label: tx('segmentDirect') },
+            { key: 2, label: tx('segmentGroups') },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSegment(key)}
+              className={`min-h-[36px] flex-1 rounded-full px-2 py-1.5 text-center text-xs font-semibold transition-colors sm:text-sm ${
+                segment === key
+                  ? 'bg-app-primary text-app-on-primary shadow-app-soft'
+                  : 'text-app-text-secondary hover:bg-app-surface-variant'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Conversations List */}
-      <div className="relative z-0 flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
+      <div className="relative z-0 flex-1 min-h-0 overflow-y-auto bg-app-background scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Spinner size="md" color="primary" />
@@ -383,14 +421,23 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-app-divider">
+          <div className="divide-y divide-app-divider px-2 pb-4 pt-1 sm:px-4">
             {filteredConversations.map((conversation) => {
-              const isGroup = conversation.isGroup && conversation.project;
-              const displayName = isGroup 
-                ? (conversation.project?.project_name || conversation.groupName || tx('projectGroup'))
+              const isGroupChat = Boolean(conversation.isGroup);
+              const isProjectGroup = isGroupChat && conversation.project;
+              const displayName = isGroupChat
+                ? (
+                    conversation.groupName?.trim() ||
+                    conversation.project?.project_name ||
+                    tx('projectGroup')
+                  )
                 : (getOtherParticipant(conversation)?.name || tx('unknownUser'));
-              const displayInitial = isGroup 
-                ? (conversation.project?.project_name?.charAt(0)?.toUpperCase() || conversation.groupName?.charAt(0)?.toUpperCase() || 'P')
+              const displayInitial = isGroupChat
+                ? (
+                    conversation.groupName?.charAt(0)?.toUpperCase() ||
+                    conversation.project?.project_name?.charAt(0)?.toUpperCase() ||
+                    'G'
+                  )
                 : (getOtherParticipant(conversation)?.name?.charAt(0)?.toUpperCase() || '?');
               const unreadCount = conversation.unreadCount || 0;
               const isActive = conversation._id === activeConversationId;
@@ -411,13 +458,13 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       <div className={`flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold text-white shadow-app-soft ${
-                        isGroup 
+                        isGroupChat
                           ? 'bg-app-info' 
                           : 'bg-app-primary'
                       }`}>
                         {displayInitial}
                       </div>
-                      {isGroup && (
+                      {isGroupChat && (
                         <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-app-info">
                           <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
@@ -433,9 +480,9 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                           <h3 className={`truncate font-semibold ${unreadCount > 0 ? 'text-app-text' : 'text-app-text-secondary'}`}>
                             {displayName}
                           </h3>
-                          {isGroup && (
+                          {isGroupChat && (
                             <span className="flex-shrink-0 rounded-full bg-app-surface-variant px-2 py-0.5 text-xs text-app-text-secondary">
-                              {tx('group')}
+                              {isProjectGroup ? tx('projectGroup') : tx('group')}
                             </span>
                           )}
                         </div>

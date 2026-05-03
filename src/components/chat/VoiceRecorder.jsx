@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useToast } from '../../contexts/ToastContext';
 
 const VoiceRecorder = ({ onRecorded, recording, setRecording, disabled = false }) => {
+  const { toast } = useToast();
   const [duration, setDuration] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -141,11 +143,15 @@ const VoiceRecorder = ({ onRecorded, recording, setRecording, disabled = false }
     } catch (error) {
       console.error('Error accessing microphone:', error);
       if (error.name === 'NotAllowedError') {
-        alert('Microphone access denied. Please allow microphone access in your browser settings.');
+        toast('Microphone access denied. Please allow microphone access in your browser settings.', {
+          severity: 'warning',
+        });
       } else if (error.name === 'NotFoundError') {
-        alert('No microphone found. Please connect a microphone and try again.');
+        toast('No microphone found. Please connect a microphone and try again.', { severity: 'warning' });
       } else {
-        alert('Could not access microphone. Please check your settings and try again.');
+        toast('Could not access microphone. Please check your settings and try again.', {
+          severity: 'error',
+        });
       }
     }
   };

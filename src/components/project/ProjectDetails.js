@@ -9,6 +9,8 @@ import GroupsOutlined from '@mui/icons-material/GroupsOutlined';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
+import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
 import { CircularProgress } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectAPI, ticketAPI, getAxiosErrorMessage } from '../../services/api';
@@ -90,7 +92,21 @@ const TEXT = {
     noComments: 'No comments',
     editTicket: 'Edit Ticket',
     assignUsers: 'Assign Users',
-    untitledProject: 'Untitled Project'
+    untitledProject: 'Untitled Project',
+    personalNotesTitle: 'Personal notes',
+    personalNotesPrivacy: 'Only you can see these notes.',
+    personalNotesLoadFailed: 'Could not load notes.',
+    personalNotesNewPlaceholder: 'Write a private note…',
+    personalNotesAdd: 'Add note',
+    personalNotesSave: 'Save',
+    personalNotesCancel: 'Cancel',
+    personalNotesEdit: 'Edit',
+    personalNotesDelete: 'Delete',
+    personalNotesDeleteConfirm: 'Delete this note?',
+    personalNotesEmpty: 'No notes yet. Add one above.',
+    personalNotesSaving: 'Saving…',
+    personalNotesOpenPanel: 'Personal notes',
+    personalNotesClosePanel: 'Close notes'
   },
   ar: {
     failedProjectDetails: 'فشل في جلب تفاصيل المشروع.',
@@ -158,9 +174,171 @@ const TEXT = {
     noComments: 'لا توجد تعليقات',
     editTicket: 'تعديل التذكرة',
     assignUsers: 'تعيين المستخدمين',
-    untitledProject: 'مشروع بدون اسم'
+    untitledProject: 'مشروع بدون اسم',
+    personalNotesTitle: 'ملاحظات شخصية',
+    personalNotesPrivacy: 'أنت فقط من يمكنه رؤية هذه الملاحظات.',
+    personalNotesLoadFailed: 'تعذر تحميل الملاحظات.',
+    personalNotesNewPlaceholder: 'اكتب ملاحظة خاصة…',
+    personalNotesAdd: 'إضافة ملاحظة',
+    personalNotesSave: 'حفظ',
+    personalNotesCancel: 'إلغاء',
+    personalNotesEdit: 'تعديل',
+    personalNotesDelete: 'حذف',
+    personalNotesDeleteConfirm: 'حذف هذه الملاحظة؟',
+    personalNotesEmpty: 'لا توجد ملاحظات بعد. أضف واحدة أعلاه.',
+    personalNotesSaving: 'جارٍ الحفظ…',
+    personalNotesOpenPanel: 'ملاحظات شخصية',
+    personalNotesClosePanel: 'إغلاق الملاحظات'
   }
 };
+
+/** Notes UI used inside the slide-over panel (tickets stay full width). */
+function PersonalNotesPanelBody({
+  tx,
+  personalNotes,
+  notesLoading,
+  notesError,
+  notesSaving,
+  newNoteContent,
+  setNewNoteContent,
+  editingNoteId,
+  editingContent,
+  setEditingNoteId,
+  setEditingContent,
+  setNotesError,
+  formatDate,
+  handleAddPersonalNote,
+  handleSavePersonalNote,
+  handleDeletePersonalNote,
+}) {
+  return (
+    <>
+      <p className="mb-6 text-xs text-app-text-secondary">{tx('personalNotesPrivacy')}</p>
+
+      {notesError && (
+        <div className="mb-4">
+          <Alert variant="error" onClose={() => setNotesError('')}>
+            {notesError}
+          </Alert>
+        </div>
+      )}
+
+      <div className="mb-6">
+        <textarea
+          rows={3}
+          value={newNoteContent}
+          onChange={(e) => setNewNoteContent(e.target.value)}
+          placeholder={tx('personalNotesNewPlaceholder')}
+          disabled={notesLoading || notesSaving}
+          className="w-full rounded-app-input border border-app-border bg-app-surface px-4 py-3 text-sm text-app-text shadow-app-soft transition-colors focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 disabled:opacity-60"
+        />
+        <div className="mt-3 flex justify-end">
+          <Button
+            variant="secondary"
+            onClick={handleAddPersonalNote}
+            disabled={notesLoading || notesSaving || !newNoteContent.trim()}
+            icon={<AddRounded sx={{ fontSize: 20 }} />}
+          >
+            {notesSaving ? tx('personalNotesSaving') : tx('personalNotesAdd')}
+          </Button>
+        </div>
+      </div>
+
+      {notesLoading ? (
+        <div className="flex justify-center py-8">
+          <CircularProgress size={28} sx={{ color: '#080936' }} />
+        </div>
+      ) : personalNotes.length === 0 ? (
+        <p className="rounded-app-input border border-dashed border-app-border bg-app-background/80 py-8 text-center text-sm text-app-text-secondary">
+          {tx('personalNotesEmpty')}
+        </p>
+      ) : (
+        <ul className="space-y-3 pb-8">
+          {personalNotes.map((note) => {
+            const noteId = note._id || note.id;
+            const updated = note.updatedAt || note.createdAt;
+            const raw = (note.content || '').trim();
+            const preview = raw.length > 200 ? `${raw.slice(0, 200)}…` : raw;
+            const isEditing = editingNoteId === noteId;
+            return (
+              <li
+                key={noteId}
+                className="rounded-app-input border border-app-divider bg-app-background p-4"
+              >
+                {isEditing ? (
+                  <>
+                    <textarea
+                      rows={4}
+                      value={editingContent}
+                      onChange={(e) => setEditingContent(e.target.value)}
+                      disabled={notesSaving}
+                      className="w-full rounded-app-input border border-app-border bg-app-surface px-4 py-3 text-sm text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20 disabled:opacity-60"
+                    />
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        disabled={notesSaving}
+                        onClick={() => {
+                          setEditingNoteId(null);
+                          setEditingContent('');
+                        }}
+                      >
+                        {tx('personalNotesCancel')}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        type="button"
+                        disabled={notesSaving || !editingContent.trim()}
+                        onClick={() => handleSavePersonalNote(noteId)}
+                      >
+                        {tx('personalNotesSave')}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="whitespace-pre-wrap text-sm text-app-text">{preview || '—'}</p>
+                    <p className="mt-2 text-xs font-semibold text-app-text-secondary">
+                      {formatDate(updated)}
+                    </p>
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        disabled={notesSaving}
+                        onClick={() => {
+                          setEditingNoteId(noteId);
+                          setEditingContent(raw);
+                        }}
+                        icon={<EditRounded sx={{ fontSize: 20 }} />}
+                      >
+                        {tx('personalNotesEdit')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        disabled={notesSaving}
+                        onClick={() => handleDeletePersonalNote(noteId)}
+                        icon={<DeleteOutlineRounded sx={{ fontSize: 20 }} />}
+                      >
+                        {tx('personalNotesDelete')}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -179,6 +357,14 @@ const ProjectDetails = () => {
   const [expandedComments, setExpandedComments] = useState({});
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [lang, setLang] = useState(getStoredLanguage());
+  const [personalNotes, setPersonalNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [notesError, setNotesError] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [notesSaving, setNotesSaving] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [notesPanelOpen, setNotesPanelOpen] = useState(false);
   const tx = (key, vars = {}) => {
     const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
     return Object.entries(vars).reduce(
@@ -237,10 +423,52 @@ const ProjectDetails = () => {
   }, [projectId]);
 
   useEffect(() => {
+    if (!projectId || !project) return undefined;
+    let cancelled = false;
+
+    const loadNotes = async () => {
+      setNotesLoading(true);
+      setNotesError('');
+      try {
+        const res = await projectAPI.getProjectNotes(projectId);
+        if (cancelled) return;
+        const list = res?.data?.notes;
+        setPersonalNotes(Array.isArray(list) ? list : []);
+      } catch (err) {
+        if (!cancelled) {
+          setPersonalNotes([]);
+          setNotesError(getAxiosErrorMessage(err, tx('personalNotesLoadFailed')));
+        }
+      } finally {
+        if (!cancelled) setNotesLoading(false);
+      }
+    };
+
+    loadNotes();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, project]);
+
+  useEffect(() => {
     const onLanguageChanged = () => setLang(getStoredLanguage());
     window.addEventListener('language-changed', onLanguageChanged);
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
+
+  useEffect(() => {
+    if (!notesPanelOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setNotesPanelOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [notesPanelOpen]);
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -349,6 +577,73 @@ const ProjectDetails = () => {
       setError(err.response?.data?.message || tx('failedStatusUpdate'));
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const refreshPersonalNotes = async () => {
+    if (!projectId) return;
+    try {
+      const res = await projectAPI.getProjectNotes(projectId);
+      const list = res?.data?.notes;
+      setPersonalNotes(Array.isArray(list) ? list : []);
+      setNotesError('');
+    } catch (err) {
+      setNotesError(getAxiosErrorMessage(err, tx('personalNotesLoadFailed')));
+    }
+  };
+
+  const handleAddPersonalNote = async () => {
+    const text = newNoteContent.trim();
+    if (!text || !projectId) return;
+    setNotesSaving(true);
+    try {
+      await projectAPI.createProjectNote(projectId, text);
+      setNewNoteContent('');
+      await refreshPersonalNotes();
+    } catch (err) {
+      toast(getAxiosErrorMessage(err, tx('personalNotesLoadFailed')), {
+        severity: 'error',
+      });
+    } finally {
+      setNotesSaving(false);
+    }
+  };
+
+  const handleSavePersonalNote = async (noteId) => {
+    const text = editingContent.trim();
+    if (!text || !projectId || !noteId) return;
+    setNotesSaving(true);
+    try {
+      await projectAPI.updateProjectNote(projectId, noteId, text);
+      setEditingNoteId(null);
+      setEditingContent('');
+      await refreshPersonalNotes();
+    } catch (err) {
+      toast(getAxiosErrorMessage(err, tx('personalNotesLoadFailed')), {
+        severity: 'error',
+      });
+    } finally {
+      setNotesSaving(false);
+    }
+  };
+
+  const handleDeletePersonalNote = async (noteId) => {
+    if (!projectId || !noteId) return;
+    if (!window.confirm(tx('personalNotesDeleteConfirm'))) return;
+    setNotesSaving(true);
+    try {
+      await projectAPI.deleteProjectNote(projectId, noteId);
+      if (editingNoteId === noteId) {
+        setEditingNoteId(null);
+        setEditingContent('');
+      }
+      await refreshPersonalNotes();
+    } catch (err) {
+      toast(getAxiosErrorMessage(err, tx('personalNotesLoadFailed')), {
+        severity: 'error',
+      });
+    } finally {
+      setNotesSaving(false);
     }
   };
 
@@ -469,6 +764,15 @@ const ProjectDetails = () => {
                 {tx('openProjectChat')}
               </Button>
               <Button
+                variant="ghost"
+                size="lg"
+                onClick={() => setNotesPanelOpen(true)}
+                className="border-2 border-app-border shadow-app-soft hover:bg-app-surface-variant"
+                icon={<StickyNote2Outlined sx={{ fontSize: 22 }} />}
+              >
+                {tx('personalNotesOpenPanel')}
+              </Button>
+              <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => navigate(`/project/${projectId}/new-ticket`)}
@@ -575,8 +879,8 @@ const ProjectDetails = () => {
           </Card>
         </div>
 
-        {/* Tickets table */}
-        <Card className="shadow-app-card">
+        {/* Tickets table — full width; personal notes open in a slide-over panel */}
+        <Card className="mb-8 shadow-app-card">
           <Card.Content className="p-5 sm:p-6">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -852,6 +1156,63 @@ const ProjectDetails = () => {
             )}
           </Card.Content>
         </Card>
+
+        {notesPanelOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex justify-end"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="personal-notes-panel-title"
+          >
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/40"
+              aria-label={tx('personalNotesClosePanel')}
+              onClick={() => setNotesPanelOpen(false)}
+            />
+            <div className="relative z-10 flex h-full w-full max-w-md shrink-0 flex-col border-s border-app-divider bg-app-surface shadow-app-card">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-app-divider px-4 py-3 sm:px-5">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <StickyNote2Outlined sx={{ fontSize: 24 }} className="shrink-0 text-app-primary" />
+                  <h2
+                    id="personal-notes-panel-title"
+                    className="truncate text-base font-extrabold text-app-text"
+                  >
+                    {tx('personalNotesTitle')}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setNotesPanelOpen(false)}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-app-input text-app-text-secondary transition-colors hover:bg-app-surface-variant hover:text-app-text"
+                  aria-label={tx('personalNotesClosePanel')}
+                >
+                  <CloseRounded sx={{ fontSize: 22 }} />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+                <PersonalNotesPanelBody
+                  tx={tx}
+                  personalNotes={personalNotes}
+                  notesLoading={notesLoading}
+                  notesError={notesError}
+                  notesSaving={notesSaving}
+                  newNoteContent={newNoteContent}
+                  setNewNoteContent={setNewNoteContent}
+                  editingNoteId={editingNoteId}
+                  editingContent={editingContent}
+                  setEditingNoteId={setEditingNoteId}
+                  setEditingContent={setEditingContent}
+                  setNotesError={setNotesError}
+                  formatDate={formatDate}
+                  handleAddPersonalNote={handleAddPersonalNote}
+                  handleSavePersonalNote={handleSavePersonalNote}
+                  handleDeletePersonalNote={handleDeletePersonalNote}
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

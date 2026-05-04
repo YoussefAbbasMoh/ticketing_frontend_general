@@ -242,6 +242,13 @@ export const projectAPI = {
   getProject: (projectId) => api.get(`/projects/${projectId}`),
   updateProjectStatus: (projectId, status) =>
     api.put(`/projects/${projectId}/status`, { status }),
+  getProjectNotes: (projectId) => api.get(`/projects/${projectId}/notes`),
+  createProjectNote: (projectId, content) =>
+    api.post(`/projects/${projectId}/notes`, { content }),
+  updateProjectNote: (projectId, noteId, content) =>
+    api.put(`/projects/${projectId}/notes/${noteId}`, { content }),
+  deleteProjectNote: (projectId, noteId) =>
+    api.delete(`/projects/${projectId}/notes/${noteId}`),
 };
 
 // Ticket API

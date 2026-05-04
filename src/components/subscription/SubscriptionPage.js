@@ -20,6 +20,9 @@ const TEXT = {
     free: 'Free',
     active: 'active',
     current: 'Current',
+    projectsForCompany: 'Projects (this company)',
+    projectsUnlimited: 'Unlimited',
+    projectsUpToN: 'Up to {{n}} projects',
   },
   ar: {
     na: 'غير متاح',
@@ -33,6 +36,9 @@ const TEXT = {
     free: 'مجاني',
     active: 'نشط',
     current: 'الحالي',
+    projectsForCompany: 'المشاريع (لهذه الشركة)',
+    projectsUnlimited: 'غير محدود',
+    projectsUpToN: 'حتى {{n}} مشروعًا',
   },
 };
 
@@ -43,6 +49,7 @@ const PLAN_UI_FALLBACK = {
       description: 'Default plan for new companies',
       features: [
         'Up to 3 accounts',
+        'Up to 3 projects',
         'No chat images, videos, or files',
         'No attendance edit or download',
       ],
@@ -53,6 +60,7 @@ const PLAN_UI_FALLBACK = {
       description: 'For growing teams',
       features: [
         'From 3 to 10 members',
+        'Up to 10 projects',
         'Chat attachments enabled',
         'Attendance edit and report download',
       ],
@@ -63,6 +71,7 @@ const PLAN_UI_FALLBACK = {
       description: 'For larger teams',
       features: [
         'From 10 to 50 members',
+        'Unlimited projects',
         'Chat attachments enabled',
         'Attendance edit and report download',
       ],
@@ -75,6 +84,7 @@ const PLAN_UI_FALLBACK = {
       description: 'الباقة الافتراضية للشركات الجديدة',
       features: [
         'حتى 3 حسابات',
+        'حتى 3 مشاريع',
         'بدون صور أو فيديو أو ملفات في الشات',
         'بدون تعديل أو تحميل الحضور',
       ],
@@ -85,6 +95,7 @@ const PLAN_UI_FALLBACK = {
       description: 'لفِرَق العمل المتوسطة',
       features: [
         'من 3 إلى 10 أفراد',
+        'حتى 10 مشاريع',
         'إتاحة مرفقات الشات',
         'تعديل الحضور وتحميل التقارير',
       ],
@@ -95,6 +106,7 @@ const PLAN_UI_FALLBACK = {
       description: 'لفِرَق العمل الكبيرة',
       features: [
         'من 10 إلى 50 فرد',
+        'مشاريع غير محدودة',
         'إتاحة مرفقات الشات',
         'تعديل الحضور وتحميل التقارير',
       ],
@@ -134,7 +146,13 @@ const SubscriptionPage = () => {
   const [success, setSuccess] = useState('');
   const handledConfirmRef = useRef(false);
   const [lang, setLang] = useState(getStoredLanguage());
-  const tx = useCallback((key) => TEXT[lang]?.[key] || TEXT.en[key] || key, [lang]);
+  const tx = useCallback((key, vars = {}) => {
+    let s = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    Object.entries(vars).forEach(([k, v]) => {
+      s = s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+    });
+    return s;
+  }, [lang]);
   const localizeBillingPeriod = useCallback(
     (value) => {
       const raw = String(value || '').toLowerCase();
@@ -375,6 +393,16 @@ const SubscriptionPage = () => {
                   <p className="text-sm text-gray-500">{t(lang, 'graceEndsAt')}</p>
                   <p className="text-gray-800">{formatDate(subscription?.graceEndsAt) || tx('na')}</p>
                 </div>
+                {subscription?.limits && (
+                  <div>
+                    <p className="text-sm text-gray-500">{tx('projectsForCompany')}</p>
+                    <p className="text-gray-800">
+                      {subscription.limits.maxProjects == null
+                        ? tx('projectsUnlimited')
+                        : tx('projectsUpToN', { n: subscription.limits.maxProjects })}
+                    </p>
+                  </div>
+                )}
                 <div className="md:col-span-2">
                   <p className="text-sm text-gray-500">{t(lang, 'paymobSubscriptionId')}</p>
                   <p className="text-gray-800 break-all">{subscription?.paymobSubscriptionId || tx('na')}</p>

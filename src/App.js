@@ -9,6 +9,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { getStoredLanguage } from './i18n';
 import { createAppTheme } from './theme';
 
+
 import RouteFallback from './components/app/RouteFallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Layout from './components/layout/Layout';

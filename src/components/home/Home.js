@@ -154,7 +154,7 @@ const Home = () => {
   const [lang, setLang] = useState(getStoredLanguage());
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { getProjectConversation } = useChat();
   const activeCompanyId = user?.activeCompanyId ? String(user.activeCompanyId) : '';
   const activeCompanyName =
@@ -172,10 +172,17 @@ const Home = () => {
   const welcomeCompanySuffix = activeCompanyName ? ` @ ${activeCompanyName}` : '';
 
   useEffect(() => {
+    /** Platform super admin without a workspace should use `/admin/login`, not the team home shell. */
+    if (user?.role === 'super_admin' && !(Array.isArray(user.companies) && user.companies.length > 0)) {
+      logout();
+      navigate('/admin/login', { replace: true });
+      return;
+    }
     fetchProjects();
     fetchActiveTickets();
     fetchSubscriptionNotice();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial load; platform-only admin sign-out
+  }, [user?.role, user?.companies?.length, navigate, logout]);
 
   useEffect(() => {
     const onLanguageChanged = () => setLang(getStoredLanguage());

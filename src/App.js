@@ -12,6 +12,7 @@ import { createAppTheme } from './theme';
 
 import RouteFallback from './components/app/RouteFallback';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import AdminProtectedRoute from './components/auth/AdminProtectedRoute';
 import Layout from './components/layout/Layout';
 
 const Login = lazy(() => import('./components/auth/Login'));
@@ -30,6 +31,14 @@ const WorkspaceCalendarPage = lazy(() => import('./components/calendar/Workspace
 const LandingPage = lazy(() =>
   import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
+const AdminLogin = lazy(() => import('./components/auth/AdminLogin'));
+const PlatformAdminRoute = lazy(() => import('./components/admin/platform/PlatformAdminRoute'));
+const AdminLayout = lazy(() => import('./components/admin/platform/AdminLayout'));
+const AdminOverviewPage = lazy(() => import('./components/admin/platform/AdminOverviewPage'));
+const AdminCompaniesPage = lazy(() => import('./components/admin/platform/AdminCompaniesPage'));
+const AdminUsersPage = lazy(() => import('./components/admin/platform/AdminUsersPage'));
+const AdminUserDetailPage = lazy(() => import('./components/admin/platform/AdminUserDetailPage'));
+const AdminSubscriptionsPage = lazy(() => import('./components/admin/platform/AdminSubscriptionsPage'));
 
 function SubscriptionRouteGate() {
   const { canSeeSubscriptionNav } = useAuth();
@@ -50,6 +59,8 @@ function AppRoutes() {
       <Route path="/register-company" element={user ? <Navigate to="/" replace /> : <RegisterCompany />} />
       <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
+
+      <Route path="/admin/login" element={<AdminLogin />} />
 
       <Route
         path="/"
@@ -129,6 +140,23 @@ function AppRoutes() {
           </Layout>
         </ProtectedRoute>
       } />
+
+      <Route
+        path="/admin"
+        element={
+          <AdminProtectedRoute>
+            <PlatformAdminRoute>
+              <AdminLayout />
+            </PlatformAdminRoute>
+          </AdminProtectedRoute>
+        }
+      >
+        <Route index element={<AdminOverviewPage />} />
+        <Route path="companies" element={<AdminCompaniesPage />} />
+        <Route path="users" element={<AdminUsersPage />} />
+        <Route path="users/:id" element={<AdminUserDetailPage />} />
+        <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+      </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

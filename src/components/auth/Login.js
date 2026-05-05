@@ -339,6 +339,14 @@ const Login = () => {
             >
               {t(lang, 'newCompanyCreateWorkspace')}
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/login')}
+              disabled={loading}
+              className={`${authLinkMutedClass} mt-s8 block w-full text-[12px] disabled:cursor-not-allowed`}
+            >
+              {lang === 'ar' ? 'دخول مسؤول المنصة (منفصل) ←' : 'Platform admin sign-in (separate) →'}
+            </button>
           </div>
         </div>
 

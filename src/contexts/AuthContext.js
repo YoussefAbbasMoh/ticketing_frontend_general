@@ -132,10 +132,6 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
-  const isAdmin = () => {
-    return user?.role === 'admin' || user?.role === 'manager';
-  };
-
   const resolveActiveCompanyId = () => {
     if (user?.activeCompanyId) return String(user.activeCompanyId);
     return readTokenCompanyId(
@@ -152,10 +148,20 @@ export const AuthProvider = ({ children }) => {
     return Boolean(m.isOwner) || ['admin', 'manager'].includes(m.companyRole);
   };
 
-  /** Owner, company admin/manager, or global admin/manager — subscription nav + attendance team summary. */
-  const canSeeSubscriptionNav = () => {
-    return isAdmin() || canManageCompanyTeam();
+  /**
+   * Workspace-level admin UI (owner / company admin|manager, or legacy global `manager` role).
+   * Platform console uses `isPlatformAdmin`, not this.
+   */
+  const isAdmin = () => {
+    if (user?.role === 'manager') return true;
+    return canManageCompanyTeam();
   };
+
+  /** Platform dashboard at `/admin` — only JWT `role: super_admin`. */
+  const isPlatformAdmin = () => user?.role === 'super_admin';
+
+  /** Subscription nav, attendance team summary, etc. */
+  const canSeeSubscriptionNav = () => isAdmin();
 
   const isCompanyOwner = () => {
     const activeId = resolveActiveCompanyId();
@@ -164,19 +170,8 @@ export const AuthProvider = ({ children }) => {
     return Boolean(m?.isOwner);
   };
 
-  /**
-   * Who may see "Add user" in the UI.
-   * Global `admin` always sees it; otherwise same as API (owner or company admin/manager).
-   */
-  const canInviteUsersToCompany = () => {
-    if (user?.role === 'admin') return true;
-
-    const activeId = resolveActiveCompanyId();
-    if (!user?.companies?.length || !activeId) return false;
-    const m = user.companies.find((c) => memberCompanyId(c) === activeId);
-    if (!m) return false;
-    return Boolean(m.isOwner) || ['admin', 'manager'].includes(m.companyRole);
-  };
+  /** Same rules as API: owner or company admin/manager in the active workspace. */
+  const canInviteUsersToCompany = () => canManageCompanyTeam();
 
   const value = {
     user,
@@ -185,6 +180,7 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     switchActiveCompany,
     isAdmin,
+    isPlatformAdmin,
     canManageCompanyTeam,
     canSeeSubscriptionNav,
     isCompanyOwner,

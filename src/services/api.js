@@ -166,7 +166,12 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      window.location.href = '/login';
+      const nextLogin =
+        typeof window !== 'undefined' &&
+        String(window.location.pathname || '').toLowerCase().startsWith('/admin')
+          ? '/admin/login'
+          : '/login';
+      window.location.href = nextLogin;
     }
     return Promise.reject(error);
   }
@@ -198,11 +203,13 @@ loginApi.interceptors.request.use(
 
 // Auth API - use loginApi for login to avoid 401 redirect
 export const authAPI = {
-  login: (email, password, companyId) =>
+  /** @param {boolean} [platformAdminLogin] - admin console only; server accepts `super_admin` users only */
+  login: (email, password, companyId, platformAdminLogin) =>
     loginApi.post('/auth/login', {
       email,
       password,
       ...(companyId ? { companyId } : {}),
+      ...(platformAdminLogin ? { platformAdminLogin: true } : {}),
     }),
   switchCompany: (companyId) => api.post('/auth/switch-company', { companyId }),
   registerCompany: (payload) => loginApi.post('/auth/register-company', payload),
@@ -449,6 +456,25 @@ export const attendanceAPI = {
       headers: { 'content-type': ct },
     };
   },
+};
+
+/** Platform API — requires JWT `role: super_admin` — `/api/platform-admin/*` */
+export const platformAdminAPI = {
+  getOverview: () => api.get('/platform-admin/overview'),
+  getCompaniesForSelect: () => api.get('/platform-admin/companies-for-select'),
+  getCompanies: (params) => api.get('/platform-admin/companies', { params }),
+  suspendCompany: (id) => api.patch(`/platform-admin/companies/${id}/suspend`),
+  activateCompany: (id) => api.patch(`/platform-admin/companies/${id}/activate`),
+  setCompanyPlan: (id, planId) => api.patch(`/platform-admin/companies/${id}/plan`, { planId }),
+  softDeleteCompany: (id) => api.patch(`/platform-admin/companies/${id}/soft-delete`),
+  getUsers: (params) => api.get('/platform-admin/users', { params }),
+  getUser: (id) => api.get(`/platform-admin/users/${id}`),
+  banUser: (id) => api.patch(`/platform-admin/users/${id}/ban`),
+  unbanUser: (id) => api.patch(`/platform-admin/users/${id}/unban`),
+  getSubscriptions: (params) => api.get('/platform-admin/subscriptions', { params }),
+  setSubscriptionPlan: (companyId, planId) =>
+    api.patch(`/platform-admin/subscriptions/${companyId}/plan`, { planId }),
+  cancelSubscription: (companyId) => api.post(`/platform-admin/subscriptions/${companyId}/cancel`),
 };
 
 // Subscription API

@@ -126,8 +126,11 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 3,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+          borderRadius: 4,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: '0 16px 40px rgba(15, 23, 42, 0.18)',
+          overflow: 'hidden',
         }
       }}
     >
@@ -135,10 +138,10 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
       <DialogTitle 
         sx={{ 
           pb: 2,
-          pt: 3,
+          pt: 2.5,
           px: 3,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
+          background: 'linear-gradient(135deg, #080936 0%, #18206f 100%)',
+          color: '#fff',
           position: 'relative',
         }}
       >
@@ -146,7 +149,7 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
           <Box display="flex" alignItems="center" gap={1.5}>
             <Avatar 
               sx={{ 
-                bgcolor: 'rgba(255,255,255,0.2)',
+                bgcolor: 'rgba(255,255,255,0.16)',
                 width: 40,
                 height: 40,
               }}
@@ -214,9 +217,9 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
           elevation={0} 
           sx={{ 
             p: 2.5, 
-            bgcolor: '#f8f9fa',
+            bgcolor: '#f8fafc',
             borderRadius: 2,
-            border: '1px solid #e0e0e0',
+            border: '1px solid #e2e8f0',
           }}
         >
           <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -240,6 +243,16 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
               sx={{
                 bgcolor: 'white',
                 borderRadius: 2,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#cbd5e1',
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#94a3b8',
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#080936',
+                  borderWidth: 2,
+                },
               }}
               renderValue={(selected) => (
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
@@ -265,6 +278,8 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
                         sx={{ 
                           borderRadius: 2,
                           fontWeight: 500,
+                          bgcolor: '#eef2ff',
+                          color: '#1e293b',
                         }}
                       />
                     );
@@ -325,9 +340,9 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
                 elevation={0}
                 sx={{
                   p: 1.5,
-                  bgcolor: 'rgba(103, 126, 234, 0.08)',
+                  bgcolor: 'rgba(8, 9, 54, 0.06)',
                   borderRadius: 2,
-                  border: '1px solid rgba(103, 126, 234, 0.2)',
+                  border: '1px solid rgba(8, 9, 54, 0.16)',
                 }}
               >
                 <Box display="flex" alignItems="center" justifyContent="space-between">
@@ -388,9 +403,9 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
                 elevation={0}
                 sx={{
                   p: 1.5,
-                  bgcolor: 'rgba(158, 158, 158, 0.08)',
+                  bgcolor: 'rgba(148, 163, 184, 0.12)',
                   borderRadius: 2,
-                  border: '1px solid rgba(158, 158, 158, 0.2)',
+                  border: '1px solid rgba(148, 163, 184, 0.28)',
                   textAlign: 'center',
                 }}
               >
@@ -415,6 +430,12 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
             px: 3,
             textTransform: 'none',
             fontWeight: 600,
+            borderColor: '#cbd5e1',
+            color: '#334155',
+            '&:hover': {
+              borderColor: '#94a3b8',
+              bgcolor: '#f8fafc',
+            },
           }}
         >
           Cancel
@@ -428,10 +449,11 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
             px: 3,
             textTransform: 'none',
             fontWeight: 600,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            boxShadow: '0 4px 12px rgba(103, 126, 234, 0.4)',
+            background: 'linear-gradient(135deg, #080936 0%, #18206f 100%)',
+            boxShadow: '0 6px 14px rgba(8, 9, 54, 0.35)',
             '&:hover': {
-              boxShadow: '0 6px 16px rgba(103, 126, 234, 0.5)',
+              background: 'linear-gradient(135deg, #06072d 0%, #121a5f 100%)',
+              boxShadow: '0 10px 20px rgba(8, 9, 54, 0.4)',
             },
             '&:disabled': {
               background: '#e0e0e0',

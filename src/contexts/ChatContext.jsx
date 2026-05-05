@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/api';
 import socketService from '../services/socketService';
@@ -21,32 +21,47 @@ export const ChatProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  const loadConversations = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await chatAPI.getConversations();
+      setConversations(response.data.conversations || []);
+    } catch (error) {
+      console.error('Load conversations error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleNewMessage = (data) => {
-    console.log('New chat message received:', data);
-    console.log('Active conversation:', activeConversation);
+  const loadMessages = useCallback(async (conversationId) => {
+    try {
+      setLoading(true);
+      const response = await chatAPI.getMessages(conversationId);
+      setMessages(prev => ({
+        ...prev,
+        [conversationId]: response.data.messages || []
+      }));
+    } catch (error) {
+      console.error('Load messages error:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-    // Convert both IDs to strings for comparison
-    const activeConvId = activeConversation?._id?.toString();
+  const handleNewMessage = useCallback((data) => {
     const receivedConvId = data.conversationId?.toString();
+    if (!receivedConvId || !data?.message?._id) return;
 
-    console.log('Conversation ID match:', activeConvId, '===', receivedConvId);
-
-    // Always update messages for the conversation, regardless of whether it's active
-    // This ensures messages are available when the conversation is opened
     setMessages(prev => {
       const existingMessages = prev[receivedConvId] || [];
-      // Check if message already exists (avoid duplicates)
       const messageExists = existingMessages.some(msg => {
         const msgId = msg._id?.toString();
         const newMsgId = data.message._id?.toString();
         return msgId === newMsgId;
       });
       if (messageExists) {
-        console.log('Message already exists, skipping duplicate');
         return prev;
       }
-      console.log('Adding new message to conversation:', receivedConvId);
       const newMessages = [...existingMessages, data.message];
       return {
         ...prev,
@@ -54,15 +69,15 @@ export const ChatProvider = ({ children }) => {
       };
     });
 
-    // Always update conversation list to refresh unread counts and last message
+    // Keep conversation list fresh for unread counts + last message preview.
     loadConversations();
-  };
+  }, [loadConversations]);
 
 
-  const handleMessageUpdated = (data) => {
-    console.log('Message updated:', data);
+  const handleMessageUpdated = useCallback((data) => {
     const { conversationId, message } = data;
     const convId = conversationId?.toString();
+    if (!convId || !message?._id) return;
 
     setMessages(prev => {
       const existingMessages = prev[convId] || [];
@@ -74,12 +89,12 @@ export const ChatProvider = ({ children }) => {
         [convId]: updatedMessages
       };
     });
-  };
+  }, []);
 
-  const handleMessageDeleted = (data) => {
-    console.log('Message deleted:', data);
+  const handleMessageDeleted = useCallback((data) => {
     const { conversationId, messageId } = data;
     const convId = conversationId?.toString();
+    if (!convId || !messageId) return;
 
     setMessages(prev => {
       const existingMessages = prev[convId] || [];
@@ -91,12 +106,12 @@ export const ChatProvider = ({ children }) => {
         [convId]: updatedMessages
       };
     });
-  };
+  }, []);
 
-  const handleReactionUpdated = (data) => {
-    console.log('Reaction updated:', data);
+  const handleReactionUpdated = useCallback((data) => {
     const { conversationId, messageId, reactions } = data;
     const convId = conversationId?.toString();
+    if (!convId || !messageId) return;
 
     setMessages(prev => {
       const existingMessages = prev[convId] || [];
@@ -108,7 +123,7 @@ export const ChatProvider = ({ children }) => {
         [convId]: updatedMessages
       };
     });
-  };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -142,7 +157,7 @@ export const ChatProvider = ({ children }) => {
         socketService.off('message_reaction_updated', handleReactionUpdated);
       };
     }
-  }, [user]);
+  }, [user, loadConversations, handleNewMessage, handleMessageUpdated, handleMessageDeleted, handleReactionUpdated]);
 
   useEffect(() => {
     if (!user) {
@@ -150,34 +165,7 @@ export const ChatProvider = ({ children }) => {
     }
   }, [user]);
 
-  const loadConversations = async () => {
-    try {
-      setLoading(true);
-      const response = await chatAPI.getConversations();
-      setConversations(response.data.conversations || []);
-    } catch (error) {
-      console.error('Load conversations error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMessages = async (conversationId) => {
-    try {
-      setLoading(true);
-      const response = await chatAPI.getMessages(conversationId);
-      setMessages(prev => ({
-        ...prev,
-        [conversationId]: response.data.messages || []
-      }));
-    } catch (error) {
-      console.error('Load messages error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const sendMessage = async (conversationId, content, replyTo = null, mentions = []) => {
+  const sendMessage = useCallback(async (conversationId, content, replyTo = null, mentions = []) => {
     try {
       const response = await chatAPI.sendMessage(conversationId, content, replyTo, mentions);
       const newMessage = response.data.message;
@@ -188,17 +176,24 @@ export const ChatProvider = ({ children }) => {
         [conversationId]: [...(prev[conversationId] || []), newMessage]
       }));
 
-      // Reload conversations to update last message
-      loadConversations();
+      // Update conversation preview locally to avoid full-list refetch on each send.
+      setConversations(prev => prev.map((conv) => {
+        if (conv._id?.toString() !== conversationId?.toString()) return conv;
+        return {
+          ...conv,
+          lastMessage: newMessage,
+          lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+        };
+      }));
 
       return newMessage;
     } catch (error) {
       console.error('Send message error:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const sendFileMessage = async (conversationId, type, file, replyTo = null) => {
+  const sendFileMessage = useCallback(async (conversationId, type, file, replyTo = null) => {
     try {
       const response = await chatAPI.sendFileMessage(conversationId, type, file, replyTo);
       const newMessage = response.data.message;
@@ -209,18 +204,23 @@ export const ChatProvider = ({ children }) => {
         [conversationId]: [...(prev[conversationId] || []), newMessage]
       }));
 
-      // Reload conversations to update last message
-      loadConversations();
+      setConversations(prev => prev.map((conv) => {
+        if (conv._id?.toString() !== conversationId?.toString()) return conv;
+        return {
+          ...conv,
+          lastMessage: newMessage,
+          lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+        };
+      }));
 
       return newMessage;
     } catch (error) {
       console.error('Send file message error:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const selectConversation = async (conversation) => {
-    console.log('Selecting conversation:', conversation);
+  const selectConversation = useCallback(async (conversation) => {
     // Ensure we have the full conversation object with _id
     if (conversation && conversation._id) {
       setActiveConversation(conversation);
@@ -233,9 +233,9 @@ export const ChatProvider = ({ children }) => {
     } else {
       console.error('Invalid conversation object:', conversation);
     }
-  };
+  }, [messages, loadMessages]);
 
-  const getOrCreateConversation = async (participantId) => {
+  const getOrCreateConversation = useCallback(async (participantId) => {
     try {
       const response = await chatAPI.getOrCreateConversation(participantId);
       const conversation = response.data.conversation;
@@ -252,9 +252,9 @@ export const ChatProvider = ({ children }) => {
       console.error('Get or create conversation error:', error);
       throw error;
     }
-  };
+  }, []);
 
-  const getProjectConversation = async (projectId) => {
+  const getProjectConversation = useCallback(async (projectId) => {
     try {
       const response = await chatAPI.getProjectConversation(projectId);
       const conversation = response.data.conversation;
@@ -274,7 +274,7 @@ export const ChatProvider = ({ children }) => {
       console.error('Get project conversation error:', error);
       throw error;
     }
-  };
+  }, [selectConversation]);
 
   // Get messages for active conversation - use useMemo to ensure reference changes when messages update
   // Create a key based on the messages array length and last message ID to detect changes
@@ -291,24 +291,39 @@ export const ChatProvider = ({ children }) => {
     return messages[convId] || [];
   }, [activeConversation?._id, messagesKey]);
 
+  const contextValue = useMemo(() => ({
+    conversations,
+    activeConversation,
+    messages: activeMessages,
+    loading,
+    isOpen,
+    setIsOpen,
+    loadConversations,
+    loadMessages,
+    sendMessage,
+    sendFileMessage,
+    selectConversation,
+    getOrCreateConversation,
+    getProjectConversation,
+    setActiveConversation
+  }), [
+    conversations,
+    activeConversation,
+    activeMessages,
+    loading,
+    isOpen,
+    loadConversations,
+    loadMessages,
+    sendMessage,
+    sendFileMessage,
+    selectConversation,
+    getOrCreateConversation,
+    getProjectConversation
+  ]);
+
   return (
     <ChatContext.Provider
-      value={{
-        conversations,
-        activeConversation,
-        messages: activeMessages,
-        loading,
-        isOpen,
-        setIsOpen,
-        loadConversations,
-        loadMessages,
-        sendMessage,
-        sendFileMessage,
-        selectConversation,
-        getOrCreateConversation,
-        getProjectConversation,
-        setActiveConversation
-      }}
+      value={contextValue}
     >
       {children}
     </ChatContext.Provider>

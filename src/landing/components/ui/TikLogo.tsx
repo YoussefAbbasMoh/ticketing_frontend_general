@@ -18,7 +18,7 @@ export function TikLogoIcon({ size = 40 }: { size?: number }) {
 export function TikLogoFull() {
   return (
     <div className="flex min-h-10 items-center gap-3">
-      <TikLogoIcon size={40} />
+      <img src="/logo1.webp" alt="Tik Logo" className="h-11 w-auto object-contain rounded-lg" />
       <span className="font-cairo font-extrabold text-2xl tracking-tight text-white">
         tik<span className="text-orange">.</span>
       </span>

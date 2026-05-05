@@ -32,7 +32,7 @@ const ChatWindow = ({ conversation, onBack }) => {
   const { user, canSeeSubscriptionNav } = useAuth();
   const companyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'default';
   const { canUploadChatAttachments } = useMySubscriptionPlan(companyKey);
-  const { messages, sendMessage, sendFileMessage, loadMessages, markAsRead } = useChat();
+  const { messages, sendMessage, loadMessages, markAsRead } = useChat();
   const { uploadFile, uploadVideo } = useBunnyUpload();
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -127,6 +127,27 @@ const ChatWindow = ({ conversation, onBack }) => {
     }
   }, [hasMore, isLoadingMore]);
 
+  const handleGlobalWheel = useCallback((e) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const target = e.target;
+    if (!(target instanceof Element)) return;
+
+    // Let explicitly opted-out areas keep their native wheel behavior.
+    if (target.closest('[data-chat-no-global-scroll]')) {
+      return;
+    }
+
+    // If wheel already happened inside the messages container, keep native behavior.
+    if (container.contains(target)) {
+      return;
+    }
+
+    container.scrollTop += e.deltaY;
+    e.preventDefault();
+  }, []);
+
   const scrollToBottom = (behavior = 'smooth') => {
     if (messagesContainerRef.current) {
       const container = messagesContainerRef.current;
@@ -215,29 +236,24 @@ const ChatWindow = ({ conversation, onBack }) => {
     }
 
     try {
-      // Voice remains on legacy multipart path.
-      if (type === 'voice') {
-        await sendFileMessage(conversation._id, type, file, replyTo?._id);
-      } else {
-        // Upload directly to Bunny from frontend.
-        const uploadResult = type === 'video'
-          ? await uploadVideo(file)
-          : await uploadFile(file, `chat/${conversation._id}`);
+      // Upload directly to Bunny from frontend for all file types.
+      const uploadResult = type === 'video'
+        ? await uploadVideo(file)
+        : await uploadFile(file, `chat/${conversation._id}`);
 
-        // Send only URL + metadata to backend API.
-        await chatAPI.sendFileMessageByUrl(
-          conversation._id,
-          type,
-          uploadResult.url,
-          uploadResult.fileName || file.name || 'attachment',
-          file?.size || null,
-          file?.type || null,
-          replyTo?._id || null,
-        );
+      // Send only URL + metadata to backend API.
+      await chatAPI.sendFileMessageByUrl(
+        conversation._id,
+        type,
+        uploadResult.url,
+        uploadResult.fileName || file.name || 'attachment',
+        file?.size || null,
+        file?.type || null,
+        replyTo?._id || null,
+      );
 
-        // Reload messages so the uploaded media appears immediately.
-        await loadMessages(conversation._id);
-      }
+      // Reload messages so the uploaded media appears immediately.
+      await loadMessages(conversation._id);
 
       setReplyTo(null);
       // Wait for file message to be added, then scroll
@@ -363,7 +379,10 @@ const ChatWindow = ({ conversation, onBack }) => {
 
   return (
     <>
-      <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-app-surface">
+      <div
+        className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-app-surface"
+        onWheelCapture={handleGlobalWheel}
+      >
         {/* Header */}
         <div className="sticky top-0 z-20 flex flex-shrink-0 items-center justify-between border-b border-app-divider bg-app-surface px-3 py-3 sm:px-4">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
@@ -558,7 +577,7 @@ const ChatWindow = ({ conversation, onBack }) => {
         </div>
 
         {/* Input */}
-        <div className="flex-shrink-0 relative z-10">
+        <div className="flex-shrink-0 relative z-10" data-chat-no-global-scroll>
           <MessageInput
             onSend={handleSendMessage}
             onSendFile={handleSendFile}

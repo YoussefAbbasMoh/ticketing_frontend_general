@@ -54,7 +54,7 @@ export function Footer() {
                 <span className="text-white/35">{f.linkCareers}</span>
               </li>
               <li>
-                <a href="mailto:hello@tik.app" className="hover:text-orange">
+                <a href="mailto:info@absai.dev" className="hover:text-orange">
                   {f.linkContact}
                 </a>
               </li>

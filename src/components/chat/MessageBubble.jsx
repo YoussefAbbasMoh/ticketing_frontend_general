@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { getImageUrl } from '../../services/api';
+import { chatAPI, getImageUrl } from '../../services/api';
 
 const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onReplyInThread }) => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -11,6 +11,9 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
   const [showContextMenu, setShowContextMenu] = useState(false);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const bubbleRef = useRef(null);
+  const [isThreadExpanded, setIsThreadExpanded] = useState(false);
+  const [threadReplies, setThreadReplies] = useState([]);
+  const [isThreadLoading, setIsThreadLoading] = useState(false);
 
   // Close context menu on click outside
   useEffect(() => {
@@ -71,6 +74,32 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const loadThreadReplies = async () => {
+    if (!message?._id) return;
+
+    try {
+      setIsThreadLoading(true);
+      const response = await chatAPI.getThreadReplies(message._id);
+      setThreadReplies(response?.data?.threadReplies || []);
+    } catch (error) {
+      console.error('Load inline thread replies error:', error);
+    } finally {
+      setIsThreadLoading(false);
+    }
+  };
+
+  const handleToggleThread = async () => {
+    if (isThreadExpanded) {
+      setIsThreadExpanded(false);
+      return;
+    }
+
+    setIsThreadExpanded(true);
+    if (threadReplies.length === 0) {
+      await loadThreadReplies();
+    }
   };
 
   // Audio player controls
@@ -492,18 +521,62 @@ const MessageBubble = ({ message, isOwn, onReply, onEdit, onDelete, onReact, onR
           </div>
         )}
 
-        {/* Thread Count Indicator */}
+        {/* Thread Count Indicator / Inline Thread */}
         {message.threadCount > 0 && (
-          <button
-            onClick={() => onReplyInThread && onReplyInThread()}
-            className={`mt-2 flex items-center gap-1.5 rounded-lg border border-orange/30 px-2.5 py-1 text-xs font-medium text-orange transition-all hover:border-orange/50 hover:bg-orange/10 ${isOwn ? 'ml-auto' : 'mr-auto'
-              }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span>{message.threadCount} {message.threadCount === 1 ? 'reply' : 'replies'}</span>
-          </button>
+          <div className={`mt-2 w-full max-w-md ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
+            <button
+              onClick={handleToggleThread}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all ${isThreadExpanded
+                ? 'border-orange/50 bg-orange/10 text-orange'
+                : 'border-orange/30 text-orange hover:border-orange/50 hover:bg-orange/10'
+                }`}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span>{message.threadCount} {message.threadCount === 1 ? 'reply' : 'replies'}</span>
+              <span className="text-[11px] opacity-80">{isThreadExpanded ? 'Hide thread' : 'View thread'}</span>
+              <svg className={`h-3.5 w-3.5 transition-transform ${isThreadExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {isThreadExpanded && (
+              <div className="mt-2 w-full rounded-xl border border-app-border bg-app-surface px-3 py-2 shadow-app-soft">
+                {isThreadLoading ? (
+                  <p className="text-xs text-app-text-secondary">Loading thread...</p>
+                ) : threadReplies.length === 0 ? (
+                  <p className="text-xs text-app-text-secondary">No replies found.</p>
+                ) : (
+                  <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
+                    {threadReplies.map((reply) => (
+                      <div key={reply._id} className="rounded-lg bg-app-background px-2.5 py-2">
+                        <div className="mb-1 flex items-center justify-between gap-2">
+                          <span className="truncate text-[11px] font-semibold text-app-text">
+                            {reply.senderName || reply.sender?.name || 'User'}
+                          </span>
+                          <span className="text-[10px] text-app-text-tertiary">{formatTime(reply.createdAt)}</span>
+                        </div>
+                        <p className="whitespace-pre-wrap break-words text-xs text-app-text-secondary">
+                          {reply.type === 'text'
+                            ? reply.content
+                            : `[${reply.type?.charAt(0)?.toUpperCase() + reply.type?.slice(1)}]`
+                          }
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => onReplyInThread && onReplyInThread()}
+                  className="mt-2 text-xs font-medium text-orange transition-colors hover:text-orange-dark"
+                >
+                  Open full thread
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

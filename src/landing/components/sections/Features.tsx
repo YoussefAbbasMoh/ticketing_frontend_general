@@ -46,7 +46,7 @@ export function Features() {
           />
         </div>
 
-        <motion.div
+        {/* <motion.div
           {...fadeUp}
           className="mt-12 grid gap-8 rounded-2xl border border-orange/40 bg-gradient-to-br from-orange/[0.08] to-transparent p-8 lg:grid-cols-2 lg:items-center"
         >
@@ -66,7 +66,7 @@ export function Features() {
               ))}
             </ul>
           </div>
-        </motion.div>
+        </motion.div> */}
       </div>
     </section>
   );

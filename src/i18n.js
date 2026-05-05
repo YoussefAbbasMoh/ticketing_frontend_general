@@ -267,7 +267,9 @@ const dictionaries = {
     planFeatureBlockedViewPlans: 'عرض الباقات',
     planFeatureBlockedClose: 'إغلاق',
     planFeatureBlockedAskAdmin:
-      'اطلب من مالك الشركة أو المسؤول ترقية الاشتراك إذا كنت بحاجة إلى هذه الميزة.'
+      'اطلب من مالك الشركة أو المسؤول ترقية الاشتراك إذا كنت بحاجة إلى هذه الميزة.',
+    enterYourPassword: 'أدخل كلمة المرور',
+    confirmYourPassword: 'تأكيد كلمة المرور',
   }
 };
 

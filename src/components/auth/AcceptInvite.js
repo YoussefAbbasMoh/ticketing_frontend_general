@@ -110,7 +110,7 @@ const AcceptInvite = () => {
                 minLength={6}
                 autoComplete="new-password"
                 className={authInputClass}
-                placeholder="Enter your password"
+                placeholder={t(lang, 'enterYourPassword')}
               />
             </div>
 
@@ -127,7 +127,7 @@ const AcceptInvite = () => {
                 minLength={6}
                 autoComplete="new-password"
                 className={authInputClass}
-                placeholder="Confirm your password"
+                placeholder={t(lang, 'confirmYourPassword')}
               />
             </div>
 

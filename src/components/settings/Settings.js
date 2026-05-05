@@ -20,6 +20,11 @@ const TEXT = {
     expires: 'Expires',
     graceEnds: 'Grace ends',
     paymobSubscriptionId: 'Paymob Subscription ID',
+    membersLimit: 'Members limit',
+    membersUsage: '{{used}} / {{max}} members',
+    membersCanBeAdded: '{{count}} can be added',
+    membersLimitReached: 'Member limit reached',
+    membersUnlimited: 'Unlimited members',
     manageSubscription: 'Manage Subscription',
     profileInfo: 'Profile Information',
     editProfile: 'Edit Profile',
@@ -71,6 +76,11 @@ const TEXT = {
     expires: 'ينتهي في',
     graceEnds: 'نهاية فترة السماح',
     paymobSubscriptionId: 'معرّف اشتراك Paymob',
+    membersLimit: 'حد الأعضاء',
+    membersUsage: '{{used}} / {{max}} أعضاء',
+    membersCanBeAdded: 'يمكن إضافة {{count}}',
+    membersLimitReached: 'تم الوصول إلى حد الأعضاء',
+    membersUnlimited: 'أعضاء غير محدودين',
     manageSubscription: 'إدارة الاشتراك',
     profileInfo: 'بيانات الحساب',
     editProfile: 'تعديل الحساب',
@@ -207,6 +217,11 @@ const Settings = () => {
       year: 'numeric',
     });
   };
+
+  const maxMembers = Number(subscriptionInfo?.limits?.maxMembers);
+  const hasMembersLimit = Number.isFinite(maxMembers) && maxMembers > 0;
+  const usedMembers = users.length;
+  const membersRemaining = hasMembersLimit ? Math.max(maxMembers - usedMembers, 0) : null;
 
   const fetchUsers = async () => {
     try {
@@ -452,6 +467,21 @@ const Settings = () => {
                   <p className="text-xs text-gray-500 mt-1">
                     {tx('paymobSubscriptionId')}: {subscriptionInfo?.paymobSubscriptionId || 'N/A'}
                   </p>
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      {tx('membersLimit')}:{' '}
+                      {hasMembersLimit
+                        ? tx('membersUsage', { used: usedMembers, max: maxMembers })
+                        : tx('membersUnlimited')}
+                    </p>
+                    {hasMembersLimit && (
+                      <p className={`text-xs mt-1 ${membersRemaining > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {membersRemaining > 0
+                          ? tx('membersCanBeAdded', { count: membersRemaining })
+                          : tx('membersLimitReached')}
+                      </p>
+                    )}
+                  </div>
                   {subscriptionInfo?.notice && (
                     <p className="text-xs text-amber-700 mt-2">{subscriptionInfo.notice}</p>
                   )}
@@ -808,8 +838,6 @@ const Settings = () => {
                       className="w-full px-4 py-2.5 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
                     >
                       <option value="user">{lang === 'ar' ? 'مستخدم' : 'User'}</option>
-                      <option value="developer">{lang === 'ar' ? 'مطور' : 'Developer'}</option>
-                      <option value="tester">{lang === 'ar' ? 'مختبر' : 'Tester'}</option>
                       <option value="manager">{lang === 'ar' ? 'مدير' : 'Manager'}</option>
                       <option value="admin">{lang === 'ar' ? 'مدير عام' : 'Admin'}</option>
                     </select>

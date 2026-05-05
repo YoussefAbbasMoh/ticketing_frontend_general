@@ -9,7 +9,22 @@ const sanitizeDestinationPath = (destinationPath = '') => {
   const trimmed = String(destinationPath || '').trim();
   return trimmed ? trimmed.replace(/^\/+|\/+$/g, '') : 'uploads';
 };
-const getFileExtension = (fileName) => (fileName.includes('.') ? fileName.split('.').pop().toLowerCase() : '');
+const ensureFileLike = (file) => {
+  if (!file || typeof file !== 'object') {
+    throw new Error('No file selected for upload');
+  }
+  if (typeof file.arrayBuffer !== 'function') {
+    throw new Error('Invalid file object provided');
+  }
+};
+const getSafeFileName = (fileName, fallbackPrefix = 'upload') => {
+  const normalized = String(fileName || '').trim();
+  return normalized || `${fallbackPrefix}-${Date.now()}`;
+};
+const getFileExtension = (fileName) => {
+  const safeName = getSafeFileName(fileName);
+  return safeName.includes('.') ? safeName.split('.').pop().toLowerCase() : '';
+};
 const getEnvValue = (keys) => {
   for (const key of keys) {
     const direct = readEnv(key);
@@ -110,6 +125,7 @@ export const useBunnyUpload = () => {
       setError(null);
 
       try {
+        ensureFileLike(file);
         if (!storageApiKey || !storageZone) {
           throw new Error(
             'Missing Bunny Storage environment variables (expected UPLOAD_IMAGES_AND_FILES_API_KEY/BUNNY_STORAGE_API_KEY and BUNNY_STORAGE_ZONE)',
@@ -121,7 +137,7 @@ export const useBunnyUpload = () => {
           );
         }
 
-        const originalFileName = file.name;
+        const originalFileName = getSafeFileName(file.name);
         const extension = getFileExtension(originalFileName);
         const isImage = IMAGE_EXTENSIONS.has(extension);
         const isAlreadyWebp = extension === 'webp';
@@ -132,7 +148,7 @@ export const useBunnyUpload = () => {
           uploadTarget = await fileToWebP(file);
         }
 
-        const uploadFileName = uploadTarget.name;
+        const uploadFileName = getSafeFileName(uploadTarget?.name, 'bunny-file');
         const sanitizedPath = sanitizeDestinationPath(destinationPath);
         const uploadUrl = buildStorageUploadUrl({
           host: storageHost,
@@ -189,13 +205,14 @@ export const useBunnyUpload = () => {
       setError(null);
 
       try {
+        ensureFileLike(file);
         if (!streamApiKey || !streamLibraryId) {
           throw new Error(
             'Missing Bunny Stream environment variables (expected UPLOAD_VIDEOS_API_KEY/BUNNY_STREAM_API_KEY and BUNNY_STORAGE_ID/BUNNY_STREAM_LIBRARY_ID)',
           );
         }
 
-        const fileName = file.name;
+        const fileName = getSafeFileName(file.name, 'video');
 
         // Step 1: Create Bunny Stream video object and read GUID.
         const createResponse = await axios.post(

@@ -15,9 +15,9 @@ export function Platform() {
   const p = copy.platform;
 
   const pills = [
-    { icon: Globe, label: p.webApp },
-    { icon: Smartphone, label: p.iosApp },
-    { icon: Smartphone, label: p.androidApp },
+    { icon: Globe, label: p.webApp, href: '#signup' },
+    { icon: Smartphone, label: p.iosApp, href: 'https://apps.apple.com/za/app/abs-ai/id6760609693' },
+    { icon: Smartphone, label: p.androidApp, href: 'https://play.google.com/store/apps/details?id=com.absai.ticketing_app' },
   ];
 
   return (
@@ -36,14 +36,17 @@ export function Platform() {
           </h2>
           <p className="mt-6 font-cairo text-lg text-white/65">{p.description}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            {pills.map(({ icon: Icon, label }) => (
-              <span
+            {pills.map(({ icon: Icon, label, href }) => (
+              <a
                 key={label}
+                href={href}
+                target={href.startsWith('http') ? '_blank' : undefined}
+                rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 font-cairo text-sm text-white/85"
               >
                 <Icon className="h-4 w-4 text-orange" strokeWidth={2} />
                 {label}
-              </span>
+              </a>
             ))}
           </div>
           <ul className="mt-10 space-y-4">

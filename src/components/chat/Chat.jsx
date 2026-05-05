@@ -42,6 +42,20 @@ const Chat = () => {
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
 
+  // Prevent page-level scrolling on chat route.
+  // Chat panes handle their own internal scrolling.
+  useEffect(() => {
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+    };
+  }, []);
+
   const handleSelectConversation = (conversation) => {
     selectConversation(conversation);
   };

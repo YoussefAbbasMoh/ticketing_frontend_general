@@ -171,11 +171,11 @@ const Login = () => {
       <div className="w-full max-w-app-form">
         {/* LogoBadge — circular primary like `logo_badge.dart` */}
         <div className="mb-s36 flex justify-center">
-          <div className="rounded-full bg-app-primary p-s16 shadow-none">
+          <div className="rounded-full bg-app-primary  shadow-none">
             <img
               src="/logo4.webp"
               alt=""
-              className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]"
+              className="h-[90px] w-[90px] object-contain sm:h-[120px] sm:w-[120px] rounded-full"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}

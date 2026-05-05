@@ -6,14 +6,14 @@ const AUTH_REFRESH_PATH =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_REFRESH_PATH) || '/auth/refresh';
 
 const getApiBaseUrl = () => {
-  if (import.meta?.env?.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
-  }
+  // if (import.meta?.env?.VITE_API_BASE_URL) {
+  //   return import.meta.env.VITE_API_BASE_URL;
+  // }
 /*   const host = window.location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') {
     return 'http://localhost:9091/api';
   } */
-  return 'https://ticketing-backend-general.vercel.app/api';
+  return 'https://api.tik.absai.dev/api';
 };
 
 const API_BASE_URL = getApiBaseUrl();

@@ -48,7 +48,7 @@ export default defineConfig({
     open: true,
   },
   build: {
-    outDir: 'build',
+    outDir: 'dist',
     target: 'es2020',
     chunkSizeWarningLimit: 650,
     /** Smaller parse cost + less main-thread time in Lighthouse */

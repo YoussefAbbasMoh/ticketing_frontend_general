@@ -8,6 +8,7 @@ import {
 import { useLandingLang } from '@/landing/LandingLangContext';
 
 type FormValues = {
+  ownerName: string;
   companyName: string;
   email: string;
   password: string;
@@ -25,6 +26,7 @@ export function SignupForm() {
 
   const onSubmit = (data: FormValues) => {
     const payload = {
+      ownerName: data.ownerName.trim(),
       companyName: data.companyName.trim(),
       email: data.email.trim().toLowerCase(),
       password: data.password,
@@ -56,6 +58,25 @@ export function SignupForm() {
           <p className="mt-3 text-center font-cairo text-white/65">{s.subtitle}</p>
 
           <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+            <div>
+              <label
+                htmlFor="ownerName"
+                className="mb-2 block font-cairo text-sm font-medium text-white/80"
+              >
+                {s.ownerName}
+              </label>
+              <input
+                id="ownerName"
+                autoComplete="name"
+                className="w-full rounded-xl border border-white/15 bg-navy-dark/80 px-4 py-3 font-cairo text-white outline-none transition-colors focus:border-orange"
+                placeholder={s.phOwner}
+                {...register('ownerName', { required: s.errOwner })}
+              />
+              {errors.ownerName ? (
+                <p className="mt-1 font-cairo text-sm text-orange">{errors.ownerName.message}</p>
+              ) : null}
+            </div>
+
             <div>
               <label
                 htmlFor="companyName"

@@ -53,8 +53,10 @@ const dictionaries = {
     registerTrialTitle: 'Start your 14-day free trial',
     registerTrialSubtitle:
       'No credit card required. Set up your company in under 20 minutes.',
+    signupOwnerName: 'Owner name',
     signupCompanyName: 'Company name',
     signupWorkEmail: 'Work email',
+    placeholderOwnerSignup: 'John Doe',
     placeholderCompanySignup: 'Acme Logistics',
     placeholderWorkEmailSignup: 'you@company.com',
     placeholderPasswordMin8: 'At least 8 characters',
@@ -73,6 +75,7 @@ const dictionaries = {
     valOtpInvalid: 'Code must be 6 digits',
     signupLegalNotice:
       'By signing up, you agree to our Terms of Service and Privacy Policy.',
+    valOwnerNameRequired: 'Owner name is required',
     valCompanyNameRequired: 'Company name is required',
     valPasswordRequired: 'Password is required',
     valEmailRequired: 'Email is required',
@@ -188,8 +191,10 @@ const dictionaries = {
     registerTrialTitle: 'ابدأ تجربتك المجانية لمدة 14 يومًا',
     registerTrialSubtitle:
       'بدون بطاقة ائتمان. أنشئ شركتك في أقل من 20 دقيقة.',
+    signupOwnerName: 'اسم المالك',
     signupCompanyName: 'اسم الشركة',
     signupWorkEmail: 'بريد العمل',
+    placeholderOwnerSignup: 'مثال: أحمد محمد',
     placeholderCompanySignup: 'مثال: أكمي للخدمات اللوجستية',
     placeholderWorkEmailSignup: 'you@company.com',
     placeholderPasswordMin8: '8 أحرف على الأقل',
@@ -208,6 +213,7 @@ const dictionaries = {
     valOtpInvalid: 'الرمز يجب أن يكون 6 أرقام',
     signupLegalNotice:
       'بالتسجيل، أنت توافق على شروط الخدمة وسياسة الخصوصية.',
+    valOwnerNameRequired: 'اسم المالك مطلوب',
     valCompanyNameRequired: 'اسم الشركة مطلوب',
     valPasswordRequired: 'كلمة المرور مطلوبة',
     valEmailRequired: 'البريد الإلكتروني مطلوب',

@@ -28,6 +28,7 @@ const RegisterCompany = () => {
 
   const [phase, setPhase] = useState('register');
   const [formData, setFormData] = useState({
+    ownerName: '',
     companyName: '',
     email: prefillEmail,
     password: prefillPassword,
@@ -41,6 +42,7 @@ const RegisterCompany = () => {
   const [lang, setLang] = useState(getStoredLanguage());
 
   const validationError = useMemo(() => {
+    if (!formData.ownerName.trim()) return t(lang, 'valOwnerNameRequired');
     if (!formData.companyName.trim()) return t(lang, 'valCompanyNameRequired');
     if (!formData.email.trim()) return t(lang, 'valEmailRequired');
     if (!/\S+@\S+\.\S+/.test(formData.email)) return t(lang, 'valEmailInvalidSignup');
@@ -96,6 +98,7 @@ const RegisterCompany = () => {
 
     try {
       const response = await authAPI.registerCompany({
+        ownerName: formData.ownerName.trim(),
         companyName: formData.companyName.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
@@ -216,13 +219,19 @@ const RegisterCompany = () => {
       searchParams.get('companyName') ||
       fromStorage?.companyName ||
       '';
+    const ownerQ =
+      searchParams.get('owner') ||
+      searchParams.get('ownerName') ||
+      fromStorage?.ownerName ||
+      '';
     const emailQ = searchParams.get('email') || fromStorage?.email || '';
     const passwordQ = fromStorage?.password || '';
 
-    if (!companyQ && !emailQ && !passwordQ) return;
+    if (!ownerQ && !companyQ && !emailQ && !passwordQ) return;
 
     setFormData((prev) => ({
       ...prev,
+      ...(ownerQ ? { ownerName: ownerQ } : {}),
       ...(companyQ ? { companyName: companyQ } : {}),
       ...(emailQ ? { email: emailQ } : {}),
       ...(passwordQ ? { password: passwordQ } : {}),
@@ -281,6 +290,24 @@ const RegisterCompany = () => {
 
           {phase === 'register' ? (
             <form onSubmit={handleSubmit} className="space-y-s20">
+              <div>
+                <label htmlFor="ownerName" className={authLabelClass}>
+                  {t(lang, 'signupOwnerName')}
+                </label>
+                <input
+                  id="ownerName"
+                  name="ownerName"
+                  type="text"
+                  autoComplete="name"
+                  value={formData.ownerName}
+                  onChange={handleChange}
+                  required
+                  disabled={loading}
+                  className={authInputClass}
+                  placeholder={t(lang, 'placeholderOwnerSignup')}
+                />
+              </div>
+
               <div>
                 <label htmlFor="companyName" className={authLabelClass}>
                   {t(lang, 'signupCompanyName')}

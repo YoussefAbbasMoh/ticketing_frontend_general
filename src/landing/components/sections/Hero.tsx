@@ -74,8 +74,8 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="relative hidden min-h-[520px] lg:block">
-          <div className="landing-ambient-animate flex min-h-[520px] items-center justify-center animate-phone-sway">
+        <div className="relative min-h-[360px] sm:min-h-[420px] lg:min-h-[520px]">
+          <div className="landing-ambient-animate flex min-h-[360px] items-center justify-center animate-phone-sway sm:min-h-[420px] lg:min-h-[520px]">
             <PhoneMockup />
           </div>
         </div>

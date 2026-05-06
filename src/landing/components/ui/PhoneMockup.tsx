@@ -54,7 +54,7 @@ export function PhoneMockup() {
         </div>
       </div>
 
-      <div className="landing-ambient-animate absolute -end-2 top-8 hidden w-[200px] animate-float-y-alt rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm [animation-delay:-2s] md:block lg:-end-8">
+      <div className="landing-ambient-animate absolute -end-1 top-6 w-[160px] animate-float-y-alt rounded-xl border border-white/10 bg-navy-mid/95 p-3 shadow-xl backdrop-blur-sm [animation-delay:-2s] sm:-end-2 sm:top-8 sm:w-[200px] sm:p-4 lg:-end-8">
         <p className="font-cairo text-xs font-semibold uppercase tracking-wider text-white/50">
           {m.weekTitle}
         </p>
@@ -74,7 +74,7 @@ export function PhoneMockup() {
         </div>
       </div>
 
-      <div className="landing-ambient-animate absolute -start-4 bottom-16 hidden w-[220px] animate-float-y-slow rounded-xl border border-white/10 bg-navy-mid/95 p-4 shadow-xl backdrop-blur-sm [animation-delay:-5s] md:block lg:-start-10">
+      <div className="landing-ambient-animate absolute -start-1 bottom-10 w-[170px] animate-float-y-slow rounded-xl border border-white/10 bg-navy-mid/95 p-3 shadow-xl backdrop-blur-sm [animation-delay:-5s] sm:-start-4 sm:bottom-16 sm:w-[220px] sm:p-4 lg:-start-10">
         <p className="font-cairo text-xs font-semibold uppercase tracking-wider text-white/50">
           {m.checkInsTitle}
         </p>

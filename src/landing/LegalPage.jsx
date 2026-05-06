@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { getStoredLanguage } from '@/i18n';
 import { LandingLangProvider } from '@/landing/LandingLangContext';
-import { TikLogoFull } from '@/landing/components/ui/TikLogo';
+import { Navbar } from '@/landing/components/layout/Navbar';
+import { Footer } from '@/landing/components/layout/Footer';
 
 const content = {
   terms: {
@@ -457,10 +458,8 @@ function LegalPageContent() {
       dir={isArabic ? 'rtl' : 'ltr'}
       lang={lang}
     >
-      <div className="mx-auto max-w-4xl px-4 py-12 lg:px-8">
-        <div className="mb-8">
-          <TikLogoFull />
-        </div>
+      <Navbar />
+      <main className="mx-auto max-w-4xl px-4 py-12 lg:px-8">
         <h1 className="text-3xl font-bold">{page.title}</h1>
         <p className="mt-3 text-sm text-white/70">
           {isArabic ? 'تاريخ السريان' : 'Effective Date'}: {page.effectiveDate}
@@ -476,27 +475,26 @@ function LegalPageContent() {
             const hasIntroLine =
               Number.isFinite(sectionNumber) &&
               section.bullets.length > 1 &&
-              (
-                (kind === 'privacy' && sectionNumber >= 1 && sectionNumber <= 6) ||
-                (kind === 'refund' && (sectionNumber === 2 || sectionNumber === 3))
-              );
+              ((kind === 'privacy' && sectionNumber >= 1 && sectionNumber <= 6) ||
+                (kind === 'refund' && (sectionNumber === 2 || sectionNumber === 3)));
             const introLine = hasIntroLine ? section.bullets[0] : null;
             const listItems = hasIntroLine ? section.bullets.slice(1) : section.bullets;
 
             return (
-            <section key={section.heading}>
-              <h2 className="text-xl font-semibold text-orange">{section.heading}</h2>
-              {introLine ? <p className="mt-3 text-white/85">{introLine}</p> : null}
-              <ul className="mt-3 list-disc space-y-2 ps-5 text-white/85">
-                {listItems.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-            </section>
-          );
+              <section key={section.heading}>
+                <h2 className="text-xl font-semibold text-orange">{section.heading}</h2>
+                {introLine ? <p className="mt-3 text-white/85">{introLine}</p> : null}
+                <ul className="mt-3 list-disc space-y-2 ps-5 text-white/85">
+                  {listItems.map((bullet) => (
+                    <li key={bullet}>{bullet}</li>
+                  ))}
+                </ul>
+              </section>
+            );
           })}
         </div>
-      </div>
+      </main>
+      <Footer />
     </div>
   );
 }

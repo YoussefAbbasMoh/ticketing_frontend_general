@@ -31,6 +31,9 @@ const WorkspaceCalendarPage = lazy(() => import('./components/calendar/Workspace
 const LandingPage = lazy(() =>
   import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
 );
+const LegalPage = lazy(() =>
+  import('./landing/LegalPage').then((m) => ({ default: m.LegalPage }))
+);
 const AdminLogin = lazy(() => import('./components/auth/AdminLogin'));
 const PlatformAdminRoute = lazy(() => import('./components/admin/platform/PlatformAdminRoute'));
 const AdminLayout = lazy(() => import('./components/admin/platform/AdminLayout'));
@@ -76,6 +79,9 @@ function AppRoutes() {
           )
         }
       />
+      <Route path="/privacy-policy" element={<LegalPage />} />
+      <Route path="/terms-of-service" element={<LegalPage />} />
+      <Route path="/cookie-policy" element={<LegalPage />} />
 
       <Route path="/project/:projectId" element={
         <ProtectedRoute>

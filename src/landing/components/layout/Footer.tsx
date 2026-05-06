@@ -1,5 +1,6 @@
 import { TikLogoFull } from '@/landing/components/ui/TikLogo';
 import { useLandingLang } from '@/landing/LandingLangContext';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
   const { copy } = useLandingLang();
@@ -13,6 +14,15 @@ export function Footer() {
           <div>
             <TikLogoFull />
             <p className="mt-4 font-cairo text-sm text-white/55">{f.blurb}</p>
+            <div className="mt-4 space-y-1 font-cairo text-sm text-white/65">
+              <a href={`mailto:${f.contactEmail}`} className="block hover:text-orange">
+                {f.contactEmail}
+              </a>
+              <a href={`tel:${f.contactPhone}`} className="block hover:text-orange">
+                {f.contactPhone}
+              </a>
+              <p>{f.contactAddress}</p>
+            </div>
           </div>
           <div>
             <p className="font-cairo text-sm font-semibold uppercase tracking-wider text-white">
@@ -54,7 +64,7 @@ export function Footer() {
                 <span className="text-white/35">{f.linkCareers}</span>
               </li>
               <li>
-                <a href="mailto:info@absai.dev" className="hover:text-orange">
+                <a href="mailto:tik@absai.dev" className="hover:text-orange">
                   {f.linkContact}
                 </a>
               </li>
@@ -85,9 +95,15 @@ export function Footer() {
             © {year} Tik. {f.rights}
           </p>
           <div className="flex flex-wrap gap-4 font-cairo text-sm text-white/55">
-            <span className="cursor-pointer hover:text-white">{f.privacy}</span>
-            <span className="cursor-pointer hover:text-white">{f.terms}</span>
-            <span className="cursor-pointer hover:text-white">{f.cookies}</span>
+            <Link to="/privacy-policy" className="hover:text-white">
+              {f.privacy}
+            </Link>
+            <Link to="/terms-of-service" className="hover:text-white">
+              {f.terms}
+            </Link>
+            <Link to="/cookie-policy" className="hover:text-white">
+              {f.cookies}
+            </Link>
           </div>
         </div>
       </div>

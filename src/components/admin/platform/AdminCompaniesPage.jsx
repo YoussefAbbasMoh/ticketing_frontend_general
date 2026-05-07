@@ -19,6 +19,7 @@ const PLANS = [
   { value: 'free', label: 'Free' },
   { value: 'basic', label: 'Basic' },
   { value: 'pro', label: 'Pro' },
+  { value: 'enterprise', label: 'Enterprise' },
 ];
 
 const STATUSES = [
@@ -265,7 +266,17 @@ export default function AdminCompaniesPage() {
                             Suspend
                           </Button>
                         )}
-                        <Button size="sm" variant="secondary" onClick={() => setPlanModal({ open: true, company: row, nextPlan: row.planId === 'pro' ? 'basic' : 'pro' })}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            setPlanModal({
+                              open: true,
+                              company: row,
+                              nextPlan: row.planId === 'free' ? 'basic' : row.planId || 'basic',
+                            })
+                          }
+                        >
                           Plan
                         </Button>
                         <Button
@@ -312,6 +323,7 @@ export default function AdminCompaniesPage() {
             <option value="free">Free</option>
             <option value="basic">Basic</option>
             <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
           </select>
         </Modal.Content>
         <Modal.Footer>

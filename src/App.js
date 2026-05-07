@@ -1,7 +1,7 @@
 import { CssBaseline } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Navigate, Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -42,6 +42,17 @@ const AdminCompaniesPage = lazy(() => import('./components/admin/platform/AdminC
 const AdminUsersPage = lazy(() => import('./components/admin/platform/AdminUsersPage'));
 const AdminUserDetailPage = lazy(() => import('./components/admin/platform/AdminUserDetailPage'));
 const AdminSubscriptionsPage = lazy(() => import('./components/admin/platform/AdminSubscriptionsPage'));
+const AdminPlansPage = lazy(() => import('./components/admin/platform/AdminPlansPage'));
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
+  return null;
+}
 
 function SubscriptionRouteGate() {
   const { canSeeSubscriptionNav } = useAuth();
@@ -162,6 +173,7 @@ function AppRoutes() {
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="users/:id" element={<AdminUserDetailPage />} />
         <Route path="subscriptions" element={<AdminSubscriptionsPage />} />
+        <Route path="plans" element={<AdminPlansPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -209,6 +221,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        <ScrollToTop />
         <ToastProvider>
           <AuthProvider>
             <NotificationProvider>

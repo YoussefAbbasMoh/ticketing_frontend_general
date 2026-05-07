@@ -69,7 +69,8 @@ const AppDrawer = ({ open, onClose }) => {
     },
   ];
 
-  const menuItems = menuItemsAll.filter(
+  const menuItems = menuItemsAll
+  .filter(
     (item) => item.path !== '/subscription' || canSeeSubscriptionNav()
   );
 

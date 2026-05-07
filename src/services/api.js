@@ -6,9 +6,9 @@ const AUTH_REFRESH_PATH =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_REFRESH_PATH) || '/auth/refresh';
 
 const getApiBaseUrl = () => {
-  // if (import.meta?.env?.VITE_API_BASE_URL) {
-  //   return import.meta.env.VITE_API_BASE_URL;
-  // }
+  if (import.meta?.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
 /*   const host = window.location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') {
     return 'http://localhost:9091/api';
@@ -482,6 +482,9 @@ export const platformAdminAPI = {
   setSubscriptionPlan: (companyId, planId) =>
     api.patch(`/platform-admin/subscriptions/${companyId}/plan`, { planId }),
   cancelSubscription: (companyId) => api.post(`/platform-admin/subscriptions/${companyId}/cancel`),
+  getPlanCatalog: () => api.get('/platform-admin/plan-catalog'),
+  updatePlanCatalog: (planId, data) => api.put(`/platform-admin/plan-catalog/${planId}`, data),
+  deletePlanCatalogOverride: (planId) => api.delete(`/platform-admin/plan-catalog/${planId}`),
 };
 
 // Subscription API

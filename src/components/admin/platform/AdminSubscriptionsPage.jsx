@@ -157,7 +157,7 @@ export default function AdminSubscriptionsPage() {
             </div>
           ) : !items.length ? (
             <div className="p-6">
-              <AdminEmptyState title="No paid subscriptions" description="Only Basic / Pro companies are listed here." />
+              <AdminEmptyState title="No paid subscriptions" description="Only Basic, Pro, or Enterprise companies are listed here." />
             </div>
           ) : (
             <table className="min-w-full text-left text-sm">
@@ -188,7 +188,17 @@ export default function AdminSubscriptionsPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex flex-wrap justify-end gap-1">
-                        <Button size="sm" variant="secondary" onClick={() => setPlanModal({ open: true, row, nextPlan: row.planId === 'pro' ? 'basic' : 'pro' })}>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() =>
+                            setPlanModal({
+                              open: true,
+                              row,
+                              nextPlan: row.planId === 'basic' ? 'pro' : row.planId === 'pro' ? 'enterprise' : 'basic',
+                            })
+                          }
+                        >
                           Change plan
                         </Button>
                         <Button
@@ -236,8 +246,10 @@ export default function AdminSubscriptionsPage() {
             value={planModal.nextPlan}
             onChange={(e) => setPlanModal((m) => ({ ...m, nextPlan: e.target.value }))}
           >
+            <option value="free">Free</option>
             <option value="basic">Basic</option>
             <option value="pro">Pro</option>
+            <option value="enterprise">Enterprise</option>
           </select>
         </Modal.Content>
         <Modal.Footer>

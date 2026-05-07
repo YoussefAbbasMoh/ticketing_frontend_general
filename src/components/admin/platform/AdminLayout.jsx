@@ -30,6 +30,12 @@ function NavIcon({ name, className }) {
           <path strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 5.25H1.5m0-2.25H12m0 0h8.25m-8.25 0v8.25m0-8.25v8.25m0-8.25V6a3 3 0 013-3h4.5a3 3 0 013 3v2.25m-12 0h8.25m-8.25 0H9m4.5 0H12" />
         </svg>
       );
+    case 'plans':
+      return (
+        <svg className={cn} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+          <path strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM3.75 15.75a2.25 2.25 0 012.25-2.25h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25z" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -52,6 +58,7 @@ export default function AdminLayout() {
     { to: '/admin/companies', label: t(lang, 'adminCompanies'), icon: 'companies' },
     { to: '/admin/users', label: t(lang, 'adminUsers'), icon: 'users' },
     { to: '/admin/subscriptions', label: t(lang, 'adminSubscriptions'), icon: 'subscriptions' },
+    { to: '/admin/plans', label: t(lang, 'adminPlans'), icon: 'plans' },
   ];
 
   const linkClass = ({ isActive }) => {

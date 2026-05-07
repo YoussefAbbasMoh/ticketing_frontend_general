@@ -459,7 +459,7 @@ function LegalPageContent() {
       lang={lang}
     >
       <Navbar />
-      <main className="mx-auto max-w-4xl px-4 py-12 lg:px-8">
+      <main className="mx-auto max-w-4xl px-4 pb-12 pt-28 lg:px-8 lg:pt-32">
         <h1 className="text-3xl font-bold">{page.title}</h1>
         <p className="mt-3 text-sm text-white/70">
           {isArabic ? 'تاريخ السريان' : 'Effective Date'}: {page.effectiveDate}

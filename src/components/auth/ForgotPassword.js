@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { authAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
 import {
@@ -263,7 +263,7 @@ const ForgotPassword = () => {
             <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" color="white" />
+                  <ButtonBusyDots className="text-white" />
                   <span className="ml-2">{t(lang, 'processing')}</span>
                 </>
               ) : step === 0 ? (

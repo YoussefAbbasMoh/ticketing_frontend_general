@@ -5,7 +5,7 @@ import { platformAdminAPI, getAxiosErrorMessage } from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
-import Spinner from '../../ui/Spinner';
+import Skeleton from '../../ui/Skeleton';
 import AdminStatusBadge from './ui/AdminStatusBadge';
 import AdminShell from './ui/AdminShell';
 
@@ -52,9 +52,10 @@ export default function AdminUserDetailPage() {
   if (loading && !user) {
     return (
       <AdminShell>
-        <div className="flex min-h-[45vh] flex-col items-center justify-center gap-3 py-16">
-          <Spinner size="lg" />
-          <p className="text-sm text-app-text-secondary">Loading profile…</p>
+        <div className="mx-auto max-w-3xl space-y-6 px-4 py-10">
+          <Skeleton className="h-8 w-48 rounded-md" />
+          <Skeleton className="h-28 w-full rounded-app border border-app-divider" />
+          <Skeleton className="h-40 w-full rounded-app border border-app-divider" />
         </div>
       </AdminShell>
     );

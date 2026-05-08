@@ -5,7 +5,7 @@ import { authAPI } from '../../services/api';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
-import Spinner from '../ui/Spinner';
+import { WorkspaceShellSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import {
   authInputClass,
   authLabelClass,
@@ -192,7 +192,7 @@ function AdminLoginForm() {
           <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
             {loading ? (
               <>
-                <Spinner size="sm" color="white" />
+                <ButtonBusyDots className="text-white" />
                 <span className="ml-2">{t(lang, 'signingIn')}</span>
               </>
             ) : (
@@ -274,11 +274,7 @@ export default function AdminLogin() {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-app-background font-cairo">
-        <Spinner size="lg" />
-      </div>
-    );
+    return <WorkspaceShellSkeleton compact />;
   }
 
   if (user?.role === 'super_admin') {

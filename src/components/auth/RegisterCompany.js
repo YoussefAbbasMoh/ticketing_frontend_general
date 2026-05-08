@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
@@ -364,7 +364,7 @@ const RegisterCompany = () => {
               <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
                 {loading ? (
                   <>
-                    <Spinner size="sm" color="white" />
+                    <ButtonBusyDots className="text-white" />
                     <span className="ml-2">{t(lang, 'creatingFreeAccount')}</span>
                   </>
                 ) : (
@@ -396,7 +396,7 @@ const RegisterCompany = () => {
               <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
                 {loading ? (
                   <>
-                    <Spinner size="sm" color="white" />
+                    <ButtonBusyDots className="text-white" />
                     <span className="ml-2">{t(lang, 'verifyingCode')}</span>
                   </>
                 ) : (

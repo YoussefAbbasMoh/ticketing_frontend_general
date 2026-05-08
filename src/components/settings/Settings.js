@@ -6,7 +6,7 @@ import Button from '../ui/Button';
 import Input from '../ui/Input';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import Modal from '../ui/Modal';
 import { getStoredLanguage } from '../../i18n';
 
@@ -603,7 +603,7 @@ const Settings = () => {
                       variant="primary"
                       fullWidth
                       disabled={loading}
-                      icon={loading ? <Spinner size="sm" color="white" /> : null}
+                      icon={loading ? <ButtonBusyDots className="text-white" /> : null}
                     >
                       {loading ? tx('saving') : tx('saveChanges')}
                     </Button>
@@ -670,7 +670,7 @@ const Settings = () => {
                   variant="primary"
                   fullWidth
                   disabled={loading}
-                  icon={loading ? <Spinner size="sm" color="white" /> : null}
+                  icon={loading ? <ButtonBusyDots className="text-white" /> : null}
                 >
                   {loading ? tx('changingPassword') : tx('changePassword')}
                 </Button>
@@ -859,7 +859,7 @@ const Settings = () => {
                     type="submit"
                     variant="secondary"
                     disabled={loading}
-                    icon={loading ? <Spinner size="sm" color="white" /> : null}
+                    icon={loading ? <ButtonBusyDots className="text-white" /> : null}
                     fullWidth
                     className="sm:w-auto"
                   >
@@ -955,7 +955,7 @@ const Settings = () => {
                     type="submit"
                     variant="primary"
                     disabled={loading}
-                    icon={loading ? <Spinner size="sm" color="white" /> : null}
+                    icon={loading ? <ButtonBusyDots className="text-white" /> : null}
                     fullWidth
                     className="sm:w-auto"
                   >
@@ -1029,7 +1029,7 @@ const Settings = () => {
                   variant="secondary"
                   onClick={confirmDeleteUser}
                   disabled={loading}
-                  icon={loading ? <Spinner size="sm" color="white" /> : null}
+                  icon={loading ? <ButtonBusyDots className="text-white" /> : null}
                   fullWidth
                   className="sm:w-auto bg-red-600 hover:bg-red-700 focus:ring-red-500"
                 >

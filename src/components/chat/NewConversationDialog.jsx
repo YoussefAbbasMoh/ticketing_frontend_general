@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { chatAPI } from '../../services/api';
 import { useChat } from '../../contexts/ChatContext';
 import { getStoredLanguage } from '../../i18n';
-import Spinner from '../ui/Spinner';
+import { ChatConversationListSkeleton } from '../ui/LoadingSkeletons';
 
 const TEXT = {
   en: {
@@ -271,10 +271,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
 
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <Spinner size="lg" color="primary" />
-              <p className="mt-3 text-sm text-app-text-secondary">{tx('loadingUsers')}</p>
-            </div>
+            <ChatConversationListSkeleton rows={6} />
           ) : filteredUsers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-app-text-secondary">
               {searchQuery ? (

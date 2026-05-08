@@ -4,7 +4,7 @@ import { subscriptionAPI } from '../../services/api';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
-import Spinner from '../ui/Spinner';
+import { SubscriptionPageSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
 
 const TEXT = {
@@ -329,14 +329,7 @@ const SubscriptionPage = () => {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex w-full min-h-[50vh] flex-col items-center justify-center bg-app-background py-16">
-        <div className="text-center">
-          <Spinner size="xl" color="secondary" />
-          <p className="mt-3 text-app-text-secondary">{t(lang, 'loadingPlans')}</p>
-        </div>
-      </div>
-    );
+    return <SubscriptionPageSkeleton />;
   }
 
   return (
@@ -419,7 +412,7 @@ const SubscriptionPage = () => {
                     variant="outline"
                     disabled={cancelling}
                     onClick={handleCancelRecurring}
-                    icon={cancelling ? <Spinner size="sm" color="secondary" /> : null}
+                    icon={cancelling ? <ButtonBusyDots className="text-app-primary" /> : null}
                   >
                     {cancelling ? t(lang, 'cancelling') : t(lang, 'cancelAutoRenewal')}
                   </Button>
@@ -475,7 +468,7 @@ const SubscriptionPage = () => {
                         variant={isCurrent ? 'outline' : 'secondary'}
                         disabled={isBusy}
                         onClick={() => handleSubscribe(plan.id)}
-                        icon={isBusy ? <Spinner size="sm" color="white" /> : null}
+                        icon={isBusy ? <ButtonBusyDots className="text-white" /> : null}
                       >
                         {isCurrent ? t(lang, 'renewPlan') : t(lang, 'subscribe')}
                       </Button>

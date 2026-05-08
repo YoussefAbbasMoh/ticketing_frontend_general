@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
@@ -313,7 +313,7 @@ const Login = () => {
             <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" color="white" />
+                  <ButtonBusyDots className="text-white" />
                   <span className="ml-2">{t(lang, 'signingIn')}</span>
                 </>
               ) : (

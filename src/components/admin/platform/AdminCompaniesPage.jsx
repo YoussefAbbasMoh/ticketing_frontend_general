@@ -6,7 +6,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import Spinner from '../../ui/Spinner';
+import { AdminTableSkeleton } from '../../ui/LoadingSkeletons';
 import Modal from '../../ui/Modal';
 import AdminStatusBadge from './ui/AdminStatusBadge';
 import AdminPagination from './ui/AdminPagination';
@@ -216,10 +216,7 @@ export default function AdminCompaniesPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           {loading && !items.length ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Spinner size="lg" />
-              <p className="text-sm text-app-text-secondary">Loading companies…</p>
-            </div>
+            <AdminTableSkeleton rows={10} />
           ) : !items.length ? (
             <div className="p-6">
               <AdminEmptyState title="No companies" description="Try adjusting filters or search." />

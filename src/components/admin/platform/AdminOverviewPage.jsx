@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { platformAdminAPI, getAxiosErrorMessage } from '../../../services/api';
 import Card from '../../ui/Card';
-import Spinner from '../../ui/Spinner';
+import Skeleton from '../../ui/Skeleton';
 import AdminKpiCard from './ui/AdminKpiCard';
 import AdminLineChart from './ui/AdminLineChart';
 import AdminEmptyState from './ui/AdminEmptyState';
@@ -59,9 +59,9 @@ export default function AdminOverviewPage() {
       ) : null}
 
       {loading && !data ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-24">
-          <Spinner size="lg" />
-          <p className="text-sm text-app-text-secondary">Loading metrics…</p>
+        <div className="mb-8 grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-72 rounded-app border border-app-divider shadow-app-soft" />
+          <Skeleton className="h-72 rounded-app border border-app-divider shadow-app-soft" />
         </div>
       ) : null}
 

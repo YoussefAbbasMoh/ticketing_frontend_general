@@ -8,7 +8,7 @@ import { openFreePlanBlockedDialog } from '../../utils/freePlanGate';
 import MessageBubble from './MessageBubble';
 import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
-import Spinner from '../ui/Spinner';
+import { ChatMessagesAreaSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import { useIsRtl } from '../../hooks/useIsRtl';
 import { getStoredLanguage } from '../../i18n';
@@ -483,10 +483,7 @@ const ChatWindow = ({ conversation, onBack }) => {
             onScroll={handleScroll}
           >
             {loading ? (
-              <div className="flex flex-col items-center justify-center h-full">
-                <Spinner size="lg" color="primary" />
-                <p className="mt-3 text-sm text-app-text-secondary">Loading messages...</p>
-              </div>
+              <ChatMessagesAreaSkeleton bubbles={7} />
             ) : messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center text-app-text-secondary">
                 {/* ... Empty state ... */}
@@ -511,7 +508,7 @@ const ChatWindow = ({ conversation, onBack }) => {
                     >
                       {isLoadingMore ? (
                         <span className="flex items-center gap-2">
-                          <Spinner size="sm" color="primary" />
+                          <ButtonBusyDots className="text-orange" />
                           Loading...
                         </span>
                       ) : (

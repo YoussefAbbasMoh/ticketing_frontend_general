@@ -3,7 +3,7 @@ import { chatAPI, getAxiosErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import MessageBubble from './MessageBubble';
-import Spinner from '../ui/Spinner';
+import { ChatThreadSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 
 const ThreadPanel = ({ parentMessage, onClose }) => {
     const { toast } = useToast();
@@ -135,10 +135,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                 {/* Thread Replies */}
                 <div className="flex-1 space-y-2 overflow-y-auto bg-app-surface p-4">
                     {loading ? (
-                        <div className="flex h-full flex-col items-center justify-center">
-                            <Spinner size="lg" color="primary" />
-                            <p className="mt-3 text-sm text-app-text-secondary">Loading thread...</p>
-                        </div>
+                        <ChatThreadSkeleton rows={6} />
                     ) : threadReplies.length === 0 ? (
                         <div className="flex h-full flex-col items-center justify-center text-app-text-secondary">
                             <svg className="mb-3 h-16 w-16 text-app-border" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -202,7 +199,7 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
                             title="Send reply"
                         >
                             {sending ? (
-                                <Spinner size="sm" color="white" />
+                                <ButtonBusyDots className="text-white" />
                             ) : (
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { chatAPI, getImageUrl } from '../../services/api';
-import Spinner from '../ui/Spinner';
+import { ChatConversationListSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage } from '../../i18n';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -302,7 +302,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                 aria-label={tx('createProjectConversations')}
               >
                 {creatingConversations ? (
-                  <Spinner size="sm" color="white" />
+                  <ButtonBusyDots className="text-white" />
                 ) : (
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -387,10 +387,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
       {/* Conversations List */}
       <div className="relative z-0 flex-1 min-h-0 overflow-y-auto bg-app-background scrollbar-thin scrollbar-track-transparent scrollbar-thumb-app-border">
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <Spinner size="md" color="primary" />
-            <p className="mt-3 text-sm text-app-text-secondary">{tx('loadingConversations')}</p>
-          </div>
+          <ChatConversationListSkeleton rows={8} />
         ) : filteredConversations.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-8 text-app-text-secondary">
             {searchQuery ? (

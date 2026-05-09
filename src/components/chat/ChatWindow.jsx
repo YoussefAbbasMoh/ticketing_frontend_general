@@ -32,7 +32,7 @@ const ChatWindow = ({ conversation, onBack }) => {
   const { user, canSeeSubscriptionNav } = useAuth();
   const companyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'default';
   const { canUploadChatAttachments } = useMySubscriptionPlan(companyKey);
-  const { messages, sendMessage, loadMessages, markAsRead } = useChat();
+  const { messages, sendMessage, loadMessages, markAsRead, applyThreadReplyUpdate } = useChat();
   const { uploadFile, uploadVideo } = useBunnyUpload();
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -595,6 +595,13 @@ const ChatWindow = ({ conversation, onBack }) => {
       {threadMessage && (
         <ThreadPanel
           parentMessage={threadMessage}
+          onThreadReplyCreated={(reply, count) => {
+            if (!conversation?._id || !threadMessage?._id) return;
+            applyThreadReplyUpdate(conversation._id, threadMessage._id, reply, count);
+            setThreadMessage((prev) =>
+              prev ? { ...prev, threadCount: Number(count ?? prev.threadCount ?? 0) || 0 } : prev
+            );
+          }}
           onClose={() => setThreadMessage(null)}
         />
       )}

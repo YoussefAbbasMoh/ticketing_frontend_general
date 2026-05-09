@@ -5,7 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import MessageBubble from './MessageBubble';
 import { ChatThreadSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 
-const ThreadPanel = ({ parentMessage, onClose }) => {
+const ThreadPanel = ({ parentMessage, onClose, onThreadReplyCreated }) => {
     const { toast } = useToast();
     const { user } = useAuth();
     const [threadReplies, setThreadReplies] = useState([]);
@@ -46,7 +46,12 @@ const ThreadPanel = ({ parentMessage, onClose }) => {
         try {
             setSending(true);
             const response = await chatAPI.createThreadReply(parentMessage._id, replyText.trim());
-            setThreadReplies(prev => [...prev, response.data.message]);
+            const nextReply = response?.data?.message;
+            const nextThreadCount = response?.data?.threadCount;
+            setThreadReplies(prev => [...prev, nextReply]);
+            if (typeof onThreadReplyCreated === 'function' && nextReply?._id) {
+                onThreadReplyCreated(nextReply, nextThreadCount);
+            }
             setReplyText('');
             if (textareaRef.current) {
                 textareaRef.current.style.height = 'auto';

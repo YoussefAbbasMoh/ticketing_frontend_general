@@ -29,45 +29,67 @@ export function PricingCard({
   ctaOnClick?: () => void;
 }) {
   const shell = featured
-    ? 'relative scale-100 border-2 border-orange shadow-[0_0_48px_rgba(255,78,13,0.25)] md:scale-[1.03]'
-    : 'border border-white/[0.09]';
+    ? 'ring-2 ring-orange shadow-[0_12px_40px_-8px_rgba(255,78,13,0.35)] md:scale-[1.02]'
+    : 'ring-1 ring-white/[0.08]';
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
-      transition={{ duration: 0.25 }}
-      className={`relative flex h-full flex-col rounded-2xl bg-white/[0.04] p-8 ${shell}`}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+      className={`relative flex h-full flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-6 md:p-7 ${shell}`}
     >
       {badge ? (
-        <div className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-orange px-4 py-1 text-xs font-cairo font-bold text-white shadow-lg">
+        <div className="absolute -top-px left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-b-lg bg-orange px-3 py-1.5 text-[10px] font-cairo font-bold uppercase tracking-wide text-white shadow-md md:text-xs">
           {badge}
         </div>
       ) : null}
-      <h3 className="font-cairo text-2xl font-bold text-white">{title}</h3>
-      <p className="mt-2 font-cairo text-white/65">{subtitle}</p>
-      <div className="mt-6 font-cairo text-3xl font-bold text-white md:text-4xl">
-        {priceNode}
+
+      <div className={badge ? 'pt-4' : ''}>
+        <h3 className="font-cairo text-xl font-bold tracking-tight text-white md:text-2xl">{title}</h3>
+        <p className="mt-2 min-h-[2.75rem] font-cairo text-sm leading-relaxed text-white/55 md:text-[0.9375rem]">
+          {subtitle}
+        </p>
       </div>
-      <ul className="mt-8 flex-1 space-y-3 font-cairo text-sm text-white/85">
-        {features.map((f) => (
-          <li key={f} className="flex gap-2">
-            <span className="text-orange">✓</span>
-            <span>{f}</span>
-          </li>
-        ))}
-        {(missingFeatures || []).map((f) => (
-          <li key={f} className="flex gap-2 text-white/35 line-through">
-            <span>—</span>
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-8">
+
+      <div className="mt-5 rounded-xl border border-white/[0.09] bg-navy-dark/40 px-4 py-4 backdrop-blur-sm">
+        <div className="font-cairo font-bold leading-none text-white [&_.text-3xl]:tracking-tight">
+          {priceNode}
+        </div>
+      </div>
+
+      <div className="mt-6 flex-1 border-t border-white/[0.08] pt-6">
+        <ul className="space-y-2.5 font-cairo text-[13px] leading-snug text-white/[0.88] md:text-sm">
+          {features.map((f) => (
+            <li key={f} className="flex gap-3">
+              <span
+                className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-orange/18 text-[10px] font-bold text-orange"
+                aria-hidden
+              >
+                ✓
+              </span>
+              <span>{f}</span>
+            </li>
+          ))}
+          {(missingFeatures || []).map((f) => (
+            <li key={f} className="flex gap-3 text-white/35 line-through">
+              <span
+                className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/5 text-[10px] text-white/25"
+                aria-hidden
+              >
+                —
+              </span>
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mt-7">
         {href ? (
           <LinkButton
             variant={featured ? 'primary' : 'outline'}
             href={href}
-            className="w-full py-3.5"
+            className="w-full py-3.5 text-[0.9375rem] font-bold"
             onClick={() => ctaOnClick?.()}
           >
             {ctaLabel}
@@ -75,7 +97,7 @@ export function PricingCard({
         ) : (
           <Button
             variant={featured ? 'primary' : 'outline'}
-            className="w-full py-3.5"
+            className="w-full py-3.5 text-[0.9375rem] font-bold"
             onClick={onCta}
           >
             {ctaLabel}

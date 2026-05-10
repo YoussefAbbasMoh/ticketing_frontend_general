@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { userAPI } from '../../services/api';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
 import AuthPageLayout from './AuthPageLayout';
 import {
@@ -134,7 +134,7 @@ const AcceptInvite = () => {
             <button type="submit" disabled={loading || !token} className={authPrimaryButtonClass}>
               {loading ? (
                 <>
-                  <Spinner size="sm" color="white" />
+                  <ButtonBusyDots className="text-white" />
                   <span className="ml-2">{t(lang, 'pleaseWait')}</span>
                 </>
               ) : (

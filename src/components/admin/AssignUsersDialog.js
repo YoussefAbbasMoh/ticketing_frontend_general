@@ -12,7 +12,6 @@ import {
   Chip,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   IconButton,
   Avatar,
@@ -460,7 +459,7 @@ const AssignUsersDialog = ({ open, onClose, project, onUsersAssigned }) => {
               boxShadow: 'none',
             }
           }}
-          startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <PersonAddIcon />}
+          startIcon={loading ? undefined : <PersonAddIcon />}
         >
           {loading ? 'Assigning...' : success ? 'Assigned!' : 'Assign Users'}
         </Button>

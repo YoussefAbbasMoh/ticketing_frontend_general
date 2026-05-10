@@ -11,7 +11,7 @@ import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
-import { CircularProgress } from '@mui/material';
+import { CommentListSkeleton, InlineSkeletonPulse } from '../ui/LoadingSkeletons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectAPI, ticketAPI, getAxiosErrorMessage } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -245,9 +245,7 @@ function PersonalNotesPanelBody({
       </div>
 
       {notesLoading ? (
-        <div className="flex justify-center py-8">
-          <CircularProgress size={28} sx={{ color: '#080936' }} />
-        </div>
+        <CommentListSkeleton lines={3} />
       ) : personalNotes.length === 0 ? (
         <p className="rounded-app-input border border-dashed border-app-border bg-app-background/80 py-8 text-center text-sm text-app-text-secondary">
           {tx('personalNotesEmpty')}
@@ -736,7 +734,7 @@ const ProjectDetails = () => {
                     </select>
                     {updatingStatus && (
                       <div className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2">
-                        <CircularProgress size={18} sx={{ color: '#080936' }} />
+                        <InlineSkeletonPulse className="h-[18px] w-[18px]" />
                       </div>
                     )}
                   </div>

@@ -9,7 +9,7 @@ import Input from '../ui/Input';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
-import Spinner from '../ui/Spinner';
+import { InlineSkeletonPulse, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage } from '../../i18n';
 
 const TEXT = {
@@ -554,7 +554,7 @@ const NewTicket = () => {
                         <div className="relative">
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                             {fetchingData ? (
-                              <Spinner size="sm" color="secondary" />
+                              <InlineSkeletonPulse className="h-5 w-5 rounded-md" />
                             ) : (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -949,7 +949,7 @@ const NewTicket = () => {
                       size="lg"
                       disabled={loading || success || uploadingImages}
                       className="px-8 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
-                      icon={(loading || uploadingImages) ? <Spinner size="sm" color="white" /> : (
+                      icon={(loading || uploadingImages) ? <ButtonBusyDots className="text-white" /> : (
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                         </svg>

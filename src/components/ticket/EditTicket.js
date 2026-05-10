@@ -9,7 +9,7 @@ import Input from '../ui/Input';
 import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
-import Spinner from '../ui/Spinner';
+import { TicketEditorSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import ReplyForm from './ReplyForm';
 import CommentsList from './CommentsList';
 import { getStoredLanguage } from '../../i18n';
@@ -473,12 +473,7 @@ const EditTicket = () => {
   };
 
   if (fetchingData) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-screen gap-4">
-        <Spinner size="xl" color="secondary" />
-        <p className="text-gray-600">{tx('loadingTicket')}</p>
-      </div>
-    );
+    return <TicketEditorSkeleton />;
   }
 
   if (!ticket) {
@@ -983,7 +978,7 @@ const EditTicket = () => {
                         size="lg"
                         disabled={loading || success || uploadingImages}
                         className="w-full shadow-lg hover:shadow-xl"
-                        icon={(loading || uploadingImages) ? <Spinner size="sm" color="white" /> : (
+                        icon={(loading || uploadingImages) ? <ButtonBusyDots className="text-white" /> : (
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>

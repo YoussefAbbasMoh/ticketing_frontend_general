@@ -4,13 +4,29 @@ import { PricingCard } from '@/landing/components/ui/PricingCard';
 import { SELECTED_PLAN_STORAGE_KEY } from '@/landing/lib/config';
 import { getApiBaseUrl } from '@/landing/lib/config';
 import { useLandingLang } from '@/landing/LandingLangContext';
-import { sortPlansForLanding, type ApiPlan } from '@/landing/lib/plans';
+import {
+  assignLandingPlanSlots,
+  isActiveLandingPlan,
+  normalizePlanTier,
+  planCanCheckoutWithPaymob,
+  planSeatCapForPricing,
+  type ApiPlan,
+} from '@/landing/lib/plans';
 
 function formatMoney(value: number, currency: string, locale: string) {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
     maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatPerSeatMoney(value: number, currency: string, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
   }).format(value);
 }
 
@@ -67,6 +83,24 @@ const FALLBACK_PLANS: ApiPlan[] = [
   },
 ];
 
+const STATIC_BUNDLE5_ID = 'landing-bundle-5';
+
+function createStaticBundle5(pc: {
+  bundle5Title: string;
+  bundle5Subtitle: string;
+  bundle5Features: readonly string[];
+}): ApiPlan {
+  return {
+    id: STATIC_BUNDLE5_ID,
+    name: pc.bundle5Title,
+    description: pc.bundle5Subtitle,
+    billingPeriod: 'monthly',
+    price: 0,
+    currency: 'EGP',
+    features: [...pc.bundle5Features],
+  };
+}
+
 function stashSelectedPlan(planId: string) {
   return () => {
     try {
@@ -94,27 +128,62 @@ export function Pricing({ plansFromApi }: { plansFromApi: ApiPlan[] | null }) {
     message: '',
   });
 
-  const { starter, growth, business } = useMemo(() => {
-    const list =
-      plansFromApi && plansFromApi.length > 0
-        ? sortPlansForLanding(plansFromApi)
-        : FALLBACK_PLANS;
-    const byId = Object.fromEntries(list.map((p) => [p.id, p]));
+  const { starter, growth, business, enterprisePlan, fifthFromApi, featuredPlanId } = useMemo(() => {
+    const hasApi = Boolean(plansFromApi && plansFromApi.length > 0);
+    const activeApi = hasApi ? plansFromApi!.filter(isActiveLandingPlan) : [];
+    const useLiveCatalog = hasApi && activeApi.length > 0;
+    const list = useLiveCatalog ? activeApi : FALLBACK_PLANS;
+    const slots = assignLandingPlanSlots(list);
+
+    let featuredId: string | null = null;
+    if (useLiveCatalog) {
+      const popular = activeApi.find((p) => p.isPopular);
+      if (popular) featuredId = popular.id;
+      else {
+        const basic = activeApi.find((p) => normalizePlanTier(p.name) === 'basic');
+        if (basic) featuredId = basic.id;
+      }
+    } else {
+      featuredId = slots.growth.id;
+    }
+
     return {
-      starter: byId.free || list[0],
-      growth: byId.basic || list.find((p) => p.id !== 'free') || list[1],
-      business:
-        byId.pro ||
-        [...list].reverse().find((p) => p.id !== 'free' && p.id !== (byId.basic?.id || '')) ||
-        list[2],
+      starter: slots.starter,
+      growth: slots.growth,
+      business: slots.business,
+      enterprisePlan: useLiveCatalog ? slots.enterprise : null,
+      fifthFromApi: useLiveCatalog ? slots.fifth : null,
+      featuredPlanId: featuredId,
     };
   }, [plansFromApi]);
 
-  const priceLabel = (plan: ApiPlan, perSeat: boolean) => {
+  const fifthPlan = fifthFromApi ?? createStaticBundle5(pc);
+
+  const perSeatBelow = (plan: ApiPlan) => {
+    if (!plansFromApi) return null;
     const cur = plan.currency || 'EGP';
     const monthly = Number(plan.price) || 0;
+    const cap = planSeatCapForPricing(plan);
+    if (cap == null || monthly <= 0) return null;
+    const perSeat = monthly / cap;
+    const line = pc.perSeatAverage.replace(
+      '{price}',
+      formatPerSeatMoney(perSeat, cur, locale)
+    );
+    return (
+      <div className="mt-2 block text-base font-cairo font-semibold text-white/60 md:text-lg">
+        {line}
+      </div>
+    );
+  };
 
-    if (plan.id === 'free' && plansFromApi && monthly === 0) {
+  const priceLabel = (plan: ApiPlan, legacySeatSuffix: boolean) => {
+    const cur = plan.currency || 'EGP';
+    const monthly = Number(plan.price) || 0;
+    const tier = normalizePlanTier(plan.name);
+    const isFreeTier = tier === 'free' && monthly === 0;
+
+    if (plansFromApi && isFreeTier) {
       return (
         <span className="text-3xl md:text-4xl">
           {pc.freeLabel}{' '}
@@ -123,20 +192,35 @@ export function Pricing({ plansFromApi }: { plansFromApi: ApiPlan[] | null }) {
       );
     }
 
-    if (perSeat) {
+    if (!plansFromApi && plan.id === 'free' && monthly === 0) {
       return (
         <span className="text-3xl md:text-4xl">
-          {formatMoney(monthly, cur, locale)}
-          <span className="text-lg font-cairo font-medium text-white/50"> {pc.seatMo}</span>
+          {pc.freeLabel}{' '}
+          <span className="text-lg font-cairo font-medium text-white/50">{pc.perWorkspace}</span>
         </span>
       );
     }
 
+    if (legacySeatSuffix) {
+      return (
+        <>
+          <span className="text-3xl md:text-4xl">
+            {formatMoney(monthly, cur, locale)}
+            <span className="text-lg font-cairo font-medium text-white/50"> {pc.seatMo}</span>
+          </span>
+          {perSeatBelow(plan)}
+        </>
+      );
+    }
+
     return (
-      <span className="text-3xl md:text-4xl">
-        {formatMoney(monthly, cur, locale)}
-        <span className="text-lg font-cairo font-medium text-white/50"> {pc.perMonth}</span>
-      </span>
+      <>
+        <span className="text-3xl md:text-4xl">
+          {formatMoney(monthly, cur, locale)}
+          <span className="text-lg font-cairo font-medium text-white/50"> {pc.perMonth}</span>
+        </span>
+        {perSeatBelow(plan)}
+      </>
     );
   };
 
@@ -150,10 +234,14 @@ export function Pricing({ plansFromApi }: { plansFromApi: ApiPlan[] | null }) {
     ? business.features
     : FALLBACK_PLANS[2].features;
 
-  const starterMissing =
-    starter.id === 'free' ? pc.starterMissing : undefined;
+  const fifthFeatures = fifthPlan.features?.length
+    ? fifthPlan.features
+    : [...pc.bundle5Features];
 
-  const enterpriseFeatures = [
+  const starterMissing =
+    plansFromApi || starter.id !== 'free' ? undefined : pc.starterMissing;
+
+  const enterpriseFeaturesFallback = [
     '30+ seats',
     'Priority onboarding',
     'Dedicated success manager',
@@ -223,8 +311,10 @@ export function Pricing({ plansFromApi }: { plansFromApi: ApiPlan[] | null }) {
           <p className="mx-auto mt-4 max-w-2xl font-cairo text-white/65">{pc.subtitle}</p>
         </motion.div>
 
-        <div className="mt-16 grid gap-8 lg:grid-cols-4 lg:items-stretch">
+        <div className="mx-auto mt-16 grid max-w-[1680px] grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-5 xl:items-stretch 2xl:gap-6">
           <PricingCard
+            featured={starter.id === featuredPlanId}
+            badge={starter.id === featuredPlanId ? pc.badgePopular : undefined}
             title={starter.name}
             subtitle={starter.description || pc.starterSubtitleFallback}
             priceNode={priceLabel(starter, false)}
@@ -235,31 +325,84 @@ export function Pricing({ plansFromApi }: { plansFromApi: ApiPlan[] | null }) {
             ctaOnClick={stashSelectedPlan(starter.id)}
           />
           <PricingCard
-            featured
-            badge={pc.badgePopular}
+            featured={growth.id === featuredPlanId}
+            badge={growth.id === featuredPlanId ? pc.badgePopular : undefined}
             title={growth.name}
             subtitle={growth.description || pc.growthSubtitleFallback}
-            priceNode={priceLabel(growth, true)}
+            priceNode={priceLabel(growth, !plansFromApi)}
             features={growthFeatures}
-            ctaLabel={pc.ctaGrowth}
-            href="#signup"
-            ctaOnClick={stashSelectedPlan(growth.id)}
+            ctaLabel={planCanCheckoutWithPaymob(growth) ? pc.ctaGrowth : pc.ctaEnterprise}
+            {...(planCanCheckoutWithPaymob(growth)
+              ? { href: '#signup' as const, ctaOnClick: stashSelectedPlan(growth.id) }
+              : { onCta: handleEnterpriseClick })}
           />
           <PricingCard
+            featured={business.id === featuredPlanId}
+            badge={business.id === featuredPlanId ? pc.badgePopular : undefined}
             title={business.name}
             subtitle={business.description || pc.businessSubtitleFallback}
-            priceNode={priceLabel(business, true)}
+            priceNode={priceLabel(business, !plansFromApi)}
             features={businessFeatures}
-            ctaLabel={pc.ctaBusiness}
-            href="mailto:sales@tik.app?subject=Tik%20Business%20plan"
+            ctaLabel={planCanCheckoutWithPaymob(business) ? pc.ctaGrowth : pc.ctaEnterprise}
+            {...(planCanCheckoutWithPaymob(business)
+              ? { href: '#signup' as const, ctaOnClick: stashSelectedPlan(business.id) }
+              : { onCta: handleEnterpriseClick })}
           />
           <PricingCard
-            title={pc.enterpriseTitle}
-            subtitle={pc.enterpriseSubtitleFallback}
-            priceNode={<span className="text-3xl md:text-4xl">{pc.enterprisePriceLabel}</span>}
-            features={enterpriseFeatures}
-            ctaLabel={pc.ctaEnterprise}
-            onCta={handleEnterpriseClick}
+            featured={Boolean(enterprisePlan && enterprisePlan.id === featuredPlanId)}
+            badge={
+              enterprisePlan && enterprisePlan.id === featuredPlanId ? pc.badgePopular : undefined
+            }
+            title={enterprisePlan?.name ?? pc.enterpriseTitle}
+            subtitle={enterprisePlan?.description ?? pc.enterpriseSubtitleFallback}
+            priceNode={
+              enterprisePlan
+                ? priceLabel(enterprisePlan, !plansFromApi)
+                : (
+                    <span className="text-3xl md:text-4xl">
+                      {pc.enterprisePriceLabel}
+                    </span>
+                  )
+            }
+            features={
+              enterprisePlan?.features?.length
+                ? enterprisePlan.features
+                : enterpriseFeaturesFallback
+            }
+            ctaLabel={
+              enterprisePlan && planCanCheckoutWithPaymob(enterprisePlan)
+                ? pc.ctaGrowth
+                : pc.ctaEnterprise
+            }
+            {...(enterprisePlan && planCanCheckoutWithPaymob(enterprisePlan)
+              ? { href: '#signup' as const, ctaOnClick: stashSelectedPlan(enterprisePlan.id) }
+              : { onCta: handleEnterpriseClick })}
+          />
+          <PricingCard
+            featured={fifthPlan.id === featuredPlanId}
+            badge={fifthPlan.id === featuredPlanId ? pc.badgePopular : undefined}
+            title={fifthPlan.name}
+            subtitle={fifthPlan.description || pc.bundle5Subtitle}
+            priceNode={
+              fifthFromApi ? (
+                priceLabel(fifthPlan, !plansFromApi)
+              ) : (
+                <span className="text-3xl md:text-4xl">{pc.bundle5PriceLabel}</span>
+              )
+            }
+            features={fifthFeatures}
+            ctaLabel={
+              planCanCheckoutWithPaymob(fifthPlan) ? pc.ctaGrowth : pc.ctaEnterprise
+            }
+            {...(planCanCheckoutWithPaymob(fifthPlan)
+              ? {
+                  href: '#signup' as const,
+                  ctaOnClick:
+                    fifthPlan.id === STATIC_BUNDLE5_ID
+                      ? undefined
+                      : stashSelectedPlan(fifthPlan.id),
+                }
+              : { onCta: handleEnterpriseClick })}
           />
         </div>
 

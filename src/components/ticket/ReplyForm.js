@@ -3,7 +3,7 @@ import { ticketAPI, uploadTicketImagesViaBunny } from '../../services/api';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
-import Spinner from '../ui/Spinner';
+import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 
 const ReplyForm = ({ ticketId, onReplyAdded }) => {
   const [comment, setComment] = useState('');
@@ -129,7 +129,7 @@ const ReplyForm = ({ ticketId, onReplyAdded }) => {
             type="submit"
             variant="secondary"
             disabled={submitting || uploading || !comment.trim()}
-            icon={uploading || submitting ? <Spinner size="sm" color="white" /> : (
+            icon={uploading || submitting ? <ButtonBusyDots className="text-white" /> : (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>

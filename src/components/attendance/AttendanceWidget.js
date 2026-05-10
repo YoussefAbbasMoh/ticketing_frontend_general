@@ -3,7 +3,7 @@ import { getStoredLanguage } from '../../i18n';
 import { attendanceAPI } from '../../services/api';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
-import Spinner from '../ui/Spinner';
+import Skeleton from '../ui/Skeleton';
 
 const TEXT = {
     en: {
@@ -316,8 +316,13 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
         return (
             <div className="relative mb-8 overflow-hidden rounded-3xl shadow-[0_12px_30px_rgba(8,9,54,0.28)]">
                 <div className="absolute inset-0 bg-gradient-to-br from-app-primary via-[#141B52] to-[#1A5278]" />
-                <div className="relative flex min-h-[220px] items-center justify-center p-8">
-                    <Spinner size="lg" color="white" />
+                <div className="relative flex min-h-[220px] flex-col justify-center gap-4 p-8">
+                    <Skeleton className="h-3 w-36 bg-white/25" />
+                    <Skeleton className="h-8 w-52 max-w-full bg-white/30" />
+                    <div className="mt-2 flex flex-wrap gap-3">
+                        <Skeleton className="h-12 w-28 rounded-xl bg-white/20" />
+                        <Skeleton className="h-12 w-28 rounded-xl bg-white/20" />
+                    </div>
                 </div>
             </div>
         );

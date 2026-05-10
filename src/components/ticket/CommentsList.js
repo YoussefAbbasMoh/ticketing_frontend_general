@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ticketAPI, getImageUrl } from '../../services/api';
-import Spinner from '../ui/Spinner';
+import { CommentListSkeleton } from '../ui/LoadingSkeletons';
 
 const CommentsList = ({ ticketId, refreshTrigger }) => {
   const [comments, setComments] = useState([]);
@@ -123,12 +123,7 @@ const CommentsList = ({ ticketId, refreshTrigger }) => {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <Spinner size="lg" color="secondary" />
-        <p className="mt-3 text-sm text-gray-500">Loading comments...</p>
-      </div>
-    );
+    return <CommentListSkeleton lines={5} />;
   }
 
   if (error) {

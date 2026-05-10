@@ -8,7 +8,6 @@ import {
   FormControl,
   Select,
   MenuItem,
-  CircularProgress,
   useTheme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -16,6 +15,7 @@ import NotificationBell from '../notifications/NotificationBell';
 import CalendarToolbarButton from './CalendarToolbarButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStoredLanguage, setStoredLanguage, t } from '../../i18n';
+import { InlineSkeletonPulse } from '../ui/LoadingSkeletons';
 
 const AppBar = ({ onMenuClick }) => {
   const theme = useTheme();
@@ -186,7 +186,7 @@ const AppBar = ({ onMenuClick }) => {
               )}
             </Box>
           )}
-          {switchingCompany && <CircularProgress size={18} color="primary" />}
+          {switchingCompany && <InlineSkeletonPulse className="h-[18px] w-[18px]" />}
         </Box>
       </Toolbar>
     </MuiAppBar>

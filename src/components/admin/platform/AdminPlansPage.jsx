@@ -6,7 +6,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import Spinner from '../../ui/Spinner';
+import Skeleton from '../../ui/Skeleton';
 import AdminShell from './ui/AdminShell';
 import AdminPageHeader from './ui/AdminPageHeader';
 
@@ -166,9 +166,10 @@ export default function AdminPlansPage() {
       />
 
       {loading && !plans.length ? (
-        <div className="flex flex-col items-center justify-center gap-3 py-24">
-          <Spinner size="lg" />
-          <p className="text-sm text-app-text-secondary">{t(lang, 'loadingPlans')}</p>
+        <div className="space-y-6 pb-12">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-52 w-full rounded-app border border-app-divider shadow-app-soft" />
+          ))}
         </div>
       ) : (
         <div className="space-y-6 pb-12">

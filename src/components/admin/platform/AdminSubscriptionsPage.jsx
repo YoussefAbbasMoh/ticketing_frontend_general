@@ -5,7 +5,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import Card from '../../ui/Card';
 import Button from '../../ui/Button';
 import Input from '../../ui/Input';
-import Spinner from '../../ui/Spinner';
+import { AdminTableSkeleton } from '../../ui/LoadingSkeletons';
 import Modal from '../../ui/Modal';
 import AdminKpiCard from './ui/AdminKpiCard';
 import AdminStatusBadge from './ui/AdminStatusBadge';
@@ -151,10 +151,7 @@ export default function AdminSubscriptionsPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           {loading && !items.length ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Spinner size="lg" />
-              <p className="text-sm text-app-text-secondary">Loading subscriptions…</p>
-            </div>
+            <AdminTableSkeleton rows={10} />
           ) : !items.length ? (
             <div className="p-6">
               <AdminEmptyState title="No paid subscriptions" description="Only Basic, Pro, or Enterprise companies are listed here." />

@@ -14,7 +14,6 @@ import {
   Chip,
   Box,
   Typography,
-  CircularProgress,
   Alert,
   IconButton,
   Divider,
@@ -531,7 +530,7 @@ const AddProjectDialog = ({ open, onClose, onProjectAdded }) => {
               boxShadow: 'none',
               '&:hover': { boxShadow: 'none', bgcolor: 'primary.dark' },
             }}
-            startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+            startIcon={loading ? undefined : null}
           >
             {loading ? 'Creating…' : success ? 'Created!' : 'Create project'}
           </Button>

@@ -27,7 +27,7 @@ import { attendanceAPI, projectAPI } from '../../services/api';
 import Alert from '../ui/Alert';
 import Button from '../ui/Button';
 import NavBackIcon from '../ui/NavBackIcon';
-import Spinner from '../ui/Spinner';
+import Skeleton from '../ui/Skeleton';
 
 /** @typedef {{ title: string; color: string; kind: 'projectStart' | 'projectDue' | 'attendance' }} CalendarEventItem */
 
@@ -426,8 +426,10 @@ const WorkspaceCalendarPage = () => {
               </div>
               <div className="p-5 lg:p-6">
                 {loading ? (
-                  <div className="flex justify-center py-16">
-                    <Spinner size="lg" color="secondary" />
+                  <div className="space-y-3 py-6">
+                    {[1, 2, 3, 4].map((i) => (
+                      <Skeleton key={i} className="h-12 w-full rounded-lg" />
+                    ))}
                   </div>
                 ) : eventsForSelected.length === 0 ? (
                   <p className="py-10 text-center text-sm leading-relaxed text-app-text-secondary">

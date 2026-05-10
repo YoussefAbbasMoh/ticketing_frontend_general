@@ -125,6 +125,48 @@ export const ChatProvider = ({ children }) => {
     });
   }, []);
 
+  const applyThreadReplyUpdate = useCallback((conversationId, parentMessageId, threadMessage, threadCount) => {
+    const convId = conversationId?.toString();
+    const parentId = parentMessageId?.toString();
+    if (!convId || !parentId) return;
+
+    setMessages(prev => {
+      const existingMessages = prev[convId] || [];
+      if (!existingMessages.length) return prev;
+
+      const updatedMessages = existingMessages.map(msg => {
+        const msgId = msg?._id?.toString();
+        if (msgId !== parentId) return msg;
+
+        const previousReplies = Array.isArray(msg.threadReplies) ? msg.threadReplies : [];
+        const incomingReplyId = threadMessage?._id?.toString();
+        const alreadyIncluded = incomingReplyId
+          ? previousReplies.some((r) => r?._id?.toString() === incomingReplyId)
+          : false;
+
+        const nextReplies = alreadyIncluded
+          ? previousReplies
+          : (threadMessage ? [...previousReplies, threadMessage] : previousReplies);
+
+        return {
+          ...msg,
+          threadCount: Number(threadCount ?? msg.threadCount ?? nextReplies.length) || 0,
+          threadReplies: nextReplies,
+        };
+      });
+
+      return {
+        ...prev,
+        [convId]: updatedMessages,
+      };
+    });
+  }, []);
+
+  const handleThreadReply = useCallback((data) => {
+    if (!data) return;
+    applyThreadReplyUpdate(data.conversationId, data.parentMessageId, data.message, data.threadCount);
+  }, [applyThreadReplyUpdate]);
+
   useEffect(() => {
     if (user) {
       loadConversations();
@@ -138,6 +180,7 @@ export const ChatProvider = ({ children }) => {
           socketService.on('message_updated', handleMessageUpdated);
           socketService.on('message_deleted', handleMessageDeleted);
           socketService.on('message_reaction_updated', handleReactionUpdated);
+          socketService.on('thread_reply', handleThreadReply);
         };
 
         setupListener();
@@ -155,9 +198,10 @@ export const ChatProvider = ({ children }) => {
         socketService.off('message_updated', handleMessageUpdated);
         socketService.off('message_deleted', handleMessageDeleted);
         socketService.off('message_reaction_updated', handleReactionUpdated);
+        socketService.off('thread_reply', handleThreadReply);
       };
     }
-  }, [user, loadConversations, handleNewMessage, handleMessageUpdated, handleMessageDeleted, handleReactionUpdated]);
+  }, [user, loadConversations, handleNewMessage, handleMessageUpdated, handleMessageDeleted, handleReactionUpdated, handleThreadReply]);
 
   useEffect(() => {
     if (!user) {
@@ -305,7 +349,8 @@ export const ChatProvider = ({ children }) => {
     selectConversation,
     getOrCreateConversation,
     getProjectConversation,
-    setActiveConversation
+    setActiveConversation,
+    applyThreadReplyUpdate
   }), [
     conversations,
     activeConversation,
@@ -318,7 +363,8 @@ export const ChatProvider = ({ children }) => {
     sendFileMessage,
     selectConversation,
     getOrCreateConversation,
-    getProjectConversation
+    getProjectConversation,
+    applyThreadReplyUpdate
   ]);
 
   return (

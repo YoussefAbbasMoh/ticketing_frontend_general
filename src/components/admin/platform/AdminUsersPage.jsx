@@ -5,7 +5,7 @@ import { platformAdminAPI, getAxiosErrorMessage } from '../../../services/api';
 import { useToast } from '../../../contexts/ToastContext';
 import Card from '../../ui/Card';
 import Input from '../../ui/Input';
-import Spinner from '../../ui/Spinner';
+import { AdminTableSkeleton } from '../../ui/LoadingSkeletons';
 import AdminStatusBadge from './ui/AdminStatusBadge';
 import AdminPagination from './ui/AdminPagination';
 import AdminEmptyState from './ui/AdminEmptyState';
@@ -141,10 +141,7 @@ export default function AdminUsersPage() {
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           {loading && !items.length ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-20">
-              <Spinner size="lg" />
-              <p className="text-sm text-app-text-secondary">Loading users…</p>
-            </div>
+            <AdminTableSkeleton rows={10} />
           ) : !items.length ? (
             <div className="p-6">
               <AdminEmptyState title="No users" description="Adjust filters or search." />

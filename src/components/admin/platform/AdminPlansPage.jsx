@@ -96,10 +96,15 @@ export default function AdminPlansPage() {
       limits.maxProjects = Number.isFinite(n) ? n : 0;
     }
 
+    const rawPrice = String(d.price ?? '')
+      .replace(/,/g, '')
+      .trim();
+    const priceNum = rawPrice === '' ? NaN : parseFloat(rawPrice);
+
     return {
       name: d.name.trim(),
       description: d.description.trim(),
-      price: Number(d.price) || 0,
+      price: Number.isFinite(priceNum) ? priceNum : 0,
       currency: String(d.currency || 'EGP').trim(),
       billingPeriod: String(d.billingPeriod || 'monthly').trim(),
       trialDays: parseInt(String(d.trialDays || 0), 10) || 0,

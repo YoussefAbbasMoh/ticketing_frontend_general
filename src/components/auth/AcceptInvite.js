@@ -11,10 +11,20 @@ import {
   authPrimaryButtonClass,
 } from './authFieldClasses';
 
+/** Match backend invite normalization (trim, strip ZWSP, lowercase hex). */
+const normalizeInviteToken = (raw) =>
+  String(raw || '')
+    .trim()
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .toLowerCase();
+
 const AcceptInvite = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const token = useMemo(() => (searchParams.get('token') || '').trim(), [searchParams]);
+  const token = useMemo(
+    () => normalizeInviteToken(searchParams.get('token') || ''),
+    [searchParams]
+  );
 
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

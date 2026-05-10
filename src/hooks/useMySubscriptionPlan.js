@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { subscriptionAPI } from '../services/api';
 
+const KNOWN_PLAN_IDS = ['free', 'basic', 'pro', 'enterprise'];
+
 function normalizePlanId(raw) {
   const s = String(raw || 'free').trim().toLowerCase();
-  return s || 'free';
+  if (!s) return 'free';
+  return KNOWN_PLAN_IDS.includes(s) ? s : 'free';
 }
 
 /**

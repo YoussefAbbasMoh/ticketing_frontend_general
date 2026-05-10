@@ -77,6 +77,17 @@ const PLAN_UI_FALLBACK = {
       ],
       billingPeriod: 'monthly',
     },
+    enterprise: {
+      name: 'Enterprise',
+      description: 'For organizations with 30+ members',
+      features: [
+        '30+ members',
+        'Unlimited projects',
+        'Chat attachments enabled',
+        'Attendance edit and report download',
+      ],
+      billingPeriod: 'monthly',
+    },
   },
   ar: {
     free: {
@@ -112,10 +123,29 @@ const PLAN_UI_FALLBACK = {
       ],
       billingPeriod: 'شهريًا',
     },
+    enterprise: {
+      name: 'المؤسسات',
+      description: 'لمؤسسات يزيد عدد أفرادها عن 30',
+      features: [
+        'أكثر من 30 فرد',
+        'مشاريع غير محدودة',
+        'إتاحة مرفقات الشات',
+        'تعديل الحضور وتحميل التقارير',
+      ],
+      billingPeriod: 'شهريًا',
+    },
   },
 };
 
 const hasArabic = (value) => /[\u0600-\u06FF]/.test(String(value || ''));
+
+const KNOWN_PLAN_IDS = ['free', 'basic', 'pro', 'enterprise'];
+
+const normalizePlanId = (raw) => {
+  const s = String(raw ?? 'free').trim().toLowerCase();
+  if (!s) return 'free';
+  return KNOWN_PLAN_IDS.includes(s) ? s : 'free';
+};
 
 const formatCurrency = (value, currency = 'EGP') =>
   new Intl.NumberFormat('en-US', {
@@ -214,7 +244,15 @@ const SubscriptionPage = () => {
     loadData();
   }, [loadData]);
 
-  const currentPlanId = subscription?.planId || 'free';
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadData();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [loadData]);
+
+  const currentPlanId = normalizePlanId(subscription?.planId);
   const hasExpired = subscription?.status === 'expired';
   const noticeMessage = subscription?.notice || '';
 
@@ -229,7 +267,7 @@ const SubscriptionPage = () => {
     setPayingPlanId(planId);
     try {
       const res = await subscriptionAPI.createPaymobCheckout({
-        planId,
+        planId: normalizePlanId(planId),
         paymentMethod: 'card',
         // Tells Paymob where to send the user after payment (must match backend allow-list).
         returnUrl: `${window.location.origin}/subscription`,

@@ -238,6 +238,11 @@ export const userAPI = {
   getProfile: () => api.get('/users/profile'),
   updateProfile: (profileData) => api.put('/users/update-profile', profileData),
   updateUser: (userId, userData) => api.put(`/users/update-user/${userId}`, userData),
+  /** Personal tasks (per user; columns: backlog | this_week | today | done) */
+  getPersonalTasks: () => api.get('/users/personal-tasks'),
+  createPersonalTask: (payload) => api.post('/users/personal-tasks', payload),
+  updatePersonalTask: (taskId, payload) => api.patch(`/users/personal-tasks/${taskId}`, payload),
+  deletePersonalTask: (taskId) => api.delete(`/users/personal-tasks/${taskId}`),
 };
 
 // Project API

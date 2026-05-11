@@ -26,6 +26,7 @@ const EditTicket = lazy(() => import('./components/ticket/EditTicket'));
 const Settings = lazy(() => import('./components/settings/Settings'));
 const Chat = lazy(() => import('./components/chat/Chat'));
 const AttendancePage = lazy(() => import('./components/attendance/AttendancePage'));
+const PersonalTasksPage = lazy(() => import('./components/personal-tasks/PersonalTasksPage'));
 const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
 const SubscriptionCheckoutPage = lazy(() =>
   import('./components/subscription/SubscriptionCheckoutPage')
@@ -149,6 +150,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <AttendancePage />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/personal-tasks" element={
+        <ProtectedRoute>
+          <Layout>
+            <PersonalTasksPage />
           </Layout>
         </ProtectedRoute>
       } />

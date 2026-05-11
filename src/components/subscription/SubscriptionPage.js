@@ -11,8 +11,6 @@ const TEXT = {
   en: {
     na: 'N/A',
     failedLoad: 'Failed to load subscription data.',
-    checkoutUrlMissing: 'Checkout URL was not returned from server.',
-    checkoutFailed: 'Could not start payment checkout.',
     activated: 'Subscription activated successfully.',
     confirmFailed: 'Failed to confirm payment.',
     cancelled: 'Subscription cancelled successfully.',
@@ -27,8 +25,6 @@ const TEXT = {
   ar: {
     na: 'غير متاح',
     failedLoad: 'فشل في تحميل بيانات الاشتراك.',
-    checkoutUrlMissing: 'لم يتم إرجاع رابط الدفع من الخادم.',
-    checkoutFailed: 'تعذر بدء عملية الدفع.',
     activated: 'تم تفعيل الاشتراك بنجاح.',
     confirmFailed: 'فشل تأكيد الدفع.',
     cancelled: 'تم إلغاء الاشتراك بنجاح.',
@@ -169,7 +165,6 @@ const SubscriptionPage = () => {
   const [plans, setPlans] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [payingPlanId, setPayingPlanId] = useState('');
   const [confirmingPayment, setConfirmingPayment] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState('');
@@ -261,32 +256,10 @@ const SubscriptionPage = () => {
     [plans, currentPlanId]
   );
 
-  const handleSubscribe = async (planId) => {
+  const handleSubscribe = (planId) => {
     setError('');
     setSuccess('');
-    setPayingPlanId(planId);
-    try {
-      const res = await subscriptionAPI.createPaymobCheckout({
-        planId: normalizePlanId(planId),
-        paymentMethod: 'card',
-        // Tells Paymob where to send the user after payment (must match backend allow-list).
-        returnUrl: `${window.location.origin}/subscription`,
-      });
-      const checkoutUrl = res?.data?.checkoutUrl;
-      if (!checkoutUrl) {
-        throw new Error(tx('checkoutUrlMissing'));
-      }
-      setSuccess(t(lang, 'redirectingCheckout'));
-      window.location.href = checkoutUrl;
-    } catch (apiError) {
-      const message =
-        apiError?.response?.data?.message ||
-        apiError?.message ||
-        tx('checkoutFailed');
-      setError(message);
-    } finally {
-      setPayingPlanId('');
-    }
+    navigate(`/subscription/checkout?planId=${encodeURIComponent(normalizePlanId(planId))}`);
   };
 
   const handleConfirmPayment = async (urlToConfirm) => {
@@ -464,8 +437,6 @@ const SubscriptionPage = () => {
               const displayPlan = normalizePlanForUi(plan);
               const isCurrent = plan.id === currentPlanId;
               const isFree = plan.id === 'free';
-              const isBusy = payingPlanId === plan.id;
-
               const paidHoverClasses = isFree
                 ? ''
                 : 'cursor-default transition-all duration-200 ease-out hover:-translate-y-1 hover:border-app-primary hover:shadow-app-card';
@@ -504,9 +475,7 @@ const SubscriptionPage = () => {
                       <Button
                         fullWidth
                         variant={isCurrent ? 'outline' : 'secondary'}
-                        disabled={isBusy}
                         onClick={() => handleSubscribe(plan.id)}
-                        icon={isBusy ? <ButtonBusyDots className="text-white" /> : null}
                       >
                         {isCurrent ? t(lang, 'renewPlan') : t(lang, 'subscribe')}
                       </Button>

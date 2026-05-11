@@ -27,6 +27,9 @@ const Settings = lazy(() => import('./components/settings/Settings'));
 const Chat = lazy(() => import('./components/chat/Chat'));
 const AttendancePage = lazy(() => import('./components/attendance/AttendancePage'));
 const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
+const SubscriptionCheckoutPage = lazy(() =>
+  import('./components/subscription/SubscriptionCheckoutPage')
+);
 const WorkspaceCalendarPage = lazy(() => import('./components/calendar/WorkspaceCalendarPage'));
 const LandingPage = lazy(() =>
   import('./landing/LandingPage').then((m) => ({ default: m.LandingPage }))
@@ -60,6 +63,14 @@ function SubscriptionRouteGate() {
     return <Navigate to="/" replace />;
   }
   return <SubscriptionPage />;
+}
+
+function SubscriptionCheckoutRouteGate() {
+  const { canSeeSubscriptionNav } = useAuth();
+  if (!canSeeSubscriptionNav()) {
+    return <Navigate to="/" replace />;
+  }
+  return <SubscriptionCheckoutPage />;
 }
 
 function AppRoutes() {
@@ -154,6 +165,14 @@ function AppRoutes() {
         <ProtectedRoute>
           <Layout>
             <SubscriptionRouteGate />
+          </Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/subscription/checkout" element={
+        <ProtectedRoute>
+          <Layout>
+            <SubscriptionCheckoutRouteGate />
           </Layout>
         </ProtectedRoute>
       } />

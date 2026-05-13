@@ -23,6 +23,7 @@
     "axios": "^1.12.2",
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.16.1",
+    "formik": "^2.4.6",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.548.0",
     "react": "^19.2.0",

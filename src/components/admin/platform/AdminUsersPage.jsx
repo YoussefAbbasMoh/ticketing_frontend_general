@@ -12,13 +12,11 @@ import AdminEmptyState from './ui/AdminEmptyState';
 import AdminShell from './ui/AdminShell';
 import AdminPageHeader from './ui/AdminPageHeader';
 
+/** Company membership roles shown in the role filter (matches assignable org roles). */
 const ROLES = [
   { value: '', label: 'All roles' },
-  { value: 'owner', label: 'Owner' },
   { value: 'admin', label: 'Admin' },
   { value: 'manager', label: 'Manager' },
-  { value: 'developer', label: 'Developer' },
-  { value: 'tester', label: 'Tester' },
   { value: 'user', label: 'User' },
 ];
 

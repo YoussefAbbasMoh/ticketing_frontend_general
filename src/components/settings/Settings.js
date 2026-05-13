@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Formik, Form, Field } from 'formik';
 import { useAuth } from '../../contexts/AuthContext';
 import { userAPI, subscriptionAPI } from '../../services/api';
 import Button from '../ui/Button';
@@ -8,7 +9,10 @@ import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import Modal from '../ui/Modal';
+import RoleDragDropSelect, { ROLE_ORDER } from './RoleDragDropSelect';
 import { getStoredLanguage } from '../../i18n';
+
+const ASSIGNABLE_ROLES = ROLE_ORDER;
 
 const TEXT = {
   en: {
@@ -26,6 +30,18 @@ const TEXT = {
     membersLimitReached: 'Member limit reached',
     membersUnlimited: 'Unlimited members',
     manageSubscription: 'Manage Subscription',
+    notApplicable: 'N/A',
+    planFree: 'Free',
+    planPro: 'Pro',
+    planStarter: 'Starter',
+    planBasic: 'Basic',
+    planEnterprise: 'Enterprise',
+    subStatusActive: 'Active',
+    subStatusExpired: 'Expired',
+    subStatusTrialing: 'Trialing',
+    subStatusCancelled: 'Cancelled',
+    subStatusPastDue: 'Past due',
+    subStatusPaused: 'Paused',
     profileInfo: 'Profile Information',
     editProfile: 'Edit Profile',
     name: 'Name',
@@ -60,12 +76,25 @@ const TEXT = {
     passwordChanged: 'Password changed successfully!',
     passwordChangeFailed: 'Failed to change password.',
     passwordsMismatch: 'New passwords do not match.',
+    passwordSameAsCurrent: 'New password must be different from current password.',
+    passwordWeak: 'Password must be at least 8 characters and include uppercase, lowercase, and a special character.',
     userAdded: 'User added successfully!',
     userAddFailed: 'Failed to add user.',
     userUpdated: 'User updated successfully!',
     userUpdateFailed: 'Failed to update user.',
     userDeleteFailed: 'Failed to delete user.',
-    userDeletedSuccess: 'User "{{name}}" deleted successfully!'
+    userDeletedSuccess: 'User "{{name}}" deleted successfully!',
+    nameValidation: 'Name must contain at least two words.',
+    titleValidation: 'Title must be at least 2 characters.',
+    fieldRequired: 'This field is required.',
+    emailInvalid: 'Enter a valid email address.',
+    roleInvalid: 'Choose owner, admin, manager, or user.',
+    roleDropZone: 'Selected role',
+    roleDragPool: 'Drag a role into the box above, or tap an option.',
+    roleEmptySlot: 'Drop a role here',
+    roleOwnerLockedTitle: 'Owner',
+    roleOwnerLockedHint: 'The company owner role cannot be changed.',
+    roleSelfLockedHint: 'You cannot change your own role here.'
   },
   ar: {
     settings: 'الإعدادات',
@@ -82,6 +111,18 @@ const TEXT = {
     membersLimitReached: 'تم الوصول إلى حد الأعضاء',
     membersUnlimited: 'أعضاء غير محدودين',
     manageSubscription: 'إدارة الاشتراك',
+    notApplicable: 'غير متاح',
+    planFree: 'مجانية',
+    planPro: 'احترافية',
+    planStarter: 'مبتدئة',
+    planBasic: 'أساسية',
+    planEnterprise: 'مؤسسات',
+    subStatusActive: 'نشط',
+    subStatusExpired: 'منتهٍ',
+    subStatusTrialing: 'فترة تجريبية',
+    subStatusCancelled: 'ملغاة',
+    subStatusPastDue: 'متأخر السداد',
+    subStatusPaused: 'موقوف',
     profileInfo: 'بيانات الحساب',
     editProfile: 'تعديل الحساب',
     name: 'الاسم',
@@ -116,12 +157,25 @@ const TEXT = {
     passwordChanged: 'تم تغيير كلمة المرور بنجاح!',
     passwordChangeFailed: 'فشل تغيير كلمة المرور.',
     passwordsMismatch: 'كلمتا المرور الجديدتان غير متطابقتين.',
+    passwordSameAsCurrent: 'يجب أن تكون كلمة المرور الجديدة مختلفة عن الحالية.',
+    passwordWeak: 'يجب أن تكون كلمة المرور 8 أحرف على الأقل وتحتوي على حرف كبير وحرف صغير ورمز خاص.',
     userAdded: 'تمت إضافة المستخدم بنجاح!',
     userAddFailed: 'فشلت إضافة المستخدم.',
     userUpdated: 'تم تحديث المستخدم بنجاح!',
     userUpdateFailed: 'فشل تحديث المستخدم.',
     userDeleteFailed: 'فشل حذف المستخدم.',
-    userDeletedSuccess: 'تم حذف المستخدم "{{name}}" بنجاح!'
+    userDeletedSuccess: 'تم حذف المستخدم "{{name}}" بنجاح!',
+    nameValidation: 'الاسم لازم يكون كلمتين على الأقل.',
+    titleValidation: 'المسمى الوظيفي لازم يكون حرفين على الأقل.',
+    fieldRequired: 'هذا الحقل مطلوب.',
+    emailInvalid: 'أدخل بريدًا إلكترونيًا صالحًا.',
+    roleInvalid: 'اختر مالك أو مدير عام أو مدير أو مستخدم.',
+    roleDropZone: 'الدور المختار',
+    roleDragPool: 'اسحب أحد الأدوار إلى المربع أعلاه أو اضغط للاختيار.',
+    roleEmptySlot: 'أفلت الدور هنا',
+    roleOwnerLockedTitle: 'مالك',
+    roleOwnerLockedHint: 'لا يمكن تغيير دور مالك الشركة.',
+    roleSelfLockedHint: 'لا يمكنك تغيير دورك من هنا.'
   }
 };
 
@@ -148,20 +202,7 @@ const Settings = () => {
     confirmPassword: '',
   });
   const [users, setUsers] = useState([]);
-  const [newUser, setNewUser] = useState({
-    name: '',
-    title: '',
-    email: '',
-    role: 'user',
-  });
   const [editingUser, setEditingUser] = useState(null);
-  const [editUserData, setEditUserData] = useState({
-    name: '',
-    title: '',
-    email: '',
-    role: '',
-  });
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -177,6 +218,85 @@ const Settings = () => {
       (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
       template
     );
+  };
+
+  const memberRoleForRow = (u) =>
+    u?.companyMemberRole || u?.companies?.[0]?.companyRole || u?.role || 'user';
+
+  const rolesAssignableByInviter =
+    user && (Boolean(user.companyIsOwner) || memberRoleForRow(user) === 'owner')
+      ? ASSIGNABLE_ROLES
+      : ASSIGNABLE_ROLES.filter((role) => role !== 'owner');
+
+  const validateUserForm = (values) => {
+    const errors = {};
+    const nameTrim = String(values.name || '').trim();
+    const titleTrim = String(values.title || '').trim();
+    const emailTrim = String(values.email || '').trim();
+
+    if (!nameTrim) {
+      errors.name = tx('fieldRequired');
+    } else if (nameTrim.split(/\s+/).filter(Boolean).length < 2) {
+      errors.name = tx('nameValidation');
+    }
+
+    if (!titleTrim) {
+      errors.title = tx('fieldRequired');
+    } else if (titleTrim.length < 2) {
+      errors.title = tx('titleValidation');
+    }
+
+    if (!emailTrim) {
+      errors.email = tx('fieldRequired');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+      errors.email = tx('emailInvalid');
+    }
+
+    return errors;
+  };
+
+  const validateAddUserForm = (values) => {
+    const errors = validateUserForm(values);
+    const r = String(values.role || '').toLowerCase();
+    if (!r) errors.role = tx('fieldRequired');
+    else if (!rolesAssignableByInviter.includes(r)) errors.role = tx('roleInvalid');
+    return errors;
+  };
+
+  const validateEditUserForm = (skipRoleValidation) => (values) => {
+    const errors = validateUserForm(values);
+    if (!skipRoleValidation) {
+      const r = String(values.role || '').toLowerCase();
+      if (!r) errors.role = tx('fieldRequired');
+      else if (!rolesAssignableByInviter.includes(r)) errors.role = tx('roleInvalid');
+    }
+    return errors;
+  };
+
+  /** API forbids changing your own company role from this screen. */
+  const cannotChangeCompanyRoleInEdit = (editTarget) => {
+    if (!editTarget || !user) return true;
+    return String(editTarget._id || editTarget.id) === String(user._id || user.id);
+  };
+
+  const pickAssignableRoleForEdit = (u) => {
+    const raw = String(memberRoleForRow(u)).toLowerCase();
+    return ASSIGNABLE_ROLES.includes(raw) ? raw : 'user';
+  };
+
+  const labelAssignableRole = (r) => {
+    const x = String(r || '').toLowerCase();
+    if (lang === 'ar') {
+      if (x === 'owner') return 'مالك';
+      if (x === 'admin') return 'مدير عام';
+      if (x === 'manager') return 'مدير';
+      if (x === 'user') return 'مستخدم';
+    }
+    if (x === 'owner') return 'Owner';
+    if (x === 'admin') return 'Admin';
+    if (x === 'manager') return 'Manager';
+    if (x === 'user') return 'User';
+    return String(r || '');
   };
 
   useEffect(() => {
@@ -210,12 +330,37 @@ const Settings = () => {
   };
 
   const formatDate = (value) => {
-    if (!value) return 'N/A';
-    return new Date(value).toLocaleDateString('en-GB', {
+    if (!value) return tx('notApplicable');
+    const loc = lang === 'ar' ? 'ar-EG' : 'en-GB';
+    return new Date(value).toLocaleDateString(loc, {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  const subscriptionPlanIdNorm = String(subscriptionInfo?.planId || 'free').toLowerCase();
+  const isFreeSubscriptionPlan = subscriptionPlanIdNorm === 'free';
+
+  const getPlanDisplayName = (planId) => {
+    const p = String(planId || 'free').toLowerCase();
+    if (p === 'free') return tx('planFree');
+    if (p === 'pro') return tx('planPro');
+    if (p === 'starter') return tx('planStarter');
+    if (p === 'basic') return tx('planBasic');
+    if (p === 'enterprise') return tx('planEnterprise');
+    return lang === 'ar' ? p : String(planId || p).toUpperCase();
+  };
+
+  const getSubscriptionStatusDisplay = (status) => {
+    const s = String(status || 'active').toLowerCase().replace(/-/g, '_');
+    if (s === 'active') return tx('subStatusActive');
+    if (s === 'expired') return tx('subStatusExpired');
+    if (s === 'trialing') return tx('subStatusTrialing');
+    if (s === 'cancelled' || s === 'canceled') return tx('subStatusCancelled');
+    if (s === 'past_due') return tx('subStatusPastDue');
+    if (s === 'paused') return tx('subStatusPaused');
+    return String(status || 'active');
   };
 
   const maxMembers = Number(subscriptionInfo?.limits?.maxMembers);
@@ -227,30 +372,36 @@ const Settings = () => {
     try {
       const response = await userAPI.getAllUsers();
       const userData = response.data.users ?? response.data ?? [];
-      setUsers(Array.isArray(userData) ? userData : []);
+      const list = Array.isArray(userData) ? userData : [];
+      setUsers(list);
+      if (user && list.length) {
+        const myId = String(user._id || user.id);
+        const row = list.find((u) => String(u._id || u.id) === myId);
+        if (row) {
+          const nextRole = memberRoleForRow(row);
+          const prevRole = memberRoleForRow(user);
+          const nextOwner = Boolean(row.companyIsOwner);
+          const prevOwner = Boolean(user.companyIsOwner);
+          if (nextRole !== prevRole || nextOwner !== prevOwner) {
+            updateUser({
+              ...user,
+              companyMemberRole: row.companyMemberRole,
+              companyIsOwner: row.companyIsOwner,
+              companies: row.companies || user.companies,
+              role: row.role ?? nextRole,
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setUsers([]);
     }
   };
 
-  const handleProfileChange = (e) => {
-    setProfileData({
-      ...profileData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
   const handlePasswordChange = (e) => {
     setPasswordData({
       ...passwordData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleNewUserChange = (e) => {
-    setNewUser({
-      ...newUser,
       [e.target.name]: e.target.value,
     });
   };
@@ -263,6 +414,17 @@ const Settings = () => {
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setError(tx('passwordsMismatch'));
+      setLoading(false);
+      return;
+    }
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setError(tx('passwordSameAsCurrent'));
+      setLoading(false);
+      return;
+    }
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$/;
+    if (!strongPasswordRegex.test(passwordData.newPassword)) {
+      setError(tx('passwordWeak'));
       setLoading(false);
       return;
     }
@@ -282,30 +444,6 @@ const Settings = () => {
     }
   };
 
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await userAPI.addAccount(newUser);
-      setSuccess(tx('userAdded'));
-      setNewUser({
-        name: '',
-        title: '',
-        email: '',
-        role: 'user',
-      });
-      setOpenDialog(false);
-      fetchUsers();
-    } catch (error) {
-      setError(error.response?.data?.message || tx('userAddFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDeleteUser = (userItem) => {
     setUserToDelete(userItem);
     setDeleteConfirmOpen(true);
@@ -319,7 +457,7 @@ const Settings = () => {
     setLoading(true);
     
     try {
-      await userAPI.deleteAccount(userToDelete._id);
+      await userAPI.deleteAccount(userToDelete._id || userToDelete.id);
       setSuccess(tx('userDeletedSuccess', { name: userToDelete.name }));
       setDeleteConfirmOpen(false);
       setUserToDelete(null);
@@ -338,60 +476,9 @@ const Settings = () => {
     setUserToDelete(null);
   };
 
-  const handleUpdateProfile = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await userAPI.updateProfile(profileData);
-      setSuccess(tx('profileUpdated'));
-      setIsEditingProfile(false);
-      // Update local user data
-      updateUser({ ...user, ...profileData });
-    } catch (error) {
-      setError(error.response?.data?.message || tx('profileUpdateFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleEditUser = (userItem) => {
     setEditingUser(userItem);
-    setEditUserData({
-      name: userItem.name,
-      title: userItem.title,
-      email: userItem.email,
-      role: userItem.role,
-    });
     setOpenEditDialog(true);
-  };
-
-  const handleEditUserChange = (e) => {
-    setEditUserData({
-      ...editUserData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleUpdateUser = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await userAPI.updateUser(editingUser._id, editUserData);
-      setSuccess(tx('userUpdated'));
-      setOpenEditDialog(false);
-      setEditingUser(null);
-      fetchUsers();
-    } catch (error) {
-      setError(error.response?.data?.message || tx('userUpdateFailed'));
-    } finally {
-      setLoading(false);
-    }
   };
 
   const getRoleBadgeColor = (role) => {
@@ -400,10 +487,8 @@ const Settings = () => {
         return 'bg-red-100 text-red-800 border-red-200';
       case 'manager':
         return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'developer':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'tester':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'owner':
+        return 'bg-amber-100 text-amber-900 border-amber-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -412,14 +497,20 @@ const Settings = () => {
   const getRoleLabel = (role) => {
     const normalized = String(role || '').toLowerCase();
     if (lang === 'ar') {
+      if (normalized === 'owner') return 'مالك';
       if (normalized === 'admin') return 'مدير عام';
       if (normalized === 'manager') return 'مدير';
-      if (normalized === 'developer') return 'مطور';
-      if (normalized === 'tester') return 'مختبر';
       if (normalized === 'user') return 'مستخدم';
     }
+    if (normalized === 'owner') return 'Owner';
+    if (normalized === 'admin') return 'Admin';
+    if (normalized === 'manager') return 'Manager';
+    if (normalized === 'user') return 'User';
     return role || 'N/A';
   };
+
+  const defaultInviteRole =
+    user && (Boolean(user.companyIsOwner) || memberRoleForRow(user) === 'owner') ? 'owner' : 'user';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-12">
@@ -456,16 +547,18 @@ const Settings = () => {
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('subscription')}</h2>
                   <p className="text-sm text-gray-600 mt-1">
-                    {tx('plan')}: <span className="font-semibold uppercase">{subscriptionInfo?.planId || 'free'}</span> · {tx('status')}:{' '}
+                    {tx('plan')}: <span className="font-semibold">{getPlanDisplayName(subscriptionInfo?.planId)}</span> · {tx('status')}:{' '}
                     <span className={`font-semibold ${subscriptionInfo?.status === 'expired' ? 'text-amber-600' : 'text-green-600'}`}>
-                      {subscriptionInfo?.status || 'active'}
+                      {getSubscriptionStatusDisplay(subscriptionInfo?.status)}
                     </span>
                   </p>
+                  {!isFreeSubscriptionPlan && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {tx('expires')}: {formatDate(subscriptionInfo?.expiresAt)} · {tx('graceEnds')}: {formatDate(subscriptionInfo?.graceEndsAt)}
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">
-                    {tx('expires')}: {formatDate(subscriptionInfo?.expiresAt)} · {tx('graceEnds')}: {formatDate(subscriptionInfo?.graceEndsAt)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {tx('paymobSubscriptionId')}: {subscriptionInfo?.paymobSubscriptionId || 'N/A'}
+                    {tx('paymobSubscriptionId')}: {subscriptionInfo?.paymobSubscriptionId || tx('notApplicable')}
                   </p>
                   <div className="mt-2">
                     <p className="text-xs font-medium text-gray-700">
@@ -513,26 +606,14 @@ const Settings = () => {
                   </div>
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-800">{tx('profileInfo')}</h2>
                 </div>
-                {!isEditingProfile && (
-                  <button
-                    onClick={() => setIsEditingProfile(true)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title={tx('editProfile')}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                )}
               </div>
               
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-4">
                 <Input
                   label={tx('name')}
                   name="name"
                   value={profileData.name}
-                  onChange={handleProfileChange}
-                  disabled={!isEditingProfile}
+                  disabled
                   required
                   icon={
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -544,8 +625,7 @@ const Settings = () => {
                   label={tx('title')}
                   name="title"
                   value={profileData.title}
-                  onChange={handleProfileChange}
-                  disabled={!isEditingProfile}
+                  disabled
                   required
                   icon={
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -558,8 +638,7 @@ const Settings = () => {
                   name="email"
                   type="email"
                   value={profileData.email}
-                  onChange={handleProfileChange}
-                  disabled={!isEditingProfile}
+                  disabled
                   required
                   icon={
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -575,41 +654,13 @@ const Settings = () => {
                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getRoleBadgeColor(user?.role)}`}>
-                      {getRoleLabel(user?.role || 'N/A')}
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${getRoleBadgeColor(memberRoleForRow(user))}`}>
+                      {getRoleLabel(memberRoleForRow(user))}
                     </span>
                   </div>
                 </div>
 
-                {isEditingProfile && (
-                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      fullWidth
-                      onClick={() => {
-                        setIsEditingProfile(false);
-                        setProfileData({
-                          name: user.name || '',
-                          title: user.title || '',
-                          email: user.email || '',
-                        });
-                      }}
-                    >
-                      {tx('cancel')}
-                    </Button>
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      fullWidth
-                      disabled={loading}
-                      icon={loading ? <ButtonBusyDots className="text-white" /> : null}
-                    >
-                      {loading ? tx('saving') : tx('saveChanges')}
-                    </Button>
-                  </div>
-                )}
-              </form>
+              </div>
             </Card.Content>
           </Card>
 
@@ -745,8 +796,8 @@ const Settings = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
-                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(userItem.role)}`}>
-                          {getRoleLabel(userItem.role)}
+                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(memberRoleForRow(userItem))}`}>
+                          {getRoleLabel(memberRoleForRow(userItem))}
                         </span>
                         <div className="flex items-center gap-1 sm:gap-2">
                           <button
@@ -780,190 +831,310 @@ const Settings = () => {
         {/* Add User Modal (company owner only — matches API) */}
         {canInviteUsersToCompany() && (
           <Modal isOpen={openDialog} onClose={() => setOpenDialog(false)}>
-            <form onSubmit={handleAddUser}>
-              <Modal.Header>
-                <h2 className="text-2xl font-bold text-gray-800">{tx('addNewUser')}</h2>
-              </Modal.Header>
-              <Modal.Content>
-                <div className="space-y-4">
-                  <Input
-                    label={tx('name')}
-                    name="name"
-                    value={newUser.name}
-                    onChange={handleNewUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    }
-                  />
-                  <Input
-                    label={tx('title')}
-                    name="title"
-                    value={newUser.title}
-                    onChange={handleNewUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    }
-                  />
-                  <Input
-                    label={tx('email')}
-                    name="email"
-                    type="email"
-                    value={newUser.email}
-                    onChange={handleNewUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    }
-                  />
-                  <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                    {tx('noPasswordNeeded')}
-                  </p>
-                  <div className="w-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {tx('role')}<span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      name="role"
-                      value={newUser.role}
-                      onChange={handleNewUserChange}
-                      required
-                      className="w-full px-4 py-2.5 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
-                    >
-                      <option value="user">{lang === 'ar' ? 'مستخدم' : 'User'}</option>
-                      <option value="manager">{lang === 'ar' ? 'مدير' : 'Manager'}</option>
-                      <option value="admin">{lang === 'ar' ? 'مدير عام' : 'Admin'}</option>
-                    </select>
-                  </div>
-                </div>
-              </Modal.Content>
-              <Modal.Footer>
-                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setOpenDialog(false)}
-                    fullWidth
-                    className="sm:w-auto"
-                  >
-                    {tx('cancel')}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="secondary"
-                    disabled={loading}
-                    icon={loading ? <ButtonBusyDots className="text-white" /> : null}
-                    fullWidth
-                    className="sm:w-auto"
-                  >
-                    {loading ? tx('adding') : tx('addUser')}
-                  </Button>
-                </div>
-              </Modal.Footer>
-            </form>
+            <Formik
+              enableReinitialize
+              initialValues={{ name: '', title: '', email: '', role: defaultInviteRole }}
+              validate={validateAddUserForm}
+              validateOnChange={false}
+              validateOnBlur
+              onSubmit={async (values, { setStatus, resetForm, setSubmitting }) => {
+                setStatus(undefined);
+                setError('');
+                setSuccess('');
+                try {
+                  await userAPI.addAccount(values);
+                  setSuccess(tx('userAdded'));
+                  resetForm();
+                  setOpenDialog(false);
+                  fetchUsers();
+                } catch (err) {
+                  setStatus(err.response?.data?.message || tx('userAddFailed'));
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              {({ status, isSubmitting }) => (
+                <Form noValidate>
+                  <Modal.Header>
+                    <h2 className="text-2xl font-bold text-gray-800">{tx('addNewUser')}</h2>
+                  </Modal.Header>
+                  <Modal.Content>
+                    {status && (
+                      <div className="mb-4 rounded-app-input border border-app-error/35 bg-app-error/10 px-3 py-2.5 text-[13px] text-app-error">
+                        {status}
+                      </div>
+                    )}
+                    <div className="space-y-4">
+                      <Field name="name">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('name')}
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field name="title">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('title')}
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field name="email">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('email')}
+                            type="email"
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                        {tx('noPasswordNeeded')}
+                      </p>
+                      <Field name="role">
+                        {({ field, form, meta }) => (
+                          <RoleDragDropSelect
+                            value={field.value}
+                            onChange={(v) => form.setFieldValue('role', v)}
+                            onBlur={field.onBlur}
+                            label={tx('role')}
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            disabled={false}
+                            labelForRole={labelAssignableRole}
+                            hintDropZone={tx('roleDropZone')}
+                            hintPool={tx('roleDragPool')}
+                            emptySlotLabel={tx('roleEmptySlot')}
+                            allowedRoles={rolesAssignableByInviter}
+                          />
+                        )}
+                      </Field>
+                    </div>
+                  </Modal.Content>
+                  <Modal.Footer>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setOpenDialog(false)}
+                        fullWidth
+                        className="sm:w-auto"
+                      >
+                        {tx('cancel')}
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="secondary"
+                        disabled={isSubmitting}
+                        icon={isSubmitting ? <ButtonBusyDots className="text-white" /> : null}
+                        fullWidth
+                        className="sm:w-auto"
+                      >
+                        {isSubmitting ? tx('adding') : tx('addUser')}
+                      </Button>
+                    </div>
+                  </Modal.Footer>
+                </Form>
+              )}
+            </Formik>
           </Modal>
         )}
 
         {/* Edit User Modal */}
-        {showTeamSection() && (
-          <Modal isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)}>
-            <form onSubmit={handleUpdateUser}>
-              <Modal.Header>
-                <h2 className="text-2xl font-bold text-gray-800">{tx('editUser')}</h2>
-              </Modal.Header>
-              <Modal.Content>
-                <div className="space-y-4">
-                  <Input
-                    label={tx('name')}
-                    name="name"
-                    value={editUserData.name}
-                    onChange={handleEditUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    }
-                  />
-                  <Input
-                    label={tx('title')}
-                    name="title"
-                    value={editUserData.title}
-                    onChange={handleEditUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    }
-                  />
-                  <Input
-                    label={tx('email')}
-                    name="email"
-                    type="email"
-                    value={editUserData.email}
-                    onChange={handleEditUserChange}
-                    required
-                    icon={
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    }
-                  />
-                  <div className="w-full">
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      {tx('role')}<span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <select
-                      name="role"
-                      value={editUserData.role}
-                      onChange={handleEditUserChange}
-                      required
-                      className="w-full px-4 py-2.5 text-base border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent hover:border-gray-400 transition-all duration-200"
-                    >
-                      <option value="user">{lang === 'ar' ? 'مستخدم' : 'User'}</option>
-                      <option value="developer">{lang === 'ar' ? 'مطور' : 'Developer'}</option>
-                      <option value="tester">{lang === 'ar' ? 'مختبر' : 'Tester'}</option>
-                      <option value="manager">{lang === 'ar' ? 'مدير' : 'Manager'}</option>
-                      <option value="admin">{lang === 'ar' ? 'مدير عام' : 'Admin'}</option>
-                    </select>
-                  </div>
-                </div>
-              </Modal.Content>
-              <Modal.Footer>
-                <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => {
-                      setOpenEditDialog(false);
-                      setEditingUser(null);
-                    }}
-                    fullWidth
-                    className="sm:w-auto"
-                  >
-                    {tx('cancel')}
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    disabled={loading}
-                    icon={loading ? <ButtonBusyDots className="text-white" /> : null}
-                    fullWidth
-                    className="sm:w-auto"
-                  >
-                    {loading ? tx('updating') : tx('updateUser')}
-                  </Button>
-                </div>
-              </Modal.Footer>
-            </form>
+        {showTeamSection() && editingUser && (
+          <Modal
+            isOpen={openEditDialog}
+            onClose={() => {
+              setOpenEditDialog(false);
+              setEditingUser(null);
+            }}
+          >
+            <Formik
+              key={editingUser._id || editingUser.id}
+              enableReinitialize
+              initialValues={{
+                name: editingUser.name || '',
+                title: editingUser.title || '',
+                email: editingUser.email || '',
+                ...(cannotChangeCompanyRoleInEdit(editingUser)
+                  ? {}
+                  : { role: pickAssignableRoleForEdit(editingUser) }),
+              }}
+              validate={validateEditUserForm(cannotChangeCompanyRoleInEdit(editingUser))}
+              validateOnChange={false}
+              validateOnBlur
+              onSubmit={async (values, { setStatus, setSubmitting }) => {
+                setStatus(undefined);
+                setError('');
+                setSuccess('');
+                const targetId = editingUser._id || editingUser.id;
+                const roleLocked = cannotChangeCompanyRoleInEdit(editingUser);
+                try {
+                  const payload = {
+                    name: values.name,
+                    title: values.title,
+                    email: values.email,
+                  };
+                  if (!roleLocked) payload.role = values.role;
+                  await userAPI.updateUser(targetId, payload);
+                  setSuccess(tx('userUpdated'));
+                  setOpenEditDialog(false);
+                  if (targetId === user?._id || targetId === user?.id) {
+                    const mergedUser = { ...user, ...payload };
+                    setProfileData({
+                      name: mergedUser.name || '',
+                      title: mergedUser.title || '',
+                      email: mergedUser.email || '',
+                    });
+                    updateUser(mergedUser);
+                  }
+                  setEditingUser(null);
+                  fetchUsers();
+                } catch (err) {
+                  setStatus(err.response?.data?.message || tx('userUpdateFailed'));
+                } finally {
+                  setSubmitting(false);
+                }
+              }}
+            >
+              {({ status, isSubmitting }) => (
+                <Form noValidate>
+                  <Modal.Header>
+                    <h2 className="text-2xl font-bold text-gray-800">{tx('editUser')}</h2>
+                  </Modal.Header>
+                  <Modal.Content>
+                    {status && (
+                      <div className="mb-4 rounded-app-input border border-app-error/35 bg-app-error/10 px-3 py-2.5 text-[13px] text-app-error">
+                        {status}
+                      </div>
+                    )}
+                    <div className="space-y-4">
+                      <Field name="name">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('name')}
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field name="title">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('title')}
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      <Field name="email">
+                        {({ field, meta }) => (
+                          <Input
+                            {...field}
+                            label={tx('email')}
+                            type="email"
+                            required
+                            error={meta.touched && meta.error ? meta.error : undefined}
+                            icon={
+                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            }
+                          />
+                        )}
+                      </Field>
+                      {cannotChangeCompanyRoleInEdit(editingUser) ? (
+                        <RoleDragDropSelect
+                          disabled
+                          label={tx('role')}
+                          disabledTitle={getRoleLabel(memberRoleForRow(editingUser))}
+                          disabledHint={tx('roleSelfLockedHint')}
+                        />
+                      ) : (
+                        <Field name="role">
+                          {({ field, form, meta }) => (
+                            <RoleDragDropSelect
+                              value={field.value}
+                              onChange={(v) => form.setFieldValue('role', v)}
+                              onBlur={field.onBlur}
+                              label={tx('role')}
+                              error={meta.touched && meta.error ? meta.error : undefined}
+                              disabled={false}
+                              labelForRole={labelAssignableRole}
+                              hintDropZone={tx('roleDropZone')}
+                              hintPool={tx('roleDragPool')}
+                              emptySlotLabel={tx('roleEmptySlot')}
+                              allowedRoles={rolesAssignableByInviter}
+                            />
+                          )}
+                        </Field>
+                      )}
+                    </div>
+                  </Modal.Content>
+                  <Modal.Footer>
+                    <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 justify-end">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setOpenEditDialog(false);
+                          setEditingUser(null);
+                        }}
+                        fullWidth
+                        className="sm:w-auto"
+                      >
+                        {tx('cancel')}
+                      </Button>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        disabled={isSubmitting}
+                        icon={isSubmitting ? <ButtonBusyDots className="text-white" /> : null}
+                        fullWidth
+                        className="sm:w-auto"
+                      >
+                        {isSubmitting ? tx('updating') : tx('updateUser')}
+                      </Button>
+                    </div>
+                  </Modal.Footer>
+                </Form>
+              )}
+            </Formik>
           </Modal>
         )}
 
@@ -999,8 +1170,8 @@ const Settings = () => {
                         <p className="text-sm text-gray-600 truncate">{userToDelete.title}</p>
                         <p className="text-sm text-gray-500 truncate">{userToDelete.email}</p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(userToDelete.role)}`}>
-                        {getRoleLabel(userToDelete.role)}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(memberRoleForRow(userToDelete))}`}>
+                        {getRoleLabel(memberRoleForRow(userToDelete))}
                       </span>
                     </div>
                   </div>

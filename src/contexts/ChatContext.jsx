@@ -62,6 +62,10 @@ export const ChatProvider = ({ children }) => {
     );
   }, []);
 
+  const handleConversationsChanged = useCallback(() => {
+    loadConversations({ silent: true });
+  }, [loadConversations]);
+
   const handleNewMessage = useCallback((data) => {
     const receivedConvId = data.conversationId?.toString();
     const newMsgId = (data?.message?._id ?? data?.message?.id)?.toString();
@@ -194,33 +198,56 @@ export const ChatProvider = ({ children }) => {
   }, [applyThreadReplyUpdate]);
 
   useEffect(() => {
-    if (user) {
-      loadConversations();
+    if (!user) return undefined;
 
-      const token = localStorage.getItem('token');
-      if (token) {
-        socketService.connect(token);
+    loadConversations();
 
-        const setupListener = () => {
-          socketService.on('new_chat_message', handleNewMessage);
-          socketService.on('message_updated', handleMessageUpdated);
-          socketService.on('message_deleted', handleMessageDeleted);
-          socketService.on('message_reaction_updated', handleReactionUpdated);
-          socketService.on('thread_reply', handleThreadReply);
-        };
+    const token = localStorage.getItem('token');
+    if (!token) return undefined;
 
-        setupListener();
-      }
+    const attachChatSocketHandlers = () => {
+      socketService.off('new_chat_message', handleNewMessage);
+      socketService.off('message_updated', handleMessageUpdated);
+      socketService.off('message_deleted', handleMessageDeleted);
+      socketService.off('message_reaction_updated', handleReactionUpdated);
+      socketService.off('thread_reply', handleThreadReply);
+      socketService.off('chat_conversations_changed', handleConversationsChanged);
 
-      return () => {
-        socketService.off('new_chat_message', handleNewMessage);
-        socketService.off('message_updated', handleMessageUpdated);
-        socketService.off('message_deleted', handleMessageDeleted);
-        socketService.off('message_reaction_updated', handleReactionUpdated);
-        socketService.off('thread_reply', handleThreadReply);
-      };
+      socketService.on('new_chat_message', handleNewMessage);
+      socketService.on('message_updated', handleMessageUpdated);
+      socketService.on('message_deleted', handleMessageDeleted);
+      socketService.on('message_reaction_updated', handleReactionUpdated);
+      socketService.on('thread_reply', handleThreadReply);
+      socketService.on('chat_conversations_changed', handleConversationsChanged);
+    };
+
+    const socket = socketService.connect(token);
+    attachChatSocketHandlers();
+    if (socket) {
+      socket.on('connect', attachChatSocketHandlers);
     }
-  }, [user, loadConversations, handleNewMessage, handleMessageUpdated, handleMessageDeleted, handleReactionUpdated, handleThreadReply]);
+
+    return () => {
+      if (socket) {
+        socket.off('connect', attachChatSocketHandlers);
+      }
+      socketService.off('new_chat_message', handleNewMessage);
+      socketService.off('message_updated', handleMessageUpdated);
+      socketService.off('message_deleted', handleMessageDeleted);
+      socketService.off('message_reaction_updated', handleReactionUpdated);
+      socketService.off('thread_reply', handleThreadReply);
+      socketService.off('chat_conversations_changed', handleConversationsChanged);
+    };
+  }, [
+    user,
+    loadConversations,
+    handleNewMessage,
+    handleMessageUpdated,
+    handleMessageDeleted,
+    handleReactionUpdated,
+    handleThreadReply,
+    handleConversationsChanged,
+  ]);
 
   useEffect(() => {
     if (!user) {
@@ -241,14 +268,17 @@ export const ChatProvider = ({ children }) => {
       }));
 
       // Update conversation preview locally to avoid full-list refetch on each send.
-      setConversations(prev => prev.map((conv) => {
-        if (conv._id?.toString() !== cid) return conv;
-        return {
-          ...conv,
-          lastMessage: newMessage,
-          lastMessageAt: newMessage.createdAt || new Date().toISOString(),
-        };
-      }));
+      setConversations((prev) =>
+        prev.map((conv) => {
+          const id = String(conv._id ?? conv.id);
+          if (id !== cid) return conv;
+          return {
+            ...conv,
+            lastMessage: newMessage,
+            lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+          };
+        })
+      );
 
       return newMessage;
     } catch (error) {
@@ -269,14 +299,17 @@ export const ChatProvider = ({ children }) => {
         [cid]: [...(prev[cid] || []), newMessage],
       }));
 
-      setConversations(prev => prev.map((conv) => {
-        if (conv._id?.toString() !== cid) return conv;
-        return {
-          ...conv,
-          lastMessage: newMessage,
-          lastMessageAt: newMessage.createdAt || new Date().toISOString(),
-        };
-      }));
+      setConversations((prev) =>
+        prev.map((conv) => {
+          const id = String(conv._id ?? conv.id);
+          if (id !== cid) return conv;
+          return {
+            ...conv,
+            lastMessage: newMessage,
+            lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+          };
+        })
+      );
 
       return newMessage;
     } catch (error) {
@@ -345,10 +378,12 @@ export const ChatProvider = ({ children }) => {
   }, [selectConversation]);
 
   const activeMessages = useMemo(() => {
-    if (!activeConversation?._id) return [];
-    const convId = activeConversation._id.toString();
+    if (!activeConversation) return [];
+    const rawId = activeConversation._id ?? activeConversation.id;
+    if (rawId == null || rawId === '') return [];
+    const convId = String(rawId);
     return messages[convId] || [];
-  }, [activeConversation?._id, messages]);
+  }, [activeConversation, messages]);
 
   const contextValue = useMemo(() => ({
     conversations,

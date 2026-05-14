@@ -103,6 +103,22 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
 
+  useEffect(() => {
+    if (String(import.meta.env?.VITE_DEBUG_CHAT_LIST || '').toLowerCase() !== 'true') return;
+    // eslint-disable-next-line no-console
+    console.log('[CHAT LIST RERENDER]', {
+      n: conversations?.length,
+      sample: (conversations || []).slice(0, 4).map((c) => ({
+        id: String(c._id ?? c.id),
+        lastMessageAt: c.lastMessageAt,
+        lastMessageAtType: typeof c.lastMessageAt,
+        lastMessageAtParsed: c.lastMessageAt != null ? Date.parse(String(c.lastMessageAt)) : null,
+        previewContent: c.lastMessage?.content ?? c.lastMessage?.text,
+        lastMessageKeys: c.lastMessage ? Object.keys(c.lastMessage) : [],
+      })),
+    });
+  }, [conversations]);
+
   const getOtherParticipant = (conversation) => {
     if (!conversation.participants || conversation.participants.length === 0) return null;
     
@@ -148,7 +164,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
 
     switch (message.type) {
       case 'text':
-        return `${prefix}${message.content || tx('message')}`;
+        return `${prefix}${(message.content ?? message.text ?? '').trim() || tx('message')}`;
       case 'image':
         return `${prefix}${tx('photo')}`;
       case 'video':
@@ -214,8 +230,9 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
   };
 
   const formatTime = (timestamp) => {
-    if (!timestamp) return '';
+    if (timestamp == null || timestamp === '') return '';
     const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) return '';
     const now = new Date();
     const diff = now - date;
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -252,6 +269,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
           conv.groupName?.toLowerCase().includes(searchLower) ||
           conv.project?.project_name?.toLowerCase().includes(searchLower) ||
           conv.lastMessage?.content?.toLowerCase().includes(searchLower) ||
+          conv.lastMessage?.text?.toLowerCase().includes(searchLower) ||
           conv.participants?.some(
             (p) =>
               (p?.name || '').toLowerCase().includes(searchLower) ||
@@ -263,13 +281,15 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
       return (
         other?.name?.toLowerCase().includes(searchLower) ||
         other?.email?.toLowerCase().includes(searchLower) ||
-        conv.lastMessage?.content?.toLowerCase().includes(searchLower)
+        conv.lastMessage?.content?.toLowerCase().includes(searchLower) ||
+        conv.lastMessage?.text?.toLowerCase().includes(searchLower)
       );
     });
   }, [segmentFiltered, searchQuery, user]);
 
-  // Get active conversation ID for highlighting
-  const activeConversationId = activeConversation?._id;
+  const activeConversationIdStr = activeConversation
+    ? String(activeConversation._id ?? activeConversation.id ?? '')
+    : '';
 
   return (
     <div className={`relative flex h-full min-h-0 flex-col overflow-hidden bg-app-background ${isRtl ? 'border-l' : 'border-r'} border-app-divider`}>
@@ -429,6 +449,7 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
         ) : (
           <div className="divide-y divide-app-divider px-2 pb-4 pt-1 sm:px-4">
             {filteredConversations.map((conversation) => {
+              const convKey = String(conversation._id ?? conversation.id ?? '');
               const isGroupChat = Boolean(conversation.isGroup);
               const isProjectGroup = isGroupChat && conversation.project;
               const displayName = isGroupChat
@@ -446,11 +467,12 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
                   )
                 : (getOtherParticipant(conversation)?.name?.charAt(0)?.toUpperCase() || '?');
               const unreadCount = conversation.unreadCount || 0;
-              const isActive = conversation._id === activeConversationId;
+              const isActive =
+                activeConversationIdStr !== '' && convKey === activeConversationIdStr;
 
               return (
                 <button
-                  key={conversation._id}
+                  key={convKey}
                   onClick={() => onSelectConversation(conversation)}
                   className={`
                     w-full p-4 transition-all duration-200 ${isRtl ? 'text-right' : 'text-left'}

@@ -10,6 +10,12 @@ import React, {
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/api';
 import socketService from '../services/socketService';
+import {
+  normalizeLastMessageForList,
+  messageSenderIdFromPayload,
+  sortConversationsByRecent,
+  logChatPreviewDebug,
+} from '../utils/chatConversationPreview';
 
 const ChatContext = createContext();
 
@@ -44,16 +50,6 @@ const normalizeMessageIdFromSocket = (message) => {
   return String(raw).trim();
 };
 
-/** Sender id for preview / unread (Mongo populate + Postgres map). */
-const messageSenderId = (msg) => {
-  if (!msg || typeof msg !== 'object') return '';
-  const s = msg.sender;
-  if (s && typeof s === 'object') return String(s._id ?? s.id ?? '').trim();
-  if (msg.senderId != null) return String(msg.senderId).trim();
-  if (typeof s === 'string') return String(s).trim();
-  return '';
-};
-
 export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -67,7 +63,17 @@ export const ChatProvider = ({ children }) => {
     try {
       if (!silent) setLoading(true);
       const response = await chatAPI.getConversations();
-      setConversations(response.data.conversations || []);
+      const raw = response.data.conversations || [];
+      const normalized = raw.map((c) => {
+        const cid = String(c._id ?? c.id);
+        let lm = null;
+        if (c.lastMessage) {
+          lm = normalizeLastMessageForList(c.lastMessage, cid);
+          if (!lm) lm = { ...c.lastMessage };
+        }
+        return { ...c, lastMessage: lm };
+      });
+      setConversations(sortConversationsByRecent(normalized));
     } catch (error) {
       console.error('Load conversations error:', error);
     } finally {
@@ -84,18 +90,32 @@ export const ChatProvider = ({ children }) => {
         ...prev,
         [cid]: msgs,
       }));
-      const newest = msgs.length ? msgs[msgs.length - 1] : null;
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (String(c._id ?? c.id) !== cid) return c;
+      const newestRaw = msgs.length ? msgs[msgs.length - 1] : null;
+      const newest = newestRaw ? normalizeLastMessageForList(newestRaw, cid) : null;
+      setConversations((prev) => {
+        const mapped = prev.map((c) => {
+          if (String(c._id ?? c.id) !== cid) return { ...c };
           const next = { ...c, unreadCount: 0 };
           if (newest) {
-            next.lastMessage = newest;
-            next.lastMessageAt = newest.createdAt || c.lastMessageAt;
+            next.lastMessage = { ...newest };
+            next.lastMessageAt = newest.createdAt;
           }
           return next;
-        })
-      );
+        });
+        return sortConversationsByRecent(mapped);
+      });
+      if (newest) {
+        setActiveConversation((cur) => {
+          if (!cur) return cur;
+          if (String(cur._id ?? cur.id) !== cid) return cur;
+          return {
+            ...cur,
+            lastMessage: { ...newest },
+            lastMessageAt: newest.createdAt,
+            unreadCount: 0,
+          };
+        });
+      }
     } catch (error) {
       console.error('Load messages error:', error);
     }
@@ -105,7 +125,7 @@ export const ChatProvider = ({ children }) => {
     const cid = String(conversationId);
     setConversations((prev) =>
       prev.map((c) =>
-        String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : c
+        String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : { ...c }
       )
     );
   }, []);
@@ -128,6 +148,15 @@ export const ChatProvider = ({ children }) => {
         return;
       }
 
+      const normalizedMsg = normalizeLastMessageForList(incoming, receivedConvId);
+      if (!normalizedMsg) return;
+
+      logChatPreviewDebug('[CHAT_PREVIEW] socket incoming → normalized', {
+        conversationId: receivedConvId,
+        incoming,
+        normalizedMsg,
+      });
+
       if (debugChatSocket) {
         // eslint-disable-next-line no-console
         console.log('[SOCKET RECEIVED] new_chat_message', {
@@ -145,15 +174,14 @@ export const ChatProvider = ({ children }) => {
         if (messageExists) {
           return prev;
         }
-        const newMessages = [...existingMessages, incoming];
         return {
           ...prev,
-          [receivedConvId]: newMessages,
+          [receivedConvId]: [...existingMessages, { ...normalizedMsg }],
         };
       });
 
       const myId = String(user?._id ?? user?.id ?? '').trim();
-      const senderId = messageSenderId(incoming);
+      const senderId = messageSenderIdFromPayload(normalizedMsg);
       const isFromMe = Boolean(myId && senderId && senderId === myId);
       const activeId = activeConversation
         ? String(activeConversation._id ?? activeConversation.id)
@@ -162,34 +190,53 @@ export const ChatProvider = ({ children }) => {
 
       setConversations((prev) => {
         const idx = prev.findIndex((c) => String(c._id ?? c.id) === receivedConvId);
-        if (idx === -1) return prev;
-
-        const c = prev[idx];
-        const lastPrevId = normalizeMessageIdFromSocket(c.lastMessage);
-        const duplicateListPreview = lastPrevId === newMsgId;
-
-        let nextUnread = typeof c.unreadCount === 'number' ? c.unreadCount : Number(c.unreadCount) || 0;
-        if (isFromMe) {
-          /* keep */
-        } else if (isActiveChat) {
-          nextUnread = 0;
-        } else if (!duplicateListPreview) {
-          nextUnread = (Number(nextUnread) || 0) + 1;
+        if (idx === -1) {
+          queueMicrotask(() => {
+            loadConversations({ silent: true });
+          });
+          return prev.map((c) => ({ ...c }));
         }
 
-        const updated = {
-          ...c,
-          lastMessage: incoming,
-          lastMessageAt: incoming.createdAt || new Date().toISOString(),
-          unreadCount: nextUnread,
-        };
-        const rest = prev.filter((_, i) => i !== idx);
-        return [updated, ...rest];
+        const mapped = prev.map((c) => {
+          const id = String(c._id ?? c.id);
+          if (id !== receivedConvId) return { ...c };
+
+          const lastPrevId = normalizeMessageIdFromSocket(c.lastMessage);
+          const duplicateListPreview = lastPrevId === newMsgId;
+
+          let nextUnread =
+            typeof c.unreadCount === 'number' ? c.unreadCount : Number(c.unreadCount) || 0;
+          if (isFromMe) {
+            /* keep */
+          } else if (isActiveChat) {
+            nextUnread = 0;
+          } else if (!duplicateListPreview) {
+            nextUnread = (Number(nextUnread) || 0) + 1;
+          }
+
+          return {
+            ...c,
+            lastMessage: { ...normalizedMsg },
+            lastMessageAt: normalizedMsg.createdAt,
+            unreadCount: nextUnread,
+          };
+        });
+
+        return sortConversationsByRecent(mapped);
       });
 
-      loadConversations({ silent: true });
+      setActiveConversation((cur) => {
+        if (!cur) return cur;
+        if (String(cur._id ?? cur.id) !== receivedConvId) return cur;
+        return {
+          ...cur,
+          lastMessage: { ...normalizedMsg },
+          lastMessageAt: normalizedMsg.createdAt,
+          unreadCount: isFromMe ? cur.unreadCount : 0,
+        };
+      });
     },
-    [loadConversations, user, activeConversation]
+    [user, activeConversation, loadConversations]
   );
 
   const handleMessageUpdated = useCallback((data) => {
@@ -426,23 +473,37 @@ export const ChatProvider = ({ children }) => {
       const response = await chatAPI.sendMessage(conversationId, content, replyTo, mentions);
       const newMessage = response.data.message;
       const cid = String(conversationId);
+      const norm =
+        normalizeLastMessageForList(newMessage, cid) ||
+        (newMessage && typeof newMessage === 'object' ? { ...newMessage } : null);
+      if (!norm) return newMessage;
 
       setMessages((prev) => ({
         ...prev,
-        [cid]: [...(prev[cid] || []), newMessage],
+        [cid]: [...(prev[cid] || []), { ...norm }],
       }));
 
-      setConversations((prev) =>
-        prev.map((conv) => {
-          const id = String(conv._id ?? conv.id);
-          if (id !== cid) return conv;
+      setConversations((prev) => {
+        const mapped = prev.map((c) => {
+          const id = String(c._id ?? c.id);
+          if (id !== cid) return { ...c };
           return {
-            ...conv,
-            lastMessage: newMessage,
-            lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+            ...c,
+            lastMessage: { ...norm },
+            lastMessageAt: norm.createdAt,
           };
-        })
-      );
+        });
+        return sortConversationsByRecent(mapped);
+      });
+
+      setActiveConversation((cur) => {
+        if (!cur || String(cur._id ?? cur.id) !== cid) return cur;
+        return {
+          ...cur,
+          lastMessage: { ...norm },
+          lastMessageAt: norm.createdAt,
+        };
+      });
 
       return newMessage;
     } catch (error) {
@@ -456,23 +517,37 @@ export const ChatProvider = ({ children }) => {
       const response = await chatAPI.sendFileMessage(conversationId, type, file, replyTo);
       const newMessage = response.data.message;
       const cid = String(conversationId);
+      const norm =
+        normalizeLastMessageForList(newMessage, cid) ||
+        (newMessage && typeof newMessage === 'object' ? { ...newMessage } : null);
+      if (!norm) return newMessage;
 
       setMessages((prev) => ({
         ...prev,
-        [cid]: [...(prev[cid] || []), newMessage],
+        [cid]: [...(prev[cid] || []), { ...norm }],
       }));
 
-      setConversations((prev) =>
-        prev.map((conv) => {
-          const id = String(conv._id ?? conv.id);
-          if (id !== cid) return conv;
+      setConversations((prev) => {
+        const mapped = prev.map((c) => {
+          const id = String(c._id ?? c.id);
+          if (id !== cid) return { ...c };
           return {
-            ...conv,
-            lastMessage: newMessage,
-            lastMessageAt: newMessage.createdAt || new Date().toISOString(),
+            ...c,
+            lastMessage: { ...norm },
+            lastMessageAt: norm.createdAt,
           };
-        })
-      );
+        });
+        return sortConversationsByRecent(mapped);
+      });
+
+      setActiveConversation((cur) => {
+        if (!cur || String(cur._id ?? cur.id) !== cid) return cur;
+        return {
+          ...cur,
+          lastMessage: { ...norm },
+          lastMessageAt: norm.createdAt,
+        };
+      });
 
       return newMessage;
     } catch (error) {

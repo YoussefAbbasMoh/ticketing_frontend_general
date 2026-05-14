@@ -49,7 +49,7 @@ const RegisterCompany = () => {
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/workspaces/new', { replace: true });
+      navigate('/', { replace: true });
     }
   }, [authLoading, user, navigate]);
 

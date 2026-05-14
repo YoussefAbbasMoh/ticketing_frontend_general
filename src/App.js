@@ -89,7 +89,7 @@ function AppRoutes() {
           loading ? (
             <RouteFallback />
           ) : user ? (
-            <Navigate to="/workspaces/new" replace />
+            <Navigate to="/" replace />
           ) : (
             <RegisterCompany />
           )

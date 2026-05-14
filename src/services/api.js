@@ -139,7 +139,29 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const status = error.response?.status;
-    const message = String(error.response?.data?.message || '').toLowerCase();
+    const rawMsg = String(error.response?.data?.message || '');
+    const message = rawMsg.toLowerCase();
+
+    /** JWT still points at a company the user was removed from */
+    if (status === 403 && message.includes('not a member of this company')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      const requestConfig = error.config || {};
+      const requestUrl = String(requestConfig.url || '');
+      const isBlobDownload =
+        requestConfig.responseType === 'blob' || requestUrl.includes('/admin/report');
+      if (isBlobDownload) {
+        return Promise.reject(error);
+      }
+      const nextLogin =
+        typeof window !== 'undefined' &&
+        String(window.location.pathname || '').toLowerCase().startsWith('/admin')
+          ? '/admin/login'
+          : '/login';
+      window.location.href = nextLogin;
+      return Promise.reject(error);
+    }
+
     const isAuthMessage =
       message.includes('invalid token') ||
       message.includes('expired token') ||

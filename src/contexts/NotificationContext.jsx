@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { useAuth } from './AuthContext';
 import socketService from '../services/socketService';
 import { getStoredLanguage } from '../i18n';
+import { decodeJwtPayload } from '../utils/jwt';
 
 const NotificationContext = createContext();
 
@@ -118,13 +119,14 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const audioRef = useRef(null);
   const chatAudioRef = useRef(null);
-  /** Must `off` with the same function reference — never `off('new_chat_message')` without handler (that strips ChatProvider listeners too). */
+  /** Must `off` with the same function reference */
   const chatMessageSocketHandlerRef = useRef(null);
+  const removedFromCompanyHandlerRef = useRef(null);
 
   useEffect(() => {
     // Create audio element for notification sound (tickets)
@@ -475,6 +477,34 @@ export const NotificationProvider = ({ children }) => {
         }
         chatMessageSocketHandlerRef.current = onNewChatMessageNotification;
         socketService.on('new_chat_message', onNewChatMessageNotification);
+
+        const onRemovedFromCompany = (data) => {
+          const cid = data?.companyId != null ? String(data.companyId) : '';
+          if (!cid) return;
+          let active = '';
+          try {
+            const tok = localStorage.getItem('token');
+            const p = decodeJwtPayload(tok);
+            if (p?.companyId != null) active = String(p.companyId);
+          } catch {
+            /* ignore */
+          }
+          if (!active && user?.activeCompanyId) {
+            active = String(user.activeCompanyId);
+          }
+          if (active && cid === active) {
+            logout();
+            const path = (window.location.pathname || '').toLowerCase();
+            if (!path.includes('/login')) {
+              window.location.href = '/login';
+            }
+          }
+        };
+        if (removedFromCompanyHandlerRef.current) {
+          socketService.off('removed_from_company', removedFromCompanyHandlerRef.current);
+        }
+        removedFromCompanyHandlerRef.current = onRemovedFromCompany;
+        socketService.on('removed_from_company', onRemovedFromCompany);
       }
     }
 
@@ -495,8 +525,12 @@ export const NotificationProvider = ({ children }) => {
         socketService.off('new_chat_message', chatMessageSocketHandlerRef.current);
         chatMessageSocketHandlerRef.current = null;
       }
+      if (removedFromCompanyHandlerRef.current) {
+        socketService.off('removed_from_company', removedFromCompanyHandlerRef.current);
+        removedFromCompanyHandlerRef.current = null;
+      }
     };
-  }, [user]);
+  }, [user, logout]);
 
   const markAsRead = (notificationId) => {
     setNotifications(prev =>

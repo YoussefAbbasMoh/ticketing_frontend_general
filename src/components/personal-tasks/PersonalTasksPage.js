@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { userAPI, getAxiosErrorMessage } from '../../services/api';
 import { getStoredLanguage, t } from '../../i18n';
 import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
+import PersonalTaskTimer from './PersonalTaskTimer';
+import { removeTimerState } from '../../utils/personalTaskTimerStorage';
 
 const COLUMNS = ['backlog', 'this_week', 'today', 'done'];
 
@@ -16,22 +18,6 @@ const columnLabelKey = (col) => {
 };
 
 const taskId = (task) => String(task?._id ?? task?.id ?? '');
-
-const clampTimerMinutes = (v) => {
-  const n = Math.round(Number(v));
-  if (!Number.isFinite(n)) return 25;
-  return Math.min(1440, Math.max(1, n));
-};
-
-/** Signed seconds → display; past zero shows negative (e.g. -1:05). */
-const formatSignedTimer = (totalSeconds) => {
-  const neg = totalSeconds < 0;
-  const abs = Math.abs(Math.trunc(totalSeconds));
-  const mm = Math.floor(abs / 60);
-  const ss = abs % 60;
-  const body = `${mm}:${String(ss).padStart(2, '0')}`;
-  return neg ? `-${body}` : body;
-};
 
 const PersonalTasksPage = () => {
   const [lang, setLang] = useState(getStoredLanguage());
@@ -52,30 +38,6 @@ const PersonalTasksPage = () => {
   const [editTitle, setEditTitle] = useState('');
   const [editMinutes, setEditMinutes] = useState(30);
   const [editSaving, setEditSaving] = useState(false);
-
-  const [timerMinutes, setTimerMinutes] = useState(25);
-  const [timerSecondsLeft, setTimerSecondsLeft] = useState(25 * 60);
-  const [timerRunning, setTimerRunning] = useState(false);
-  const tickRef = useRef(null);
-
-  useEffect(() => {
-    if (!timerRunning) {
-      if (tickRef.current != null) {
-        clearInterval(tickRef.current);
-        tickRef.current = null;
-      }
-      return undefined;
-    }
-    tickRef.current = window.setInterval(() => {
-      setTimerSecondsLeft((prev) => prev - 1);
-    }, 1000);
-    return () => {
-      if (tickRef.current != null) {
-        clearInterval(tickRef.current);
-        tickRef.current = null;
-      }
-    };
-  }, [timerRunning]);
 
   const byColumn = useMemo(() => {
     const m = Object.fromEntries(COLUMNS.map((c) => [c, []]));
@@ -112,21 +74,6 @@ const PersonalTasksPage = () => {
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2500);
-  };
-
-  const applyTimerMinutesInput = (raw) => {
-    const c = clampTimerMinutes(raw);
-    setTimerMinutes(c);
-    if (!timerRunning) {
-      setTimerSecondsLeft(c * 60);
-    }
-  };
-
-  const handleTimerReset = () => {
-    setTimerRunning(false);
-    const c = clampTimerMinutes(timerMinutes);
-    setTimerMinutes(c);
-    setTimerSecondsLeft(c * 60);
   };
 
   const openAdd = (column) => {
@@ -198,6 +145,7 @@ const PersonalTasksPage = () => {
     if (!window.confirm(t(lang, 'deleteTask') + '?')) return;
     try {
       await userAPI.deletePersonalTask(id);
+      removeTimerState(id);
       setTasks((prev) => prev.filter((x) => taskId(x) !== id));
       showToast(t(lang, 'taskDeleted'));
     } catch (err) {
@@ -274,72 +222,6 @@ const PersonalTasksPage = () => {
       <div className="border-b border-app-divider bg-app-surface px-4 py-4 sm:px-6">
         <h1 className="text-xl font-bold text-app-text sm:text-2xl">{t(lang, 'personalTasks')}</h1>
         <p className="mt-1 text-sm text-app-text-secondary">{t(lang, 'personalTasksSubtitle')}</p>
-
-        <div className="mt-4 max-w-xl rounded-app border border-app-divider bg-app-background px-4 py-3 shadow-sm sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-app-text-tertiary">
-                {t(lang, 'tasksTimerTitle')}
-              </p>
-              <p className="mt-1 text-xs text-app-text-secondary">{t(lang, 'tasksTimerSubtitle')}</p>
-            </div>
-            <div
-              className={`font-mono text-3xl font-bold tabular-nums sm:text-4xl ${
-                timerSecondsLeft < 0 ? 'text-app-error' : 'text-app-text'
-              }`}
-              aria-live="polite"
-            >
-              {formatSignedTimer(timerSecondsLeft)}
-              {timerSecondsLeft < 0 && (
-                <span className="ms-2 text-xs font-semibold normal-case text-app-error sm:text-sm">
-                  ({t(lang, 'tasksTimerOverrun')})
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <label className="flex min-w-0 flex-1 flex-col text-xs font-medium text-app-text-secondary sm:max-w-[140px]">
-              {t(lang, 'tasksTimerDuration')}
-              <input
-                type="number"
-                min={1}
-                max={1440}
-                disabled={timerRunning}
-                className="mt-1 w-full rounded-app-input border border-app-border bg-app-surface px-2 py-1.5 text-sm text-app-text disabled:opacity-50"
-                value={timerMinutes}
-                onChange={(e) => applyTimerMinutesInput(e.target.value)}
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {timerRunning ? (
-                <button
-                  type="button"
-                  onClick={() => setTimerRunning(false)}
-                  className="rounded-app-input border border-app-border bg-app-surface-variant px-4 py-2 text-sm font-semibold text-app-text hover:bg-app-primary/[0.08]"
-                >
-                  {t(lang, 'tasksTimerPause')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setTimerRunning(true)}
-                  className="rounded-app-input bg-app-primary px-4 py-2 text-sm font-semibold text-app-on-primary shadow-app-soft hover:opacity-95"
-                >
-                  {timerSecondsLeft === clampTimerMinutes(timerMinutes) * 60
-                    ? t(lang, 'tasksTimerStart')
-                    : t(lang, 'tasksTimerResume')}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleTimerReset}
-                className="rounded-app-input border border-app-divider bg-app-surface px-4 py-2 text-sm font-semibold text-app-text-secondary hover:bg-app-surface-variant"
-              >
-                {t(lang, 'tasksTimerReset')}
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div className="flex-1 overflow-auto p-4 sm:p-6">
@@ -407,6 +289,12 @@ const PersonalTasksPage = () => {
                       <p className="mt-1 text-xs text-app-text-secondary">
                         ~{task.estimated_minutes} {t(lang, 'minuteAbbrev')}
                       </p>
+                      <PersonalTaskTimer
+                        taskId={id}
+                        estimatedMinutes={task.estimated_minutes}
+                        column={col}
+                        lang={lang}
+                      />
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
                           type="button"

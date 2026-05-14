@@ -255,6 +255,8 @@ const dictionaries = {
     tasksTimerResume: 'Resume',
     tasksTimerReset: 'Reset',
     tasksTimerOverrun: 'Over time',
+    taskCardTimerLabel: 'Timer',
+    taskTimerStoppedDone: 'Timer paused (done)',
   },
   ar: {
     appTitle: 'نظام إدارة التذاكر',
@@ -513,6 +515,8 @@ const dictionaries = {
     tasksTimerResume: 'متابعة',
     tasksTimerReset: 'إعادة ضبط',
     tasksTimerOverrun: 'تجاوز الوقت',
+    taskCardTimerLabel: 'المؤقت',
+    taskTimerStoppedDone: 'المؤقت متوقف (منجزة)',
     enterYourPassword: 'أدخل كلمة المرور',
     confirmYourPassword: 'تأكيد كلمة المرور',
   }

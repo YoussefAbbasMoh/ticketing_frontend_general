@@ -26,6 +26,30 @@ class SocketService {
     this.isConnected = false;
   }
 
+  /** Idempotent: logs connect / disconnect / reconnect / connect_error when VITE_DEBUG_CHAT_SOCKET=true */
+  attachChatDebugLogging() {
+    const on = String(import.meta.env?.VITE_DEBUG_CHAT_SOCKET || '').toLowerCase() === 'true';
+    if (!on || !this.socket || this.socket.__absaiChatDebugInstalled) return;
+    this.socket.__absaiChatDebugInstalled = true;
+    const tag = '[SOCKET LIFECYCLE]';
+    this.socket.on('connect', () => {
+      // eslint-disable-next-line no-console
+      console.log(tag, 'connect', { id: this.socket?.id, transport: this.socket?.io?.engine?.transport?.name });
+    });
+    this.socket.on('disconnect', (reason) => {
+      // eslint-disable-next-line no-console
+      console.log(tag, 'disconnect', reason);
+    });
+    this.socket.io?.on?.('reconnect', (attempt) => {
+      // eslint-disable-next-line no-console
+      console.log(tag, 'reconnect', { attempt });
+    });
+    this.socket.on('connect_error', (err) => {
+      // eslint-disable-next-line no-console
+      console.log(tag, 'connect_error', err?.message || err);
+    });
+  }
+
   connect(token) {
     if (this.socket?.connected) {
       if (isDev) console.log('Socket already connected, reusing...');

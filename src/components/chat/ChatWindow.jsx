@@ -80,8 +80,8 @@ const ChatWindow = ({ conversation, onBack }) => {
     }
   }, [conversationId, loadMessages, markAsRead]);
 
-  // REST + Socket.IO can land on different serverless instances (e.g. Vercel), so live emits may never
-  // arrive; poll lightly while this thread is open. Set VITE_CHAT_MESSAGE_POLL_MS=0 to disable.
+  // REST + Socket.IO can land on different serverless instances (e.g. Vercel) unless REDIS_URL + adapter is set.
+  // Poll lightly while this thread is open. Set VITE_CHAT_MESSAGE_POLL_MS=0 to disable.
   useEffect(() => {
     if (!conversationId) return undefined;
     const raw = import.meta.env?.VITE_CHAT_MESSAGE_POLL_MS;
@@ -92,8 +92,14 @@ const ChatWindow = ({ conversation, onBack }) => {
         : 4000;
     if (!Number.isFinite(ms) || ms <= 0) return undefined;
 
+    const pollDebug = String(import.meta.env?.VITE_DEBUG_CHAT_POLL || '').toLowerCase() === 'true';
+
     const id = setInterval(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      if (pollDebug) {
+        // eslint-disable-next-line no-console
+        console.log('[CHAT_POLL] loadMessages', { conversationId: String(conversationId), at: new Date().toISOString() });
+      }
       loadMessages(conversationId);
     }, ms);
     return () => clearInterval(id);
@@ -102,7 +108,7 @@ const ChatWindow = ({ conversation, onBack }) => {
   // ... (keeping existing scroll logic) ...
   // Auto-scroll to bottom when conversation opens and messages are available
   useEffect(() => {
-    if (conversation?._id && messages.length > 0 && !loading) {
+    if (conversationId && messages.length > 0 && !loading) {
       // Wait for images to load before scrolling
       const timer = setTimeout(() => {
         scrollToBottom('auto');
@@ -113,7 +119,7 @@ const ChatWindow = ({ conversation, onBack }) => {
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, [conversation?._id, messages.length, loading]);
+  }, [conversationId, messages.length, loading]);
 
   // Scroll to bottom when new messages arrive (only if already near bottom)
   useEffect(() => {

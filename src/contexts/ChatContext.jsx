@@ -1,9 +1,21 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/api';
 import socketService from '../services/socketService';
 
 const ChatContext = createContext();
+
+const debugChatSocket =
+  typeof import.meta !== 'undefined' &&
+  String(import.meta.env?.VITE_DEBUG_CHAT_SOCKET || '').toLowerCase() === 'true';
 
 export const useChat = () => {
   const context = useContext(ChatContext);
@@ -11,6 +23,25 @@ export const useChat = () => {
     throw new Error('useChat must be used within ChatProvider');
   }
   return context;
+};
+
+/** Normalize conversation id from socket payloads (ObjectId, string, nested). */
+const normalizeConversationIdFromSocket = (data) => {
+  if (!data || typeof data !== 'object') return '';
+  const raw =
+    data.conversationId ??
+    data.conversation_id ??
+    data.message?.conversation ??
+    data.message?.conversationId;
+  if (raw == null || raw === '') return '';
+  return String(raw).trim();
+};
+
+const normalizeMessageIdFromSocket = (message) => {
+  if (!message || typeof message !== 'object') return '';
+  const raw = message._id ?? message.id;
+  if (raw == null || raw === '') return '';
+  return String(raw).trim();
 };
 
 export const ChatProvider = ({ children }) => {
@@ -42,7 +73,6 @@ export const ChatProvider = ({ children }) => {
         ...prev,
         [cid]: response.data.messages || [],
       }));
-      // GET /messages marks read server-side; mirror in list state so badges clear without a full refetch.
       setConversations((prev) =>
         prev.map((c) =>
           String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : c
@@ -67,14 +97,29 @@ export const ChatProvider = ({ children }) => {
   }, [loadConversations]);
 
   const handleNewMessage = useCallback((data) => {
-    const receivedConvId = data.conversationId?.toString();
-    const newMsgId = (data?.message?._id ?? data?.message?.id)?.toString();
-    if (!receivedConvId || !newMsgId) return;
+    const receivedConvId = normalizeConversationIdFromSocket(data);
+    const newMsgId = normalizeMessageIdFromSocket(data?.message);
+    if (!receivedConvId) return;
+    if (!newMsgId) {
+      if (debugChatSocket) {
+        // eslint-disable-next-line no-console
+        console.warn('[SOCKET RECEIVED] new_chat_message missing message id — skip state merge', data);
+      }
+      return;
+    }
+
+    if (debugChatSocket) {
+      // eslint-disable-next-line no-console
+      console.log('[SOCKET RECEIVED] new_chat_message', {
+        conversationId: receivedConvId,
+        messageId: newMsgId,
+      });
+    }
 
     setMessages((prev) => {
       const existingMessages = prev[receivedConvId] || [];
       const messageExists = existingMessages.some((msg) => {
-        const msgId = (msg._id ?? msg.id)?.toString();
+        const msgId = normalizeMessageIdFromSocket(msg);
         return msgId === newMsgId;
       });
       if (messageExists) {
@@ -87,21 +132,24 @@ export const ChatProvider = ({ children }) => {
       };
     });
 
-    // Refresh previews + unread without toggling global chat loading (avoids list flicker).
     loadConversations({ silent: true });
   }, [loadConversations]);
 
-
   const handleMessageUpdated = useCallback((data) => {
     const { conversationId, message } = data;
-    const convId = conversationId?.toString();
-    const mid = (message?._id ?? message?.id)?.toString();
+    const convId = conversationId != null ? String(conversationId) : '';
+    const mid = normalizeMessageIdFromSocket(message);
     if (!convId || !mid) return;
+
+    if (debugChatSocket) {
+      // eslint-disable-next-line no-console
+      console.log('[SOCKET RECEIVED] message_updated', { conversationId: convId, messageId: mid });
+    }
 
     setMessages((prev) => {
       const existingMessages = prev[convId] || [];
       const updatedMessages = existingMessages.map((msg) =>
-        (msg._id ?? msg.id)?.toString() === mid ? { ...msg, ...message } : msg
+        normalizeMessageIdFromSocket(msg) === mid ? { ...msg, ...message } : msg
       );
       return {
         ...prev,
@@ -112,14 +160,19 @@ export const ChatProvider = ({ children }) => {
 
   const handleMessageDeleted = useCallback((data) => {
     const { conversationId, messageId } = data;
-    const convId = conversationId?.toString();
-    const mid = messageId?.toString();
+    const convId = conversationId != null ? String(conversationId) : '';
+    const mid = messageId != null ? String(messageId) : '';
     if (!convId || !mid) return;
+
+    if (debugChatSocket) {
+      // eslint-disable-next-line no-console
+      console.log('[SOCKET RECEIVED] message_deleted', { conversationId: convId, messageId: mid });
+    }
 
     setMessages((prev) => {
       const existingMessages = prev[convId] || [];
       const updatedMessages = existingMessages.map((msg) =>
-        (msg._id ?? msg.id)?.toString() === mid
+        normalizeMessageIdFromSocket(msg) === mid
           ? {
               ...msg,
               isDeleted: true,
@@ -139,14 +192,19 @@ export const ChatProvider = ({ children }) => {
 
   const handleReactionUpdated = useCallback((data) => {
     const { conversationId, messageId, reactions } = data;
-    const convId = conversationId?.toString();
-    const mid = messageId?.toString();
+    const convId = conversationId != null ? String(conversationId) : '';
+    const mid = messageId != null ? String(messageId) : '';
     if (!convId || !mid) return;
+
+    if (debugChatSocket) {
+      // eslint-disable-next-line no-console
+      console.log('[SOCKET RECEIVED] message_reaction_updated', { conversationId: convId, messageId: mid });
+    }
 
     setMessages((prev) => {
       const existingMessages = prev[convId] || [];
       const updatedMessages = existingMessages.map((msg) =>
-        (msg._id ?? msg.id)?.toString() === mid ? { ...msg, reactions } : msg
+        normalizeMessageIdFromSocket(msg) === mid ? { ...msg, reactions } : msg
       );
       return {
         ...prev,
@@ -156,27 +214,29 @@ export const ChatProvider = ({ children }) => {
   }, []);
 
   const applyThreadReplyUpdate = useCallback((conversationId, parentMessageId, threadMessage, threadCount) => {
-    const convId = conversationId?.toString();
-    const parentId = parentMessageId?.toString();
+    const convId = conversationId != null ? String(conversationId) : '';
+    const parentId = parentMessageId != null ? String(parentMessageId) : '';
     if (!convId || !parentId) return;
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const existingMessages = prev[convId] || [];
       if (!existingMessages.length) return prev;
 
       const updatedMessages = existingMessages.map((msg) => {
-        const msgId = (msg?._id ?? msg?.id)?.toString();
+        const msgId = normalizeMessageIdFromSocket(msg);
         if (msgId !== parentId) return msg;
 
         const previousReplies = Array.isArray(msg.threadReplies) ? msg.threadReplies : [];
-        const incomingReplyId = (threadMessage?._id ?? threadMessage?.id)?.toString();
+        const incomingReplyId = normalizeMessageIdFromSocket(threadMessage);
         const alreadyIncluded = incomingReplyId
-          ? previousReplies.some((r) => (r?._id ?? r?.id)?.toString() === incomingReplyId)
+          ? previousReplies.some((r) => normalizeMessageIdFromSocket(r) === incomingReplyId)
           : false;
 
         const nextReplies = alreadyIncluded
           ? previousReplies
-          : (threadMessage ? [...previousReplies, threadMessage] : previousReplies);
+          : threadMessage
+            ? [...previousReplies, threadMessage]
+            : previousReplies;
 
         return {
           ...msg,
@@ -194,8 +254,46 @@ export const ChatProvider = ({ children }) => {
 
   const handleThreadReply = useCallback((data) => {
     if (!data) return;
+    if (debugChatSocket) {
+      // eslint-disable-next-line no-console
+      console.log('[SOCKET RECEIVED] thread_reply', {
+        conversationId: data.conversationId,
+        parentMessageId: data.parentMessageId,
+      });
+    }
     applyThreadReplyUpdate(data.conversationId, data.parentMessageId, data.message, data.threadCount);
   }, [applyThreadReplyUpdate]);
+
+  const handleConversationsChangedStable = useCallback(() => {
+    loadConversations({ silent: true });
+  }, [loadConversations]);
+
+  const handlersRef = useRef({
+    handleNewMessage,
+    handleMessageUpdated,
+    handleMessageDeleted,
+    handleReactionUpdated,
+    handleThreadReply,
+    handleConversationsChanged: handleConversationsChangedStable,
+  });
+
+  useEffect(() => {
+    handlersRef.current = {
+      handleNewMessage,
+      handleMessageUpdated,
+      handleMessageDeleted,
+      handleReactionUpdated,
+      handleThreadReply,
+      handleConversationsChanged: handleConversationsChangedStable,
+    };
+  }, [
+    handleNewMessage,
+    handleMessageUpdated,
+    handleMessageDeleted,
+    handleReactionUpdated,
+    handleThreadReply,
+    handleConversationsChangedStable,
+  ]);
 
   useEffect(() => {
     if (!user) return undefined;
@@ -205,23 +303,43 @@ export const ChatProvider = ({ children }) => {
     const token = localStorage.getItem('token');
     if (!token) return undefined;
 
-    const attachChatSocketHandlers = () => {
-      socketService.off('new_chat_message', handleNewMessage);
-      socketService.off('message_updated', handleMessageUpdated);
-      socketService.off('message_deleted', handleMessageDeleted);
-      socketService.off('message_reaction_updated', handleReactionUpdated);
-      socketService.off('thread_reply', handleThreadReply);
-      socketService.off('chat_conversations_changed', handleConversationsChanged);
+    const onNewChatMessage = (data) => {
+      handlersRef.current.handleNewMessage(data);
+    };
+    const onMessageUpdated = (data) => {
+      handlersRef.current.handleMessageUpdated(data);
+    };
+    const onMessageDeleted = (data) => {
+      handlersRef.current.handleMessageDeleted(data);
+    };
+    const onReactionUpdated = (data) => {
+      handlersRef.current.handleReactionUpdated(data);
+    };
+    const onThreadReply = (data) => {
+      handlersRef.current.handleThreadReply(data);
+    };
+    const onConversationsChanged = () => {
+      handlersRef.current.handleConversationsChanged();
+    };
 
-      socketService.on('new_chat_message', handleNewMessage);
-      socketService.on('message_updated', handleMessageUpdated);
-      socketService.on('message_deleted', handleMessageDeleted);
-      socketService.on('message_reaction_updated', handleReactionUpdated);
-      socketService.on('thread_reply', handleThreadReply);
-      socketService.on('chat_conversations_changed', handleConversationsChanged);
+    const attachChatSocketHandlers = () => {
+      socketService.off('new_chat_message', onNewChatMessage);
+      socketService.off('message_updated', onMessageUpdated);
+      socketService.off('message_deleted', onMessageDeleted);
+      socketService.off('message_reaction_updated', onReactionUpdated);
+      socketService.off('thread_reply', onThreadReply);
+      socketService.off('chat_conversations_changed', onConversationsChanged);
+
+      socketService.on('new_chat_message', onNewChatMessage);
+      socketService.on('message_updated', onMessageUpdated);
+      socketService.on('message_deleted', onMessageDeleted);
+      socketService.on('message_reaction_updated', onReactionUpdated);
+      socketService.on('thread_reply', onThreadReply);
+      socketService.on('chat_conversations_changed', onConversationsChanged);
     };
 
     const socket = socketService.connect(token);
+    socketService.attachChatDebugLogging();
     attachChatSocketHandlers();
     if (socket) {
       socket.on('connect', attachChatSocketHandlers);
@@ -231,23 +349,14 @@ export const ChatProvider = ({ children }) => {
       if (socket) {
         socket.off('connect', attachChatSocketHandlers);
       }
-      socketService.off('new_chat_message', handleNewMessage);
-      socketService.off('message_updated', handleMessageUpdated);
-      socketService.off('message_deleted', handleMessageDeleted);
-      socketService.off('message_reaction_updated', handleReactionUpdated);
-      socketService.off('thread_reply', handleThreadReply);
-      socketService.off('chat_conversations_changed', handleConversationsChanged);
+      socketService.off('new_chat_message', onNewChatMessage);
+      socketService.off('message_updated', onMessageUpdated);
+      socketService.off('message_deleted', onMessageDeleted);
+      socketService.off('message_reaction_updated', onReactionUpdated);
+      socketService.off('thread_reply', onThreadReply);
+      socketService.off('chat_conversations_changed', onConversationsChanged);
     };
-  }, [
-    user,
-    loadConversations,
-    handleNewMessage,
-    handleMessageUpdated,
-    handleMessageDeleted,
-    handleReactionUpdated,
-    handleThreadReply,
-    handleConversationsChanged,
-  ]);
+  }, [user, loadConversations]);
 
   useEffect(() => {
     if (!user) {
@@ -261,13 +370,11 @@ export const ChatProvider = ({ children }) => {
       const newMessage = response.data.message;
       const cid = String(conversationId);
 
-      // Add message to local state
       setMessages((prev) => ({
         ...prev,
         [cid]: [...(prev[cid] || []), newMessage],
       }));
 
-      // Update conversation preview locally to avoid full-list refetch on each send.
       setConversations((prev) =>
         prev.map((conv) => {
           const id = String(conv._id ?? conv.id);
@@ -293,7 +400,6 @@ export const ChatProvider = ({ children }) => {
       const newMessage = response.data.message;
       const cid = String(conversationId);
 
-      // Add message to local state
       setMessages((prev) => ({
         ...prev,
         [cid]: [...(prev[cid] || []), newMessage],
@@ -328,7 +434,6 @@ export const ChatProvider = ({ children }) => {
     setActiveConversation(conversation);
     markAsRead(convId);
 
-    // Load messages if not already loaded (ChatWindow also loads on open — avoids empty state flash).
     if (!messages[convId] || messages[convId].length === 0) {
       await loadMessages(rawId);
     }
@@ -339,7 +444,6 @@ export const ChatProvider = ({ children }) => {
       const response = await chatAPI.getOrCreateConversation(participantId);
       const conversation = response.data.conversation;
 
-      // Add to conversations if not exists
       setConversations((prev) => {
         const nid = String(conversation._id ?? conversation.id);
         const exists = prev.some((c) => String(c._id ?? c.id) === nid);
@@ -359,7 +463,6 @@ export const ChatProvider = ({ children }) => {
       const response = await chatAPI.getProjectConversation(projectId);
       const conversation = response.data.conversation;
 
-      // Add to conversations if not exists
       setConversations((prev) => {
         const nid = String(conversation._id ?? conversation.id);
         const exists = prev.some((c) => String(c._id ?? c.id) === nid);
@@ -367,7 +470,6 @@ export const ChatProvider = ({ children }) => {
         return [conversation, ...prev];
       });
 
-      // Select the conversation
       await selectConversation(conversation);
 
       return conversation;
@@ -385,46 +487,42 @@ export const ChatProvider = ({ children }) => {
     return messages[convId] || [];
   }, [activeConversation, messages]);
 
-  const contextValue = useMemo(() => ({
-    conversations,
-    activeConversation,
-    messages: activeMessages,
-    loading,
-    isOpen,
-    setIsOpen,
-    loadConversations,
-    loadMessages,
-    markAsRead,
-    sendMessage,
-    sendFileMessage,
-    selectConversation,
-    getOrCreateConversation,
-    getProjectConversation,
-    setActiveConversation,
-    applyThreadReplyUpdate
-  }), [
-    conversations,
-    activeConversation,
-    activeMessages,
-    loading,
-    isOpen,
-    loadConversations,
-    loadMessages,
-    markAsRead,
-    sendMessage,
-    sendFileMessage,
-    selectConversation,
-    getOrCreateConversation,
-    getProjectConversation,
-    applyThreadReplyUpdate
-  ]);
-
-  return (
-    <ChatContext.Provider
-      value={contextValue}
-    >
-      {children}
-    </ChatContext.Provider>
+  const contextValue = useMemo(
+    () => ({
+      conversations,
+      activeConversation,
+      messages: activeMessages,
+      loading,
+      isOpen,
+      setIsOpen,
+      loadConversations,
+      loadMessages,
+      markAsRead,
+      sendMessage,
+      sendFileMessage,
+      selectConversation,
+      getOrCreateConversation,
+      getProjectConversation,
+      setActiveConversation,
+      applyThreadReplyUpdate,
+    }),
+    [
+      conversations,
+      activeConversation,
+      activeMessages,
+      loading,
+      isOpen,
+      loadConversations,
+      loadMessages,
+      markAsRead,
+      sendMessage,
+      sendFileMessage,
+      selectConversation,
+      getOrCreateConversation,
+      getProjectConversation,
+      applyThreadReplyUpdate,
+    ]
   );
-};
 
+  return <ChatContext.Provider value={contextValue}>{children}</ChatContext.Provider>;
+};

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authAPI, refreshAccessToken } from '../services/api';
 import { decodeJwtPayload, getJwtExpiresAtMs, isJwtExpired } from '../utils/jwt';
 
@@ -9,6 +9,36 @@ const readTokenCompanyId = (token) => {
   if (!payload) return null;
   return payload.companyId ? String(payload.companyId) : null;
 };
+
+/** Restore session on first paint so protected routes and auth gates never flash the wrong UI. */
+function readInitialAuth() {
+  if (typeof localStorage === 'undefined') {
+    return { user: null, loading: false };
+  }
+  const token = localStorage.getItem('token');
+  const userData = localStorage.getItem('user');
+
+  if (token && isJwtExpired(token, 0)) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    return { user: null, loading: false };
+  }
+
+  if (token && userData) {
+    try {
+      let parsed = JSON.parse(userData);
+      const fromToken = readTokenCompanyId(token);
+      if (fromToken && !parsed.activeCompanyId) {
+        parsed = { ...parsed, activeCompanyId: fromToken };
+      }
+      return { user: parsed, loading: false };
+    } catch {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+  }
+  return { user: null, loading: false };
+}
 
 /** Login sends `companyId`; profile/DB may use `company` or populated `{ _id }`. */
 const memberCompanyId = (entry) => {
@@ -28,35 +58,9 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-
-    if (token && isJwtExpired(token, 0)) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setLoading(false);
-      return;
-    }
-
-    if (token && userData) {
-      try {
-        let parsed = JSON.parse(userData);
-        const fromToken = readTokenCompanyId(token);
-        if (fromToken && !parsed.activeCompanyId) {
-          parsed = { ...parsed, activeCompanyId: fromToken };
-        }
-        setUser(parsed);
-      } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      }
-    }
-    setLoading(false);
-  }, []);
+  const initialAuth = useMemo(() => readInitialAuth(), []);
+  const [user, setUser] = useState(initialAuth.user);
+  const loading = initialAuth.loading;
 
   const logout = useCallback(() => {
     setUser(null);
@@ -122,7 +126,20 @@ export const AuthProvider = ({ children }) => {
       throw new Error('No token returned from switch-company');
     }
 
-    const nextUser = user ? { ...user, activeCompanyId: nextCompanyId } : user;
+    const list = response?.data?.companies;
+    const nextUserName =
+      typeof response?.data?.userName === 'string' && response.data.userName.trim()
+        ? response.data.userName.trim()
+        : null;
+
+    const nextUser = user
+      ? {
+          ...user,
+          activeCompanyId: nextCompanyId,
+          ...(Array.isArray(list) ? { companies: list } : {}),
+          ...(nextUserName ? { name: nextUserName } : {}),
+        }
+      : user;
     if (nextUser) {
       setUser(nextUser);
       localStorage.setItem('user', JSON.stringify(nextUser));
@@ -167,7 +184,7 @@ export const AuthProvider = ({ children }) => {
     const activeId = resolveActiveCompanyId();
     if (!user?.companies?.length || !activeId) return false;
     const m = user.companies.find((c) => memberCompanyId(c) === activeId);
-    return Boolean(m?.isOwner);
+    return Boolean(m?.isOwner) || String(m?.companyRole || '').toLowerCase() === 'owner';
   };
 
   /** Same rules as API: owner or company admin/manager in the active workspace. */

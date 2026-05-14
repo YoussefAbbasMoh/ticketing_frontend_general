@@ -1,9 +1,11 @@
 import React, { useMemo } from 'react';
 import AddRounded from '@mui/icons-material/AddRounded';
 import ChatRounded from '@mui/icons-material/ChatRounded';
+import BusinessOutlined from '@mui/icons-material/BusinessOutlined';
 import CheckCircleOutlineRounded from '@mui/icons-material/CheckCircleOutlineRounded';
 import RadioButtonUncheckedRounded from '@mui/icons-material/RadioButtonUncheckedRounded';
 import Button from '../ui/Button';
+import { t } from '../../i18n';
 
 const TEXT = {
   en: {
@@ -57,6 +59,7 @@ const WorkspaceWelcome = ({
   isAdmin,
   onChat,
   onNewProject,
+  onNewWorkspace,
   isRtl,
 }) => {
   const tx = (key) => TEXT[lang]?.[key] || TEXT.en[key] || key;
@@ -101,35 +104,10 @@ const WorkspaceWelcome = ({
         <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wide text-app-text-secondary">
           {dateLine}
         </p>
-      </div>
 
-      <div className={`flex flex-col items-stretch gap-3 sm:items-end ${isRtl ? 'sm:items-start' : ''}`}>
-        {isAdmin && (
-          <div className={`flex flex-wrap gap-2 sm:justify-end ${isRtl ? 'sm:justify-start' : ''}`}>
-            <Button
-              variant="ghost"
-              size="lg"
-              onClick={onChat}
-              className="border-2 border-orange-dark text-orange-dark shadow-app-soft transition-transform hover:-translate-y-0.5 hover:bg-orange-dark/5 hover:shadow-app-card"
-              icon={<ChatRounded sx={{ fontSize: 22 }} />}
-            >
-              {tx('chat')}
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              onClick={onNewProject}
-              className="bg-orange-dark shadow-app-soft transition-transform hover:-translate-y-0.5 hover:opacity-95 hover:shadow-app-card"
-              icon={<AddRounded sx={{ fontSize: 22 }} />}
-            >
-              {tx('newProject')}
-            </Button>
-          </div>
-        )}
-
-        <div className={`flex items-center gap-2 ${isRtl ? 'flex-row-reverse' : ''}`}>
+        <div className="mt-3">
           <div
-            className={`inline-flex min-h-[30px] items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold ${pillClass}`}
+            className={`inline-flex min-h-[30px] items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-bold ${pillClass} ${isRtl ? 'flex-row-reverse' : ''}`}
           >
             {attendanceKind === 'loading' && (
               <span className="h-2 w-16 animate-pulse rounded-full bg-current/30" />
@@ -148,6 +126,44 @@ const WorkspaceWelcome = ({
             )}
             {attendanceKind !== 'loading' && <span>{pillLabel}</span>}
           </div>
+        </div>
+      </div>
+
+      <div className={`flex flex-col items-stretch gap-3 sm:items-end ${isRtl ? 'sm:items-start' : ''}`}>
+        <div className={`flex flex-wrap gap-2 sm:justify-end ${isRtl ? 'sm:justify-start' : ''}`}>
+          {typeof onNewWorkspace === 'function' && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onNewWorkspace}
+              className="border-2 border-app-primary text-app-primary shadow-app-soft transition-transform hover:-translate-y-0.5 hover:bg-app-primary/5"
+              icon={<BusinessOutlined sx={{ fontSize: 22 }} />}
+            >
+              {t(lang, 'newWorkspace')}
+            </Button>
+          )}
+          {isAdmin && (
+            <>
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={onChat}
+                className="border-2 border-orange-dark text-orange-dark shadow-app-soft transition-transform hover:-translate-y-0.5 hover:bg-orange-dark/5 hover:shadow-app-card"
+                icon={<ChatRounded sx={{ fontSize: 22 }} />}
+              >
+                {tx('chat')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="lg"
+                onClick={onNewProject}
+                className="bg-orange-dark shadow-app-soft transition-transform hover:-translate-y-0.5 hover:opacity-95 hover:shadow-app-card"
+                icon={<AddRounded sx={{ fontSize: 22 }} />}
+              >
+                {tx('newProject')}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

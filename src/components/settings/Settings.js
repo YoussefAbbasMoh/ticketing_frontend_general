@@ -10,7 +10,8 @@ import Alert from '../ui/Alert';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import Modal from '../ui/Modal';
 import RoleDragDropSelect, { ROLE_ORDER } from './RoleDragDropSelect';
-import { getStoredLanguage } from '../../i18n';
+import { getStoredLanguage, t as i18nT } from '../../i18n';
+import { companyNameFromMembership, membershipCompanyId } from '../../utils/companyMembership';
 
 const ASSIGNABLE_ROLES = ROLE_ORDER;
 
@@ -94,7 +95,15 @@ const TEXT = {
     roleEmptySlot: 'Drop a role here',
     roleOwnerLockedTitle: 'Owner',
     roleOwnerLockedHint: 'The company owner role cannot be changed.',
-    roleSelfLockedHint: 'You cannot change your own role here.'
+    roleSelfLockedHint: 'You cannot change your own role here.',
+    yourWorkspaces: 'Your workspaces',
+    workspaceAddShort: 'Add workspace',
+    workspaceRenamed: 'Workspace name updated.',
+    workspaceDeleted: 'Workspace removed.',
+    workspaceRenameAction: 'Rename',
+    workspaceDeleteAction: 'Delete',
+    workspaceActive: 'Active',
+    workspaceSaveName: 'Save name',
   },
   ar: {
     settings: 'الإعدادات',
@@ -175,7 +184,15 @@ const TEXT = {
     roleEmptySlot: 'أفلت الدور هنا',
     roleOwnerLockedTitle: 'مالك',
     roleOwnerLockedHint: 'لا يمكن تغيير دور مالك الشركة.',
-    roleSelfLockedHint: 'لا يمكنك تغيير دورك من هنا.'
+    roleSelfLockedHint: 'لا يمكنك تغيير دورك من هنا.',
+    yourWorkspaces: 'مساحات العمل',
+    workspaceAddShort: 'إضافة مساحة',
+    workspaceRenamed: 'تم تحديث اسم المساحة.',
+    workspaceDeleted: 'تمت إزالة المساحة.',
+    workspaceRenameAction: 'تسمية',
+    workspaceDeleteAction: 'حذف',
+    workspaceActive: 'نشطة',
+    workspaceSaveName: 'حفظ الاسم',
   }
 };
 
@@ -191,6 +208,60 @@ const Settings = () => {
   } = useAuth();
 
   const showTeamSection = () => isAdmin() || canManageCompanyTeam();
+
+  const workspaceRoleCanRename = (entry) => {
+    const r = String(entry?.companyRole || '').toLowerCase();
+    return Boolean(entry?.isOwner) || r === 'owner' || r === 'admin';
+  };
+
+  const workspaceIsOwner = (entry) =>
+    Boolean(entry?.isOwner) || String(entry?.companyRole || '').toLowerCase() === 'owner';
+
+  const handleWorkspaceRenameOpen = (entry) => {
+    const id = membershipCompanyId(entry);
+    if (!id) return;
+    setWsRename({ id, name: companyNameFromMembership(entry) || '' });
+    setWsRenameDraft(companyNameFromMembership(entry) || '');
+  };
+
+  const handleWorkspaceRenameSave = async () => {
+    if (!wsRename?.id) return;
+    const name = String(wsRenameDraft || '').trim();
+    if (name.length < 2) {
+      setError(tx('titleValidation'));
+      return;
+    }
+    setWsLoading(true);
+    setError('');
+    try {
+      const res = await userAPI.updateWorkspaceName(wsRename.id, { name });
+      const list = res?.data?.companies;
+      if (Array.isArray(list)) updateUser({ ...user, companies: list });
+      setSuccess(tx('workspaceRenamed'));
+      setWsRename(null);
+    } catch (e) {
+      setError(e?.response?.data?.message || tx('userUpdateFailed'));
+    } finally {
+      setWsLoading(false);
+    }
+  };
+
+  const handleWorkspaceDelete = async (companyId) => {
+    if (!companyId) return;
+    if (!window.confirm(i18nT(lang, 'workspaceDeleteConfirm'))) return;
+    setWsLoading(true);
+    setError('');
+    try {
+      const res = await userAPI.deleteWorkspace(companyId);
+      const list = res?.data?.companies;
+      if (Array.isArray(list)) updateUser({ ...user, companies: list });
+      setSuccess(tx('workspaceDeleted'));
+    } catch (e) {
+      setError(e?.response?.data?.message || tx('userDeleteFailed'));
+    } finally {
+      setWsLoading(false);
+    }
+  };
   const [profileData, setProfileData] = useState({
     name: '',
     title: '',
@@ -210,6 +281,9 @@ const Settings = () => {
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [wsRename, setWsRename] = useState(null);
+  const [wsRenameDraft, setWsRenameDraft] = useState('');
+  const [wsLoading, setWsLoading] = useState(false);
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [lang, setLang] = useState(getStoredLanguage());
   const tx = (key, vars = {}) => {
@@ -729,6 +803,88 @@ const Settings = () => {
             </Card.Content>
           </Card>
         </div>
+
+        <Card className="mb-6">
+          <Card.Content className="p-4 sm:p-6">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold text-gray-800">{tx('yourWorkspaces')}</h2>
+              <Button variant="secondary" type="button" onClick={() => navigate('/workspaces/new')}>
+                {tx('workspaceAddShort')}
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {(user?.companies || []).map((entry) => {
+                const cid = membershipCompanyId(entry);
+                if (!cid) return null;
+                const label = companyNameFromMembership(entry) || cid;
+                const isActive = String(user?.activeCompanyId || '') === String(cid);
+                const canRen = workspaceRoleCanRename(entry);
+                const canDel = workspaceIsOwner(entry);
+                return (
+                  <div
+                    key={cid}
+                    className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-gray-900">{label}</p>
+                      {isActive && (
+                        <span className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                          {tx('workspaceActive')}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {canRen && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={wsLoading}
+                          onClick={() => handleWorkspaceRenameOpen(entry)}
+                        >
+                          {tx('workspaceRenameAction')}
+                        </Button>
+                      )}
+                      {canDel && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          disabled={wsLoading || isActive}
+                          onClick={() => handleWorkspaceDelete(cid)}
+                        >
+                          {tx('workspaceDeleteAction')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card.Content>
+        </Card>
+
+        {wsRename && (
+          <Modal isOpen={Boolean(wsRename)} onClose={() => !wsLoading && setWsRename(null)} size="md">
+            <Modal.Header onClose={() => !wsLoading && setWsRename(null)}>{tx('workspaceRenameAction')}</Modal.Header>
+            <Modal.Content>
+              <Input
+                label={i18nT(lang, 'workspaceNameLabel')}
+                value={wsRenameDraft}
+                onChange={(e) => setWsRenameDraft(e.target.value)}
+                disabled={wsLoading}
+              />
+            </Modal.Content>
+            <Modal.Footer className="flex justify-end gap-2">
+              <Button variant="outline" type="button" disabled={wsLoading} onClick={() => setWsRename(null)}>
+                {tx('cancel')}
+              </Button>
+              <Button variant="primary" type="button" disabled={wsLoading} onClick={handleWorkspaceRenameSave}>
+                {wsLoading ? <ButtonBusyDots className="text-white" /> : tx('workspaceSaveName')}
+              </Button>
+            </Modal.Footer>
+          </Modal>
+        )}
 
         {/* User Management (active company) */}
         {showTeamSection() && (

@@ -4,6 +4,12 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
+import {
+  localizeRegisterNetworkError,
+  localizeRegisterSubmitError,
+  localizeResendRegistrationOtpError,
+  localizeVerifyRegistrationOtpError,
+} from '../../utils/registerAuthErrors';
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
 import {
@@ -22,7 +28,7 @@ const RegisterCompany = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { login } = useAuth();
+  const { login, user, loading: authLoading } = useAuth();
   const prefillEmail = location.state?.prefillEmail || '';
   const prefillPassword = location.state?.prefillPassword || '';
 
@@ -41,9 +47,26 @@ const RegisterCompany = () => {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [lang, setLang] = useState(getStoredLanguage());
 
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/workspaces/new', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  const isValidOwnerFullName = (name) => {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (parts.length < 2) return false;
+    return parts.every((w) => w.length >= 2);
+  };
+
   const validationError = useMemo(() => {
     if (!formData.ownerName.trim()) return t(lang, 'valOwnerNameRequired');
+    if (!isValidOwnerFullName(formData.ownerName)) return t(lang, 'valOwnerNameFullName');
     if (!formData.companyName.trim()) return t(lang, 'valCompanyNameRequired');
+    if (formData.companyName.trim().length < 2) return t(lang, 'valCompanyNameMin2');
     if (!formData.email.trim()) return t(lang, 'valEmailRequired');
     if (!/\S+@\S+\.\S+/.test(formData.email)) return t(lang, 'valEmailInvalidSignup');
     if (!formData.password) return t(lang, 'valPasswordRequired');
@@ -125,12 +148,25 @@ const RegisterCompany = () => {
         return;
       }
 
-      setError('Unexpected response from server. Please try again.');
+      setError(t(lang, 'errRegisterUnexpectedResponse'));
     } catch (apiError) {
-      setError(
-        apiError?.response?.data?.message ||
-          'Could not create your company account. Please try again.'
-      );
+      const netMsg = localizeRegisterNetworkError(lang, apiError);
+      if (netMsg) {
+        setError(netMsg);
+        return;
+      }
+      const st = apiError?.response?.status;
+      const data = apiError?.response?.data || {};
+      if (st === 409 && data?.code === 'ACCOUNT_EXISTS_USE_LOGIN') {
+        navigate('/login', {
+          replace: true,
+          state: {
+            prefillEmail: data.email || formData.email.trim().toLowerCase(),
+          },
+        });
+        return;
+      }
+      setError(localizeRegisterSubmitError(lang, st, data));
     } finally {
       setLoading(false);
     }
@@ -158,12 +194,20 @@ const RegisterCompany = () => {
       if (response?.status === 200 && response?.data?.token && response?.data?.user) {
         applyAuthSuccess(response);
       } else {
-        setError('Unexpected response. Please try again.');
+        setError(t(lang, 'errVerifyUnexpected'));
       }
     } catch (apiError) {
+      const netMsg = localizeRegisterNetworkError(lang, apiError);
+      if (netMsg) {
+        setError(netMsg);
+        return;
+      }
       setError(
-        apiError?.response?.data?.message ||
-          'Could not verify the code. Check the code and try again.'
+        localizeVerifyRegistrationOtpError(
+          lang,
+          apiError?.response?.status,
+          apiError?.response?.data || {}
+        )
       );
     } finally {
       setLoading(false);
@@ -183,7 +227,18 @@ const RegisterCompany = () => {
       setInfoMessage(t(lang, 'verifyEmailSuccessHint'));
       startResendCooldown();
     } catch (apiError) {
-      setError(apiError?.response?.data?.message || 'Could not resend the code. Try again later.');
+      const netMsg = localizeRegisterNetworkError(lang, apiError);
+      if (netMsg) {
+        setError(netMsg);
+        return;
+      }
+      setError(
+        localizeResendRegistrationOtpError(
+          lang,
+          apiError?.response?.status,
+          apiError?.response?.data || {}
+        )
+      );
     } finally {
       setLoading(false);
     }

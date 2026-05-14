@@ -1,5 +1,27 @@
 import axios from 'axios';
 import { getStoredLanguage } from '../i18n';
+import { decodeJwtPayload } from '../utils/jwt';
+
+/** Active workspace for API calls (matches JWT `companyId` / company switcher). */
+const getActiveCompanyIdForRequest = () => {
+  try {
+    const raw = localStorage.getItem('user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.activeCompanyId != null && String(u.activeCompanyId).trim()) {
+        return String(u.activeCompanyId).trim();
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  const token = localStorage.getItem('token');
+  const payload = token ? decodeJwtPayload(token) : null;
+  if (payload?.companyId != null && String(payload.companyId).trim()) {
+    return String(payload.companyId).trim();
+  }
+  return null;
+};
 
 /** If set, used instead of `/auth/refresh` (e.g. `/auth/token/refresh`). */
 const AUTH_REFRESH_PATH =
@@ -243,6 +265,9 @@ export const userAPI = {
   createPersonalTask: (payload) => api.post('/users/personal-tasks', payload),
   updatePersonalTask: (taskId, payload) => api.patch(`/users/personal-tasks/${taskId}`, payload),
   deletePersonalTask: (taskId) => api.delete(`/users/personal-tasks/${taskId}`),
+  createWorkspace: (payload) => api.post('/users/workspaces', payload),
+  updateWorkspaceName: (companyId, payload) => api.patch(`/users/workspaces/${companyId}`, payload),
+  deleteWorkspace: (companyId) => api.delete(`/users/workspaces/${companyId}`),
 };
 
 // Project API
@@ -261,6 +286,7 @@ export const projectAPI = {
     api.put(`/projects/${projectId}/notes/${noteId}`, { content }),
   deleteProjectNote: (projectId, noteId) =>
     api.delete(`/projects/${projectId}/notes/${noteId}`),
+  deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
 };
 
 // Ticket API
@@ -412,17 +438,23 @@ export const attendanceAPI = {
    */
   downloadReport: async (month, year, format = 'xlsx') => {
     const token = localStorage.getItem('token');
+    const companyId = getActiveCompanyIdForRequest();
+    const preferredLang = getStoredLanguage();
     const params = new URLSearchParams({
       month: String(month),
       year: String(year),
       format,
     });
     const url = `${API_BASE_URL}/attendance/admin/report?${params.toString()}`;
+    // Keep headers aligned with the axios instance. Avoid a custom `Accept` value: strict CORS
+    // configs often omit it from Access-Control-Allow-Headers, which makes the preflight fail and
+    // the download appears to "do nothing" (network error before any file is saved).
     const res = await fetch(url, {
       method: 'GET',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        Accept: 'application/vnd.ms-excel, text/csv, application/octet-stream, application/json;q=0.1, */*',
+        'x-lang': preferredLang,
+        ...(companyId ? { 'x-company-id': companyId } : {}),
       },
       cache: 'no-store',
     });

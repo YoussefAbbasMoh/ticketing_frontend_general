@@ -81,7 +81,19 @@ const TEXT = {
         checkInLocation: 'Check-in location',
         checkOutLocation: 'Check-out location',
         openInMaps: 'Open in Maps',
-        openMapButton: 'Map'
+        openMapButton: 'Map',
+        errCheckOutBeforeCheckIn: 'Check-out must be after check-in.',
+        errInvalidCheckIn: 'Invalid check-in date or time.',
+        errInvalidCheckOut: 'Invalid check-out date or time.',
+        errInvalidStatus: 'Invalid attendance status.',
+        statusPresent: 'Present',
+        statusHalfDay: 'Half day',
+        statusAbsent: 'Absent',
+        roleOwner: 'Owner',
+        roleAdmin: 'Admin',
+        roleManager: 'Manager',
+        roleDeveloper: 'Developer',
+        roleDesigner: 'Designer'
     },
     ar: {
         title: 'الحضور',
@@ -131,8 +143,58 @@ const TEXT = {
         checkInLocation: 'موقع تسجيل الحضور',
         checkOutLocation: 'موقع تسجيل الانصراف',
         openInMaps: 'فتح في الخرائط',
-        openMapButton: 'خريطة'
+        openMapButton: 'خريطة',
+        errCheckOutBeforeCheckIn: 'يجب أن يكون وقت الانصراف بعد وقت الحضور.',
+        errInvalidCheckIn: 'تاريخ أو وقت الحضور غير صالح.',
+        errInvalidCheckOut: 'تاريخ أو وقت الانصراف غير صالح.',
+        errInvalidStatus: 'حالة الحضور غير صالحة.',
+        statusPresent: 'حاضر',
+        statusHalfDay: 'نصف يوم',
+        statusAbsent: 'غائب',
+        roleOwner: 'مالك',
+        roleAdmin: 'مسؤول',
+        roleManager: 'مدير',
+        roleDeveloper: 'مطور',
+        roleDesigner: 'مصمم'
     }
+};
+
+/** Normalize stored / bidi language tags so TEXT[lang] always resolves. */
+const resolveAttendancePageLang = (raw) => {
+    const s = String(raw ?? 'en')
+        .trim()
+        .replace(/[\u200e\u200f]/g, '')
+        .toLowerCase();
+    return s.startsWith('ar') ? 'ar' : 'en';
+};
+
+const attendanceStatusDictionaryKey = (raw) => {
+    let s = String(raw ?? 'present').trim().toLowerCase();
+    s = s.replace(/_/g, '-').replace(/\s+/g, '-');
+    if (s === 'half-day' || s === 'halfday') return 'statusHalfDay';
+    if (s === 'absent') return 'statusAbsent';
+    return 'statusPresent';
+};
+
+const attendanceStatusLabelText = (pageLang, raw) => {
+    const L = resolveAttendancePageLang(pageLang);
+    const key = attendanceStatusDictionaryKey(raw);
+    return TEXT[L]?.[key] || TEXT.en[key] || String(raw ?? '').trim();
+};
+
+const attendanceStatusBadgeVariant = (raw) => {
+    const key = attendanceStatusDictionaryKey(raw);
+    if (key === 'statusAbsent') return 'error';
+    if (key === 'statusHalfDay') return 'warning';
+    return 'success';
+};
+
+const userRoleLabelText = (pageLang, roleRaw) => {
+    const L = resolveAttendancePageLang(pageLang);
+    const r = String(roleRaw || '').trim().toLowerCase();
+    const key = { owner: 'roleOwner', admin: 'roleAdmin', manager: 'roleManager', developer: 'roleDeveloper', designer: 'roleDesigner' }[r];
+    if (key) return TEXT[L]?.[key] || TEXT.en[key] || roleRaw;
+    return String(roleRaw || '').trim() || '—';
 };
 
 const formatText = (template, vars = {}) =>
@@ -180,15 +242,30 @@ const AttendancePage = () => {
     const companyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'default';
     const { isFreePlan } = useMySubscriptionPlan(companyKey);
     const [lang, setLang] = useState(getStoredLanguage());
-    const locale = lang === 'ar' ? 'ar-EG' : 'en-US';
-    const isRtl = lang === 'ar';
+    const pageLang = resolveAttendancePageLang(lang);
+    const locale = pageLang === 'ar' ? 'ar-EG' : 'en-US';
+    const isRtl = pageLang === 'ar';
     const yearOptions = useMemo(() => {
         const y = new Date().getFullYear();
         return [y - 2, y - 1, y, y + 1, y + 2];
     }, []);
     const tt = (key, vars) => {
-        const value = TEXT[lang]?.[key] || TEXT.en[key] || key;
+        const value = TEXT[pageLang]?.[key] || TEXT.en[key] || key;
         return formatText(value, vars || {});
+    };
+
+    const mapAdminAttendanceEditError = (err) => {
+        const data = err.response?.data;
+        const code = data?.code;
+        const msg = String(data?.message || '');
+        if (code === 'CHECKOUT_BEFORE_CHECKIN' || /checkOut must be after checkIn/i.test(msg)) {
+            return tt('errCheckOutBeforeCheckIn');
+        }
+        if (code === 'INVALID_CHECK_IN' || /Invalid checkIn date/i.test(msg)) return tt('errInvalidCheckIn');
+        if (code === 'INVALID_CHECK_OUT' || /Invalid checkOut date/i.test(msg)) return tt('errInvalidCheckOut');
+        if (code === 'INVALID_STATUS' || /Invalid status/i.test(msg)) return tt('errInvalidStatus');
+        if (pageLang === 'en' && msg.trim()) return msg.trim();
+        return getAxiosErrorMessage(err, tt('failedUpdate'));
     };
 
     const [activeTab, setActiveTab] = useState('my_attendance');
@@ -298,6 +375,18 @@ const AttendancePage = () => {
             setError(tt('checkInRequired'));
             return;
         }
+        let outIso = null;
+        if (!editOpenSession) {
+            outIso = fromLocalDateTimeValue(editCheckOut);
+            if (!outIso) {
+                setError(tt('setCheckoutOrOpenSession'));
+                return;
+            }
+            if (new Date(outIso).getTime() <= new Date(checkInIso).getTime()) {
+                setError(tt('errCheckOutBeforeCheckIn'));
+                return;
+            }
+        }
         try {
             setSavingEdit(true);
             setError('');
@@ -309,15 +398,20 @@ const AttendancePage = () => {
             if (editOpenSession) {
                 payload.checkOut = null;
             } else {
-                const outIso = fromLocalDateTimeValue(editCheckOut);
-                if (!outIso) {
-                    setError(tt('setCheckoutOrOpenSession'));
-                    setSavingEdit(false);
-                    return;
-                }
                 payload.checkOut = outIso;
             }
-            await attendanceAPI.adminUpdateAttendance(editRecord._id, payload);
+            const res = await attendanceAPI.adminUpdateAttendance(editRecord._id, payload);
+            const updated = res.data?.attendance;
+            if (updated) {
+                const rowId = updated._id || updated.id;
+                const merge = (list) =>
+                    (Array.isArray(list) ? list : []).map((l) => {
+                        const lid = l._id || l.id;
+                        return String(lid) === String(rowId) ? { ...l, ...updated } : l;
+                    });
+                setLogs((prev) => merge(prev));
+                setAllLogs((prev) => merge(prev));
+            }
             setSuccessMsg(tt('updatedSuccessfully'));
             closeEditModal();
             await fetchMyLogs();
@@ -325,7 +419,7 @@ const AttendancePage = () => {
                 await fetchAllLogs();
             }
         } catch (err) {
-            setError(err.response?.data?.message || tt('failedUpdate'));
+            setError(mapAdminAttendanceEditError(err));
         } finally {
             setSavingEdit(false);
         }
@@ -342,6 +436,14 @@ const AttendancePage = () => {
         }
     };
 
+    const getDownloadResponseContentType = (response) => {
+        const h = response?.headers;
+        if (!h) return '';
+        if (typeof h.get === 'function') return String(h.get('content-type') || '').toLowerCase();
+        const v = h['content-type'] ?? h['Content-Type'] ?? '';
+        return String(v).toLowerCase();
+    };
+
     const handleDownloadReport = async () => {
         if (canUseAttendanceSummary && isFreePlan) {
             openFreePlanBlockedDialog(alertDialog, navigate, canUseAttendanceSummary);
@@ -352,7 +454,7 @@ const AttendancePage = () => {
             setError('');
             const response = await attendanceAPI.downloadReport(reportMonth, reportYear, 'xlsx');
 
-            const ct = (response.headers['content-type'] || '').toLowerCase();
+            const ct = getDownloadResponseContentType(response);
             if (ct.includes('application/json')) {
                 const msg = await parseBlobErrorMessage(response.data);
                 setError(msg || tt('couldNotDownload'));
@@ -364,14 +466,22 @@ const AttendancePage = () => {
                     ? response.data
                     : new Blob([response.data], { type: 'application/vnd.ms-excel' });
 
+            if (!blob.size) {
+                setError(tt('couldNotDownload'));
+                return;
+            }
+
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             const m = String(reportMonth).padStart(2, '0');
             link.setAttribute('download', `attendance_report_${reportYear}_${m}.xls`);
+            link.style.display = 'none';
             document.body.appendChild(link);
-            link.click();
-            link.remove();
+            queueMicrotask(() => {
+                link.click();
+                link.remove();
+            });
             // Revoking the URL immediately can cancel the download in some browsers.
             window.setTimeout(() => {
                 try {
@@ -692,7 +802,9 @@ const AttendancePage = () => {
                                                             {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 sm:px-6">
-                                                            <Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge>
+                                                            <Badge variant={attendanceStatusBadgeVariant(log.status)}>
+                                                                {attendanceStatusLabelText(pageLang, log.status)}
+                                                            </Badge>
                                                         </td>
                                                         {canUseAttendanceSummary && (
                                                             <td className="whitespace-nowrap px-4 py-4 text-right sm:px-6">
@@ -774,8 +886,8 @@ const AttendancePage = () => {
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="whitespace-nowrap px-4 py-4 text-sm capitalize text-app-text-secondary sm:px-6">
-                                                            {log.user?.role || '-'}
+                                                        <td className="whitespace-nowrap px-4 py-4 text-sm text-app-text-secondary sm:px-6">
+                                                            {userRoleLabelText(pageLang, log.user?.role)}
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 text-sm font-medium text-app-text sm:px-6">
                                                             {formatDate(log.date)}
@@ -819,7 +931,9 @@ const AttendancePage = () => {
                                                             {log.duration ? `${Math.floor(log.duration / 60)}h ${log.duration % 60}m` : '-'}
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 sm:px-6">
-                                                            <Badge variant={log.status === 'present' ? 'success' : 'warning'}>{log.status}</Badge>
+                                                            <Badge variant={attendanceStatusBadgeVariant(log.status)}>
+                                                                {attendanceStatusLabelText(pageLang, log.status)}
+                                                            </Badge>
                                                         </td>
                                                         <td className="whitespace-nowrap px-4 py-4 text-right sm:px-6">
                                                             <Button
@@ -880,7 +994,7 @@ const AttendancePage = () => {
                                 {' · '}
                                 {editRecord.user?.email || user?.email}
                                 {' · '}
-                                {tt('date')}: <span className="font-mono text-app-text">{editRecord.date}</span>
+                                {tt('date')}: <span className="font-mono text-app-text">{formatDate(editRecord.date)}</span>
                             </p>
                             {canUseAttendanceSummary && (
                                 <div
@@ -965,9 +1079,9 @@ const AttendancePage = () => {
                                     onChange={(e) => setEditStatus(e.target.value)}
                                     className="w-full rounded-app-input border border-app-border bg-app-surface px-3 py-2.5 text-sm font-medium text-app-text shadow-app-soft focus:border-app-primary focus:outline-none focus:ring-2 focus:ring-[#080936]/20"
                                 >
-                                    <option value="present">present</option>
-                                    <option value="half-day">half-day</option>
-                                    <option value="absent">absent</option>
+                                    <option value="present">{tt('statusPresent')}</option>
+                                    <option value="half-day">{tt('statusHalfDay')}</option>
+                                    <option value="absent">{tt('statusAbsent')}</option>
                                 </select>
                             </div>
                             <div>

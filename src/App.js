@@ -20,6 +20,7 @@ const ForgotPassword = lazy(() => import('./components/auth/ForgotPassword'));
 const RegisterCompany = lazy(() => import('./components/auth/RegisterCompany'));
 const AcceptInvite = lazy(() => import('./components/auth/AcceptInvite'));
 const Home = lazy(() => import('./components/home/Home'));
+const AddWorkspacePage = lazy(() => import('./components/workspace/AddWorkspacePage'));
 const ProjectDetails = lazy(() => import('./components/project/ProjectDetails'));
 const NewTicket = lazy(() => import('./components/ticket/NewTicket'));
 const EditTicket = lazy(() => import('./components/ticket/EditTicket'));
@@ -75,19 +76,44 @@ function SubscriptionCheckoutRouteGate() {
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const activeCompanyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'no-company';
 
   return (
     <Suspense fallback={<RouteFallback />}>
     <Routes key={activeCompanyKey}>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/register-company" element={user ? <Navigate to="/" replace /> : <RegisterCompany />} />
+      <Route
+        path="/register-company"
+        element={
+          loading ? (
+            <RouteFallback />
+          ) : user ? (
+            <Navigate to="/workspaces/new" replace />
+          ) : (
+            <RegisterCompany />
+          )
+        }
+      />
       <Route path="/forgot-password" element={user ? <Navigate to="/" replace /> : <ForgotPassword />} />
       <Route path="/accept-invite" element={<AcceptInvite />} />
 
       <Route path="/admin/login" element={<AdminLogin />} />
 
+      <Route
+        path="/workspaces/new"
+        element={
+          user ? (
+            <ProtectedRoute>
+              <Layout>
+                <AddWorkspacePage />
+              </Layout>
+            </ProtectedRoute>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
       <Route
         path="/"
         element={

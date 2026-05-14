@@ -28,6 +28,7 @@ import StatChip from './StatChip';
 import WorkspaceHomePanel from './WorkspaceHomePanel';
 import { HomeLoadingSkeleton, ActiveTicketsLoadingRail } from './HomeSkeletons';
 import { getStoredLanguage } from '../../i18n';
+import { activeCompanyDisplayName } from '../../utils/companyMembership';
 
 const TEXT = {
   en: {
@@ -51,6 +52,7 @@ const TEXT = {
     active: 'Active',
     completed: 'Completed',
     onHold: 'On Hold',
+    cancelled: 'Cancelled',
     searchProjectsPlaceholder: 'Search projects by name...',
     clearSearch: 'Clear search',
     foundProjects: 'Found {{count}} {{label}} matching "{{query}}"',
@@ -79,7 +81,8 @@ const TEXT = {
     addNewProject: 'Add New Project',
     projects: 'Projects',
     viewAll: 'View All',
-    projectsSummary: '{{active}} active · {{completed}} completed',
+    projectsSummary:
+      '{{active}} active · {{completed}} completed · {{onHold}} on hold · {{cancelled}} cancelled',
     noActiveTicketsLine: 'No active tickets',
     ticketsRequireAttention: '{{count}} tickets requiring attention',
   },
@@ -104,6 +107,7 @@ const TEXT = {
     active: 'نشط',
     completed: 'مكتمل',
     onHold: 'معلّق',
+    cancelled: 'ملغاة',
     searchProjectsPlaceholder: 'ابحث عن مشروع بالاسم...',
     clearSearch: 'مسح البحث',
     foundProjects: 'تم العثور على {{count}} {{label}} مطابق لـ "{{query}}"',
@@ -132,7 +136,7 @@ const TEXT = {
     addNewProject: 'إضافة مشروع جديد',
     projects: 'المشاريع',
     viewAll: 'عرض الكل',
-    projectsSummary: '{{active}} نشط · {{completed}} مكتمل',
+    projectsSummary: '{{active}} نشط · {{completed}} مكتمل · {{onHold}} معلّق · {{cancelled}} ملغاة',
     noActiveTicketsLine: 'لا توجد تذاكر نشطة',
     ticketsRequireAttention: '{{count}} تذكرة تحتاج انتباهك',
   }
@@ -157,11 +161,7 @@ const Home = () => {
   const { user, isAdmin, logout } = useAuth();
   const { getProjectConversation } = useChat();
   const activeCompanyId = user?.activeCompanyId ? String(user.activeCompanyId) : '';
-  const activeCompanyName =
-    (user?.companies || []).find((entry) => {
-      const raw = entry?.companyId ?? entry?.company?._id ?? entry?.company;
-      return raw != null && String(raw) === activeCompanyId;
-    })?.company?.name || '';
+  const activeCompanyName = activeCompanyDisplayName(user, activeCompanyId);
   const tx = (key, vars = {}) => {
     const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
     return Object.entries(vars).reduce(
@@ -313,11 +313,16 @@ const Home = () => {
 
   const getProjectStats = () => {
     const total = projects.length;
-    const active = projects.filter((p) => p.status?.toLowerCase() === 'active').length;
-    const completed = projects.filter((p) => p.status?.toLowerCase() === 'completed').length;
-    const onHold = projects.filter((p) => p.status?.toLowerCase() === 'on_hold').length;
+    const norm = (p) => String(p?.status || '').toLowerCase().replace(/-/g, '_');
+    const active = projects.filter((p) => norm(p) === 'active').length;
+    const completed = projects.filter((p) => norm(p) === 'completed').length;
+    const onHold = projects.filter((p) => norm(p) === 'on_hold').length;
+    const cancelled = projects.filter((p) => {
+      const s = norm(p);
+      return s === 'cancelled' || s === 'canceled';
+    }).length;
 
-    return { total, active, completed, onHold };
+    return { total, active, completed, onHold, cancelled };
   };
 
   const handleAddProject = () => {
@@ -373,6 +378,7 @@ const Home = () => {
           isAdmin={isAdmin()}
           onChat={() => navigate('/chat')}
           onNewProject={handleAddProject}
+          onNewWorkspace={() => navigate('/workspaces/new')}
           isRtl={isRtl}
         />
 
@@ -436,7 +442,12 @@ const Home = () => {
         <WorkspaceHomePanel
           id="workspace-projects-intro"
           title={tx('projects')}
-          subtitle={tx('projectsSummary', { active: stats.active, completed: stats.completed })}
+          subtitle={tx('projectsSummary', {
+            active: stats.active,
+            completed: stats.completed,
+            onHold: stats.onHold,
+            cancelled: stats.cancelled,
+          })}
           headerRight={
             projects.length > 0 ? (
               <button
@@ -454,6 +465,8 @@ const Home = () => {
           <div className="mb-4 flex flex-wrap gap-2 sm:gap-3">
             <StatChip label={tx('active')} count={stats.active} tone="success" icon="active" />
             <StatChip label={tx('completed')} count={stats.completed} tone="info" icon="completed" />
+            <StatChip label={tx('onHold')} count={stats.onHold} tone="warning" icon="onHold" />
+            <StatChip label={tx('cancelled')} count={stats.cancelled} tone="danger" icon="cancelled" />
             <StatChip label={tx('totalProjects')} count={stats.total} tone="primary" icon="total" />
           </div>
           {projects.length === 0 ? (

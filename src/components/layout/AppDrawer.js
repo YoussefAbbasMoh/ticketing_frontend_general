@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getStoredLanguage, t } from '../../i18n';
+import { activeCompanyDisplayName } from '../../utils/companyMembership';
 
 const AppDrawer = ({ open, onClose }) => {
   const { user, logout, canSeeSubscriptionNav } = useAuth();
@@ -15,7 +16,7 @@ const AppDrawer = ({ open, onClose }) => {
       const raw = entry?.companyId ?? entry?.company?._id ?? entry?.company;
       return raw != null && String(raw) === activeCompanyId;
     }) || null;
-  const activeCompanyName = activeMembership?.company?.name || '';
+  const activeCompanyName = activeCompanyDisplayName(user, activeCompanyId);
   const activeRoleLabel = activeMembership?.isOwner
     ? 'owner'
     : (activeMembership?.companyRole || user?.title || '');

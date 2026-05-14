@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const Modal = ({ isOpen, onClose, children, size = 'md', className = '' }) => {
+const Modal = ({ isOpen, onClose, children, size = 'md', className = '', contentDir }) => {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -33,7 +33,8 @@ const Modal = ({ isOpen, onClose, children, size = 'md', className = '' }) => {
       
       {/* Modal */}
       <div className="flex min-h-screen items-center justify-center p-4">
-        <div 
+        <div
+          dir={contentDir || undefined}
           className={`relative w-full rounded-app border border-app-divider bg-app-surface shadow-app-card ${sizes[size]} ${className}`}
           onClick={(e) => e.stopPropagation()}
         >
@@ -44,15 +45,15 @@ const Modal = ({ isOpen, onClose, children, size = 'md', className = '' }) => {
   );
 };
 
-const ModalHeader = ({ children, onClose, className = '' }) => (
+const ModalHeader = ({ children, onClose, className = '', closeAriaLabel = 'Close' }) => (
   <div className={`flex items-center justify-between border-b border-app-divider px-6 py-4 ${className}`}>
-    <h2 className="text-[18px] font-extrabold tracking-tight text-app-text">{children}</h2>
+    <h2 className="min-w-0 flex-1 text-[18px] font-extrabold tracking-tight text-app-text">{children}</h2>
     {onClose && (
       <button
         onClick={onClose}
         type="button"
         className="rounded-app-input p-1 text-app-text-tertiary transition-colors hover:bg-app-surface-variant hover:text-app-text"
-        aria-label="Close"
+        aria-label={closeAriaLabel}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

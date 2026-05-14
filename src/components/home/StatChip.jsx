@@ -2,6 +2,8 @@ import React from 'react';
 import BoltRounded from '@mui/icons-material/BoltRounded';
 import CheckCircleRounded from '@mui/icons-material/CheckCircleRounded';
 import FolderRounded from '@mui/icons-material/FolderRounded';
+import PauseCircleRounded from '@mui/icons-material/PauseCircleRounded';
+import HighlightOffRounded from '@mui/icons-material/HighlightOffRounded';
 
 /** Matches Flutter `projects_section.dart` StatChip icons. */
 const iconSx = { fontSize: 18, color: 'inherit' };
@@ -10,12 +12,16 @@ const iconMap = {
   active: <BoltRounded sx={iconSx} />,
   completed: <CheckCircleRounded sx={iconSx} />,
   total: <FolderRounded sx={iconSx} />,
+  onHold: <PauseCircleRounded sx={iconSx} />,
+  cancelled: <HighlightOffRounded sx={iconSx} />,
 };
 
 const toneClass = {
   success: 'border-emerald-800/25 bg-emerald-50 text-emerald-950',
   info: 'border-sky-800/25 bg-sky-50 text-sky-950',
   primary: 'border-app-primary/30 bg-app-primary/8 text-app-text',
+  warning: 'border-amber-800/25 bg-amber-50 text-amber-950',
+  danger: 'border-rose-800/25 bg-rose-50 text-rose-950',
 };
 
 /**

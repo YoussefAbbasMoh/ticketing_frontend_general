@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AddRounded from '@mui/icons-material/AddRounded';
 import CalendarTodayOutlined from '@mui/icons-material/CalendarTodayOutlined';
 import ChatRounded from '@mui/icons-material/ChatRounded';
@@ -11,6 +11,7 @@ import ScheduleRounded from '@mui/icons-material/ScheduleRounded';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import StickyNote2Outlined from '@mui/icons-material/StickyNote2Outlined';
 import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded';
+import PersonAddOutlined from '@mui/icons-material/PersonAddOutlined';
 import { CommentListSkeleton, InlineSkeletonPulse } from '../ui/LoadingSkeletons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { projectAPI, ticketAPI, getAxiosErrorMessage } from '../../services/api';
@@ -23,6 +24,8 @@ import Card from '../ui/Card';
 import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import ProjectDetailsSkeleton from './ProjectDetailsSkeleton';
+import Modal from '../ui/Modal';
+import AssignUsersDialog from '../admin/AssignUsersDialog';
 import { getStoredLanguage } from '../../i18n';
 
 const TEXT = {
@@ -92,6 +95,7 @@ const TEXT = {
     noComments: 'No comments',
     editTicket: 'Edit Ticket',
     assignUsers: 'Assign Users',
+    manageProjectTeam: 'Manage team',
     untitledProject: 'Untitled Project',
     personalNotesTitle: 'Personal notes',
     personalNotesPrivacy: 'Only you can see these notes.',
@@ -106,7 +110,19 @@ const TEXT = {
     personalNotesEmpty: 'No notes yet. Add one above.',
     personalNotesSaving: 'Saving…',
     personalNotesOpenPanel: 'Personal notes',
-    personalNotesClosePanel: 'Close notes'
+    personalNotesClosePanel: 'Close notes',
+    deleteProject: 'Delete project',
+    deleteProjectZoneTitle: 'Danger zone',
+    deleteProjectConfirmTitle: 'Delete this project?',
+    deleteProjectConfirmBody:
+      'This permanently deletes the project, all tickets, chat, and notes. This cannot be undone.',
+    deleteProjectConfirm: 'Delete permanently',
+    deleteProjectCancel: 'Cancel',
+    deleteProjectSuccess: 'Project deleted.',
+    deleteProjectFailed: 'Could not delete the project.',
+    deleteProjectDeleting: 'Deleting…',
+    deleteProjectHint: 'Removes all tickets, chat, and notes for this project.',
+    modalClose: 'Close',
   },
   ar: {
     failedProjectDetails: 'فشل في جلب تفاصيل المشروع.',
@@ -174,6 +190,7 @@ const TEXT = {
     noComments: 'لا توجد تعليقات',
     editTicket: 'تعديل التذكرة',
     assignUsers: 'تعيين المستخدمين',
+    manageProjectTeam: 'إدارة الفريق',
     untitledProject: 'مشروع بدون اسم',
     personalNotesTitle: 'ملاحظات شخصية',
     personalNotesPrivacy: 'أنت فقط من يمكنه رؤية هذه الملاحظات.',
@@ -188,7 +205,19 @@ const TEXT = {
     personalNotesEmpty: 'لا توجد ملاحظات بعد. أضف واحدة أعلاه.',
     personalNotesSaving: 'جارٍ الحفظ…',
     personalNotesOpenPanel: 'ملاحظات شخصية',
-    personalNotesClosePanel: 'إغلاق الملاحظات'
+    personalNotesClosePanel: 'إغلاق الملاحظات',
+    deleteProject: 'حذف المشروع',
+    deleteProjectZoneTitle: 'منطقة خطرة',
+    deleteProjectConfirmTitle: 'حذف هذا المشروع؟',
+    deleteProjectConfirmBody:
+      'سيتم حذف المشروع وجميع التذاكر والدردشة والملاحظات نهائيًا. لا يمكن التراجع عن هذا الإجراء.',
+    deleteProjectConfirm: 'حذف نهائيًا',
+    deleteProjectCancel: 'إلغاء',
+    deleteProjectSuccess: 'تم حذف المشروع.',
+    deleteProjectFailed: 'تعذر حذف المشروع.',
+    deleteProjectDeleting: 'جارٍ الحذف…',
+    deleteProjectHint: 'يحذف كل التذاكر والدردشة والملاحظات لهذا المشروع.',
+    modalClose: 'إغلاق',
   }
 };
 
@@ -342,7 +371,7 @@ const ProjectDetails = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isCompanyOwner } = useAuth();
   const { getProjectConversation } = useChat();
   const [project, setProject] = useState(null);
   const [tickets, setTickets] = useState([]);
@@ -363,12 +392,51 @@ const ProjectDetails = () => {
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [editingContent, setEditingContent] = useState('');
   const [notesPanelOpen, setNotesPanelOpen] = useState(false);
+  const [deleteProjectModalOpen, setDeleteProjectModalOpen] = useState(false);
+  const [deleteProjectSubmitting, setDeleteProjectSubmitting] = useState(false);
+  const [assignTeamOpen, setAssignTeamOpen] = useState(false);
   const tx = (key, vars = {}) => {
     const template = TEXT[lang]?.[key] || TEXT.en[key] || key;
     return Object.entries(vars).reduce(
       (acc, [k, v]) => acc.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v)),
       template
     );
+  };
+
+  const refreshProject = useCallback(async () => {
+    try {
+      const res = await projectAPI.getProject(projectId);
+      const d = res?.data;
+      const proj = d?.project || d;
+      if (proj && (proj._id || proj.id)) {
+        setProject(proj);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [projectId]);
+
+  const projectStatusLabel = (statusRaw) => {
+    const s = String(statusRaw || '').toLowerCase().replace(/-/g, '_');
+    if (s === 'active') return tx('active');
+    if (s === 'completed') return tx('completed');
+    if (s === 'on_hold') return tx('onHold');
+    if (s === 'cancelled' || s === 'canceled') return tx('cancelled');
+    return String(statusRaw || '').replace(/_/g, ' ');
+  };
+
+  const handleDeleteProject = async () => {
+    setDeleteProjectSubmitting(true);
+    try {
+      await projectAPI.deleteProject(projectId);
+      toast(tx('deleteProjectSuccess'), { severity: 'success' });
+      setDeleteProjectModalOpen(false);
+      navigate('/');
+    } catch (err) {
+      toast(getAxiosErrorMessage(err, tx('deleteProjectFailed')), { severity: 'error' });
+    } finally {
+      setDeleteProjectSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -567,10 +635,8 @@ const ProjectDetails = () => {
     try {
       await projectAPI.updateProjectStatus(projectId, newStatus);
       setProject(prev => ({ ...prev, status: newStatus }));
-      // Show success message briefly
-      const successMsg = tx('statusUpdated', { status: newStatus });
-      setError(''); // Clear any errors
-      // You could add a success state here if needed
+      setError('');
+      toast(tx('statusUpdated', { status: projectStatusLabel(newStatus) }), { severity: 'success' });
     } catch (err) {
       setError(err.response?.data?.message || tx('failedStatusUpdate'));
     } finally {
@@ -706,7 +772,7 @@ const ProjectDetails = () => {
                   {project?.project_name || tx('untitledProject')}
                 </h1>
                 <Badge variant={getStatusColor(project?.status)} size="lg">
-                  {(project?.status || tx('unknown')).replace(/_/g, ' ')}
+                  {project?.status ? projectStatusLabel(project.status) : tx('unknown')}
                 </Badge>
               </div>
               <p className="mb-4 text-[13px] leading-snug text-app-text-secondary">{tx('projectOverview')}</p>
@@ -831,20 +897,39 @@ const ProjectDetails = () => {
               <p className="mb-3 text-xs text-app-text-secondary">{tx('activeMembers')}</p>
               {project?.assigned_users && project.assigned_users.length > 0 && (
                 <div className="flex -space-x-2">
-                  {project.assigned_users.slice(0, 5).map((user, index) => (
-                    <div
-                      key={index}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-app-surface bg-app-primary text-xs font-bold text-white"
-                      title={user.name}
-                    >
-                      {getInitials(user.name)}
-                    </div>
-                  ))}
+                  {project.assigned_users.slice(0, 5).map((user, index) => {
+                    const isStr = typeof user === 'string';
+                    const displayName = isStr ? user : user?.name || '';
+                    const rowKey = isStr ? user : user?._id || user?.id || `u-${index}`;
+                    return (
+                      <div
+                        key={rowKey}
+                        className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-app-surface bg-app-primary text-xs font-bold text-white"
+                        title={displayName || undefined}
+                      >
+                        {getInitials(displayName)}
+                      </div>
+                    );
+                  })}
                   {project.assigned_users.length > 5 && (
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-app-surface bg-app-surface-variant text-xs font-bold text-app-text">
                       +{project.assigned_users.length - 5}
                     </div>
                   )}
+                </div>
+              )}
+              {isAdmin() && (
+                <div className="mt-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => setAssignTeamOpen(true)}
+                    icon={<PersonAddOutlined sx={{ fontSize: 20 }} />}
+                    className="w-full sm:w-auto"
+                  >
+                    {tx('manageProjectTeam')}
+                  </Button>
                 </div>
               )}
             </Card.Content>
@@ -1155,6 +1240,39 @@ const ProjectDetails = () => {
           </Card.Content>
         </Card>
 
+        {isCompanyOwner() && (
+          <div
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+            className="relative mt-10 overflow-hidden rounded-2xl border border-red-200/90 bg-gradient-to-br from-red-50/95 via-app-surface to-app-surface p-1 shadow-app-card sm:mt-12"
+          >
+            <div
+              className="pointer-events-none absolute start-0 top-0 h-full w-1 rounded-s-lg bg-gradient-to-b from-red-500 to-red-600"
+              aria-hidden
+            />
+            <div className="flex flex-col gap-4 px-4 py-4 ps-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-600 text-white shadow-md ring-2 ring-red-500/25">
+                  <DeleteOutlineRounded sx={{ fontSize: 26 }} />
+                </span>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-extrabold tracking-tight text-red-900">{tx('deleteProjectZoneTitle')}</p>
+                  <p className="max-w-2xl text-sm font-medium leading-relaxed text-red-800/90">{tx('deleteProjectHint')}</p>
+                </div>
+              </div>
+              <Button
+                variant="danger"
+                size="lg"
+                type="button"
+                className="shrink-0 shadow-md ring-1 ring-red-600/20 transition-transform hover:-translate-y-0.5 sm:min-w-[200px]"
+                onClick={() => setDeleteProjectModalOpen(true)}
+                icon={<DeleteOutlineRounded sx={{ fontSize: 22 }} />}
+              >
+                {tx('deleteProject')}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {notesPanelOpen && (
           <div
             className="fixed inset-0 z-[100] flex justify-end"
@@ -1210,6 +1328,79 @@ const ProjectDetails = () => {
               </div>
             </div>
           </div>
+        )}
+
+        <Modal
+          isOpen={deleteProjectModalOpen}
+          onClose={() => {
+            if (!deleteProjectSubmitting) setDeleteProjectModalOpen(false);
+          }}
+          size="sm"
+          contentDir={lang === 'ar' ? 'rtl' : 'ltr'}
+        >
+          <Modal.Header
+            onClose={() => {
+              if (!deleteProjectSubmitting) setDeleteProjectModalOpen(false);
+            }}
+            closeAriaLabel={tx('modalClose')}
+          >
+            {tx('deleteProjectConfirmTitle')}
+          </Modal.Header>
+          <Modal.Content>
+            <p className="text-sm leading-relaxed text-app-text-secondary">{tx('deleteProjectConfirmBody')}</p>
+          </Modal.Content>
+          <Modal.Footer>
+            {lang === 'ar' ? (
+              <>
+                <Button
+                  variant="danger"
+                  type="button"
+                  onClick={handleDeleteProject}
+                  disabled={deleteProjectSubmitting}
+                >
+                  {deleteProjectSubmitting ? tx('deleteProjectDeleting') : tx('deleteProjectConfirm')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setDeleteProjectModalOpen(false)}
+                  disabled={deleteProjectSubmitting}
+                >
+                  {tx('deleteProjectCancel')}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  type="button"
+                  onClick={() => setDeleteProjectModalOpen(false)}
+                  disabled={deleteProjectSubmitting}
+                >
+                  {tx('deleteProjectCancel')}
+                </Button>
+                <Button
+                  variant="danger"
+                  type="button"
+                  onClick={handleDeleteProject}
+                  disabled={deleteProjectSubmitting}
+                >
+                  {deleteProjectSubmitting ? tx('deleteProjectDeleting') : tx('deleteProjectConfirm')}
+                </Button>
+              </>
+            )}
+          </Modal.Footer>
+        </Modal>
+
+        {isAdmin() && project && (project._id || project.id) && (
+          <AssignUsersDialog
+            open={assignTeamOpen}
+            onClose={() => setAssignTeamOpen(false)}
+            project={project}
+            onUsersAssigned={() => {
+              refreshProject();
+            }}
+          />
         )}
       </div>
     </div>

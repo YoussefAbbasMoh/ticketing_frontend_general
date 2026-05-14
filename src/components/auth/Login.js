@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
+import {
+  localizeRegisterNetworkError,
+  localizeResendRegistrationOtpError,
+  localizeVerifyRegistrationOtpError,
+} from '../../utils/registerAuthErrors';
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
 import {
@@ -13,6 +18,8 @@ import {
   authLinkSecondaryClass,
   authPrimaryButtonClass,
 } from './authFieldClasses';
+
+const RESEND_COOLDOWN_SEC = 60;
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -28,16 +35,30 @@ const Login = () => {
   const [companyActionError, setCompanyActionError] = useState('');
   const [pendingLoginData, setPendingLoginData] = useState(null);
   const [lang, setLang] = useState(getStoredLanguage());
+  const [loginPhase, setLoginPhase] = useState('credentials');
+  const [verifyOtp, setVerifyOtp] = useState('');
+  const [verifyError, setVerifyError] = useState('');
+  const [verifyInfo, setVerifyInfo] = useState('');
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    if (loginPhase === 'verify_email' && (name === 'email' || name === 'password')) {
+      setLoginPhase('credentials');
+      setVerifyOtp('');
+      setVerifyError('');
+      setVerifyInfo('');
+      setResendCooldown(0);
+    }
+    setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
-    // Clear error when user starts typing
     if (error) {
       setError('');
     }
@@ -66,22 +87,17 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form submitted - preventDefault called');
-    
+
     if (loading) {
-      console.log('Already loading, returning');
       return false;
     }
-  
+
     setLoading(true);
     setError('');
-    console.log('Starting login attempt...');
-  
+
     try {
-      console.log('Calling authAPI.login...');
       const response = await authAPI.login(formData.email, formData.password);
-      console.log('Response received:', response);
-      
+
       if (response && response.data && response.status === 200) {
         const companiesFromSuccess = response?.data?.user?.companies || [];
         if (companiesFromSuccess.length > 0) {
@@ -97,36 +113,150 @@ const Login = () => {
           setError('');
           return false;
         }
-        console.log('Login successful, navigating...');
         finishLogin(response);
       }
     } catch (error) {
-      console.log('Error caught:', error);
       const data = error.response?.data;
-      if (error.response?.status === 400 && Array.isArray(data?.companies) && data.companies.length > 0) {
+      const status = error.response?.status;
+      if (status === 400 && Array.isArray(data?.companies) && data.companies.length > 0) {
         setCompanyChoices(data.companies);
         const firstId = data.companies[0].companyId;
         setSelectedCompanyId(firstId != null ? String(firstId) : '');
         setCompanyActionError(
-          data.message ||
-            'اختر شركة واحدة للمتابعة / Choose one company to continue.'
+          data.message || 'اختر شركة واحدة للمتابعة / Choose one company to continue.'
         );
         setCompanyModalOpen(true);
         setError('');
+      } else if (
+        status === 403 &&
+        (data?.requiresEmailVerification === true ||
+          data?.code === 'EMAIL_NOT_VERIFIED' ||
+          /email not verified|not verified/i.test(String(data?.message || '').toLowerCase()))
+      ) {
+        setLoginPhase('verify_email');
+        setVerifyOtp('');
+        setVerifyError('');
+        setVerifyInfo('');
+        setError('');
+        setResendCooldown(0);
       } else {
-        const errorMessage = data?.message ||
-                          error.message || 
-                          'Wrong credentials. Please check your email and password and try again.';
+        const errorMessage =
+          data?.message ||
+          error.message ||
+          'Wrong credentials. Please check your email and password and try again.';
         setError(errorMessage);
-        setFormData(prev => ({ ...prev, password: '' }));
+        setFormData((prev) => ({ ...prev, password: '' }));
       }
       console.error('Login error:', error);
     } finally {
-      console.log('Finally block - setting loading to false');
       setLoading(false);
     }
-    
+
     return false;
+  };
+
+  const handleVerifyOtpChange = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setVerifyOtp(v);
+    if (verifyError) setVerifyError('');
+  };
+
+  const handleVerifyFromLogin = async (e) => {
+    e.preventDefault();
+    if (verifyLoading) return;
+    const trimmed = verifyOtp.trim();
+    if (!trimmed) {
+      setVerifyError(t(lang, 'valOtpRequired'));
+      return;
+    }
+    if (!/^\d{6}$/.test(trimmed)) {
+      setVerifyError(t(lang, 'valOtpInvalid'));
+      return;
+    }
+    if (!formData.password) {
+      setVerifyError(t(lang, 'valPasswordRequired'));
+      return;
+    }
+    setVerifyLoading(true);
+    setVerifyError('');
+    setVerifyInfo('');
+    try {
+      const response = await authAPI.verifyRegistrationOtp({
+        email: formData.email.trim().toLowerCase(),
+        otp: trimmed,
+      });
+      if (response?.data?.token && response?.data?.user && response.status === 200) {
+        setLoginPhase('credentials');
+        setVerifyOtp('');
+        const companiesFromSuccess = response.data.user.companies || [];
+        if (companiesFromSuccess.length > 0) {
+          setCompanyChoices(companiesFromSuccess);
+          setSelectedCompanyId(
+            response.data.activeCompanyId
+              ? String(response.data.activeCompanyId)
+              : String(companiesFromSuccess[0]?.companyId || '')
+          );
+          setPendingLoginData(response.data);
+          setCompanyActionError('');
+          setCompanyModalOpen(true);
+          setError('');
+        } else {
+          finishLogin(response);
+        }
+      } else {
+        setVerifyError(t(lang, 'errVerifyUnexpected'));
+      }
+    } catch (apiError) {
+      const netMsg = localizeRegisterNetworkError(lang, apiError);
+      if (netMsg) {
+        setVerifyError(netMsg);
+      } else {
+        setVerifyError(
+          localizeVerifyRegistrationOtpError(
+            lang,
+            apiError?.response?.status,
+            apiError?.response?.data || {}
+          )
+        );
+      }
+    } finally {
+      setVerifyLoading(false);
+    }
+  };
+
+  const handleResendFromLogin = async () => {
+    if (resendLoading || resendCooldown > 0) return;
+    if (!formData.email.trim()) {
+      setVerifyError(t(lang, 'valEmailRequired'));
+      return;
+    }
+    if (!formData.password) {
+      setVerifyError(t(lang, 'valPasswordRequired'));
+      return;
+    }
+    setResendLoading(true);
+    setVerifyError('');
+    setVerifyInfo('');
+    try {
+      await authAPI.resendRegistrationOtp(formData.email.trim().toLowerCase(), formData.password);
+      setVerifyInfo(t(lang, 'verifyEmailSuccessHint'));
+      setResendCooldown(RESEND_COOLDOWN_SEC);
+    } catch (apiError) {
+      const netMsg = localizeRegisterNetworkError(lang, apiError);
+      if (netMsg) {
+        setVerifyError(netMsg);
+      } else {
+        setVerifyError(
+          localizeResendRegistrationOtpError(
+            lang,
+            apiError?.response?.status,
+            apiError?.response?.data || {}
+          )
+        );
+      }
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleConfirmCompanyChoice = async () => {
@@ -166,6 +296,21 @@ const Login = () => {
     return () => window.removeEventListener('language-changed', onLanguageChanged);
   }, []);
 
+  useEffect(() => {
+    if (resendCooldown <= 0) return undefined;
+    const id = setInterval(() => {
+      setResendCooldown((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    const st = location.state;
+    if (!st?.prefillEmail) return;
+    setFormData((prev) => ({ ...prev, email: String(st.prefillEmail) }));
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [location.state, location.pathname, navigate]);
+
   return (
     <AuthPageLayout>
       <div className="w-full max-w-app-form">
@@ -185,14 +330,53 @@ const Login = () => {
 
         <div className="text-center">
           <h1 className="text-[32px] font-bold leading-tight tracking-tight text-app-text">
-            {t(lang, 'welcomeBack')}
+            {loginPhase === 'verify_email' ? t(lang, 'loginVerifyEmailTitle') : t(lang, 'welcomeBack')}
           </h1>
           <p className="mt-s8 text-[13px] leading-normal text-app-text-secondary">
-            {t(lang, 'signInSubtitle')}
+            {loginPhase === 'verify_email'
+              ? t(lang, 'verifyEmailSubtitle').replace('{email}', formData.email.trim() || '—')
+              : t(lang, 'signInSubtitle')}
           </p>
         </div>
 
         <div className="mt-s36 w-full">
+          {verifyError && loginPhase === 'verify_email' && (
+            <div className="mb-s24 animate-fade-in rounded-app-input border border-app-error/40 bg-app-error/10 p-s16">
+              <div className="flex items-start gap-3">
+                <svg
+                  className="mt-0.5 h-5 w-5 flex-shrink-0 text-app-error"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <p className="flex-1 text-[13px] text-app-error">{verifyError}</p>
+                <button
+                  type="button"
+                  onClick={() => setVerifyError('')}
+                  className="flex-shrink-0 text-app-error/80 hover:text-app-error"
+                  aria-label="Close"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {verifyInfo && loginPhase === 'verify_email' && (
+            <div className="mb-s24 rounded-app-input border border-app-primary/25 bg-app-primary/5 p-s16 text-[13px] text-app-text">
+              {verifyInfo}
+            </div>
+          )}
+
           {error && (
             <div className="mb-s24 animate-fade-in rounded-app-input border border-app-error/40 bg-app-error/10 p-s16">
               <div className="flex items-start gap-3">
@@ -224,7 +408,10 @@ const Login = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-s24">
+          <form
+            onSubmit={loginPhase === 'verify_email' ? handleVerifyFromLogin : handleSubmit}
+            className="space-y-s24"
+          >
             <div>
               <label htmlFor="email" className={authLabelClass}>
                 {t(lang, 'emailAddress')}
@@ -237,8 +424,8 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 autoComplete="email"
-                autoFocus
-                disabled={loading}
+                autoFocus={loginPhase === 'credentials'}
+                disabled={loading || verifyLoading || resendLoading}
                 className={authInputClass}
                 placeholder={t(lang, 'emailAddress')}
               />
@@ -256,12 +443,34 @@ const Login = () => {
                 onChange={handleChange}
                 required
                 autoComplete="current-password"
-                disabled={loading}
+                disabled={loading || verifyLoading || resendLoading}
                 placeholder={t(lang, 'password')}
               />
             </div>
 
-            {companyChoices && companyChoices.length > 0 && (
+            {loginPhase === 'verify_email' && (
+              <div>
+                <label htmlFor="login-verify-otp" className={authLabelClass}>
+                  {t(lang, 'verificationCode')}
+                </label>
+                <input
+                  id="login-verify-otp"
+                  name="verify_otp"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus={loginPhase === 'verify_email'}
+                  maxLength={6}
+                  value={verifyOtp}
+                  onChange={handleVerifyOtpChange}
+                  disabled={verifyLoading}
+                  className={authInputClass}
+                  placeholder="000000"
+                />
+              </div>
+            )}
+
+            {companyChoices && companyChoices.length > 0 && loginPhase === 'credentials' && (
               <div>
                 <label htmlFor="companyId" className={authLabelClass}>
                   {t(lang, 'company')}
@@ -270,7 +479,7 @@ const Login = () => {
                   id="companyId"
                   value={selectedCompanyId}
                   onChange={(e) => setSelectedCompanyId(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || verifyLoading || resendLoading}
                   className={`${authInputClass} appearance-none bg-[length:1rem] bg-[right_12px_center] bg-no-repeat pr-10`}
                   style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%235C6378'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -300,33 +509,80 @@ const Login = () => {
             )}
 
             <div className="flex justify-end pt-s8">
-              <button
-                type="button"
-                onClick={() => navigate('/forgot-password')}
-                disabled={loading}
-                className={`${authLinkSecondaryClass} disabled:cursor-not-allowed`}
-              >
-                {t(lang, 'forgotPassword')}
-              </button>
+              {loginPhase === 'credentials' && (
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  disabled={loading || verifyLoading || resendLoading}
+                  className={`${authLinkSecondaryClass} disabled:cursor-not-allowed`}
+                >
+                  {t(lang, 'forgotPassword')}
+                </button>
+              )}
             </div>
 
-            <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
-              {loading ? (
-                <>
-                  <ButtonBusyDots className="text-white" />
-                  <span className="ml-2">{t(lang, 'signingIn')}</span>
-                </>
-              ) : (
-                t(lang, 'signIn')
-              )}
-            </button>
+            {loginPhase === 'verify_email' ? (
+              <div className="flex flex-col gap-s16">
+                <button
+                  type="submit"
+                  disabled={verifyLoading || resendLoading}
+                  className={authPrimaryButtonClass}
+                >
+                  {verifyLoading ? (
+                    <>
+                      <ButtonBusyDots className="text-white" />
+                      <span className="ml-2">{t(lang, 'verifyingCode')}</span>
+                    </>
+                  ) : (
+                    t(lang, 'verifyEmailConfirm')
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendFromLogin}
+                  disabled={verifyLoading || resendLoading || resendCooldown > 0}
+                  className="w-full rounded-app-input border border-app-border bg-app-surface py-3 text-[14px] font-semibold text-app-text shadow-none transition-colors hover:bg-app-surface-variant disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {resendLoading
+                    ? t(lang, 'pleaseWait')
+                    : resendCooldown > 0
+                      ? t(lang, 'resendCooldownSec').replace('{n}', String(resendCooldown))
+                      : t(lang, 'resendCode')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLoginPhase('credentials');
+                    setVerifyOtp('');
+                    setVerifyError('');
+                    setVerifyInfo('');
+                    setResendCooldown(0);
+                  }}
+                  disabled={verifyLoading || resendLoading}
+                  className={`${authLinkSecondaryClass} text-center disabled:cursor-not-allowed`}
+                >
+                  {t(lang, 'loginBackToCredentials')}
+                </button>
+              </div>
+            ) : (
+              <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
+                {loading ? (
+                  <>
+                    <ButtonBusyDots className="text-white" />
+                    <span className="ml-2">{t(lang, 'signingIn')}</span>
+                  </>
+                ) : (
+                  t(lang, 'signIn')
+                )}
+              </button>
+            )}
           </form>
 
           <div className="mt-s24 flex flex-col gap-s16 text-center">
             <button
               type="button"
               onClick={() => navigate('/')}
-              disabled={loading}
+              disabled={loading || verifyLoading || resendLoading}
               className="w-full rounded-app-input border border-app-border bg-app-surface py-3 text-[14px] font-semibold text-app-text shadow-none transition-colors hover:bg-app-surface-variant disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t(lang, 'backToLanding')}
@@ -334,7 +590,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => navigate('/register-company')}
-              disabled={loading}
+              disabled={loading || verifyLoading || resendLoading}
               className={`${authLinkMutedClass} disabled:cursor-not-allowed`}
             >
               {t(lang, 'newCompanyCreateWorkspace')}
@@ -342,7 +598,7 @@ const Login = () => {
             <button
               type="button"
               onClick={() => navigate('/admin/login')}
-              disabled={loading}
+              disabled={loading || verifyLoading || resendLoading}
               className={`${authLinkMutedClass} mt-s8 block w-full text-[12px] disabled:cursor-not-allowed`}
             >
               {lang === 'ar' ? 'دخول مسؤول المنصة (منفصل) ←' : 'Platform admin sign-in (separate) →'}

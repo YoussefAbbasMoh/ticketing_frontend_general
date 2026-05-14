@@ -6,6 +6,7 @@ import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { SubscriptionPageSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
+import { mergeSubscriptionPlanForDisplay, resolveSubscriptionUiLang } from '../../utils/subscriptionPlanUi';
 
 const TEXT = {
   en: {
@@ -16,7 +17,10 @@ const TEXT = {
     cancelled: 'Subscription cancelled successfully.',
     cancelFailed: 'Failed to cancel subscription.',
     free: 'Free',
-    active: 'active',
+    statusActive: 'Active',
+    statusExpired: 'Expired',
+    statusCancelled: 'Cancelled',
+    statusPending: 'Pending',
     current: 'Current',
     projectsForCompany: 'Projects (this company)',
     projectsUnlimited: 'Unlimited',
@@ -30,7 +34,10 @@ const TEXT = {
     cancelled: 'تم إلغاء الاشتراك بنجاح.',
     cancelFailed: 'فشل إلغاء الاشتراك.',
     free: 'مجاني',
-    active: 'نشط',
+    statusActive: 'نشط',
+    statusExpired: 'منتهٍ',
+    statusCancelled: 'ملغى',
+    statusPending: 'قيد الانتظار',
     current: 'الحالي',
     projectsForCompany: 'المشاريع (لهذه الشركة)',
     projectsUnlimited: 'غير محدود',
@@ -38,125 +45,12 @@ const TEXT = {
   },
 };
 
-const PLAN_UI_FALLBACK = {
-  en: {
-    free: {
-      name: 'Free',
-      description: 'Default plan for new companies',
-      features: [
-        'Up to 3 accounts',
-        'Up to 3 projects',
-        'No chat images, videos, or files',
-        'No attendance edit or download',
-      ],
-      billingPeriod: 'monthly',
-    },
-    basic: {
-      name: 'Basic',
-      description: 'For growing teams',
-      features: [
-        'From 3 to 10 members',
-        'Up to 10 projects',
-        'Chat attachments enabled',
-        'Attendance edit and report download',
-      ],
-      billingPeriod: 'monthly',
-    },
-    pro: {
-      name: 'Pro',
-      description: 'For larger teams',
-      features: [
-        'From 10 to 50 members',
-        'Unlimited projects',
-        'Chat attachments enabled',
-        'Attendance edit and report download',
-      ],
-      billingPeriod: 'monthly',
-    },
-    enterprise: {
-      name: 'Enterprise',
-      description: 'For organizations with 30+ members',
-      features: [
-        '30+ members',
-        'Unlimited projects',
-        'Chat attachments enabled',
-        'Attendance edit and report download',
-      ],
-      billingPeriod: 'monthly',
-    },
-  },
-  ar: {
-    free: {
-      name: 'مجانية',
-      description: 'الباقة الافتراضية للشركات الجديدة',
-      features: [
-        'حتى 3 حسابات',
-        'حتى 3 مشاريع',
-        'بدون صور أو فيديو أو ملفات في الشات',
-        'بدون تعديل أو تحميل الحضور',
-      ],
-      billingPeriod: 'شهريًا',
-    },
-    basic: {
-      name: 'أساسية',
-      description: 'لفِرَق العمل المتوسطة',
-      features: [
-        'من 3 إلى 10 أفراد',
-        'حتى 10 مشاريع',
-        'إتاحة مرفقات الشات',
-        'تعديل الحضور وتحميل التقارير',
-      ],
-      billingPeriod: 'شهريًا',
-    },
-    pro: {
-      name: 'احترافية',
-      description: 'لفِرَق العمل الكبيرة',
-      features: [
-        'من 10 إلى 50 فرد',
-        'مشاريع غير محدودة',
-        'إتاحة مرفقات الشات',
-        'تعديل الحضور وتحميل التقارير',
-      ],
-      billingPeriod: 'شهريًا',
-    },
-    enterprise: {
-      name: 'المؤسسات',
-      description: 'لمؤسسات يزيد عدد أفرادها عن 30',
-      features: [
-        'أكثر من 30 فرد',
-        'مشاريع غير محدودة',
-        'إتاحة مرفقات الشات',
-        'تعديل الحضور وتحميل التقارير',
-      ],
-      billingPeriod: 'شهريًا',
-    },
-  },
-};
-
-const hasArabic = (value) => /[\u0600-\u06FF]/.test(String(value || ''));
-
 const KNOWN_PLAN_IDS = ['free', 'basic', 'pro', 'enterprise'];
 
 const normalizePlanId = (raw) => {
   const s = String(raw ?? 'free').trim().toLowerCase();
   if (!s) return 'free';
   return KNOWN_PLAN_IDS.includes(s) ? s : 'free';
-};
-
-const formatCurrency = (value, currency = 'EGP') =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-
-const formatDate = (value) => {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
 };
 
 const SubscriptionPage = () => {
@@ -171,17 +65,42 @@ const SubscriptionPage = () => {
   const [success, setSuccess] = useState('');
   const handledConfirmRef = useRef(false);
   const [lang, setLang] = useState(getStoredLanguage());
+  const uiLang = resolveSubscriptionUiLang(lang);
   const tx = useCallback((key, vars = {}) => {
-    let s = TEXT[lang]?.[key] || TEXT.en[key] || key;
+    let s = TEXT[uiLang]?.[key] || TEXT.en[key] || key;
     Object.entries(vars).forEach(([k, v]) => {
       s = s.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
     });
     return s;
-  }, [lang]);
+  }, [uiLang]);
+
+  const formatMoney = useCallback(
+    (value, currency = 'EGP') =>
+      new Intl.NumberFormat(uiLang === 'ar' ? 'ar-EG' : 'en-US', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+      }).format(Number(value || 0)),
+    [uiLang]
+  );
+
+  const formatDateUi = useCallback(
+    (value) => {
+      if (!value) return null;
+      const locale = uiLang === 'ar' ? 'ar-EG' : 'en-GB';
+      return new Date(value).toLocaleDateString(locale, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    },
+    [uiLang]
+  );
+
   const localizeBillingPeriod = useCallback(
     (value) => {
       const raw = String(value || '').toLowerCase();
-      if (lang === 'ar') {
+      if (uiLang === 'ar') {
         if (raw === 'monthly') return 'شهريًا';
         if (raw === 'yearly') return 'سنويًا';
       } else {
@@ -190,32 +109,19 @@ const SubscriptionPage = () => {
       }
       return value || '';
     },
-    [lang]
+    [uiLang]
   );
 
-  const normalizePlanForUi = useCallback(
-    (plan) => {
-      if (!plan) return plan;
-      const textPayload = [
-        plan.name,
-        plan.description,
-        plan.billingPeriod,
-        ...(plan.features || []),
-      ].join(' ');
-      const fallback = PLAN_UI_FALLBACK[lang]?.[plan.id];
-      if (!fallback) return plan;
-
-      // If requested Arabic but payload has no Arabic chars, enforce Arabic fallback.
-      if (lang === 'ar' && !hasArabic(textPayload)) {
-        return { ...plan, ...fallback };
-      }
-      // If requested English but payload is Arabic, enforce English fallback.
-      if (lang === 'en' && hasArabic(textPayload)) {
-        return { ...plan, ...fallback };
-      }
-      return plan;
+  const subscriptionStatusLabel = useCallback(
+    (status) => {
+      const k = String(status || '').toLowerCase();
+      if (k === 'active') return tx('statusActive');
+      if (k === 'expired') return tx('statusExpired');
+      if (k === 'cancelled' || k === 'canceled') return tx('statusCancelled');
+      if (k === 'pending') return tx('statusPending');
+      return status ? String(status) : tx('statusActive');
     },
-    [lang]
+    [tx]
   );
 
   const loadData = useCallback(async () => {
@@ -254,6 +160,11 @@ const SubscriptionPage = () => {
   const currentPlan = useMemo(
     () => plans.find((plan) => plan.id === currentPlanId) || null,
     [plans, currentPlanId]
+  );
+
+  const mergedCurrentPlan = useMemo(
+    () => mergeSubscriptionPlanForDisplay(lang, currentPlan),
+    [lang, currentPlan]
   );
 
   const handleSubscribe = (planId) => {
@@ -381,21 +292,21 @@ const SubscriptionPage = () => {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <p className="text-sm text-gray-500">{t(lang, 'plan')}</p>
-                  <p className="text-lg font-semibold text-gray-900">{currentPlan?.name || tx('free')}</p>
+                  <p className="text-lg font-semibold text-gray-900">{mergedCurrentPlan?.name || tx('free')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">{t(lang, 'status')}</p>
                   <p className={`text-lg font-semibold ${hasExpired ? 'text-amber-600' : 'text-green-600'}`}>
-                    {subscription?.status || tx('active')}
+                    {subscriptionStatusLabel(subscription?.status)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">{t(lang, 'expiresAt')}</p>
-                  <p className="text-gray-800">{formatDate(subscription?.expiresAt) || tx('na')}</p>
+                  <p className="text-gray-800">{formatDateUi(subscription?.expiresAt) || tx('na')}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">{t(lang, 'graceEndsAt')}</p>
-                  <p className="text-gray-800">{formatDate(subscription?.graceEndsAt) || tx('na')}</p>
+                  <p className="text-gray-800">{formatDateUi(subscription?.graceEndsAt) || tx('na')}</p>
                 </div>
                 {subscription?.limits && (
                   <div>
@@ -434,7 +345,7 @@ const SubscriptionPage = () => {
 
           <div className="grid gap-4 md:grid-cols-3">
             {plans.map((plan) => {
-              const displayPlan = normalizePlanForUi(plan);
+              const displayPlan = mergeSubscriptionPlanForDisplay(lang, plan);
               const isCurrent = plan.id === currentPlanId;
               const isFree = plan.id === 'free';
               const paidHoverClasses = isFree
@@ -457,7 +368,7 @@ const SubscriptionPage = () => {
                     </div>
                     <p className="mb-4 text-gray-600">{displayPlan.description}</p>
                     <p className="mb-4 text-2xl font-semibold text-primary">
-                      {formatCurrency(plan.price, plan.currency)} / {localizeBillingPeriod(displayPlan.billingPeriod)}
+                      {formatMoney(plan.price, plan.currency)} / {localizeBillingPeriod(displayPlan.billingPeriod)}
                     </p>
                     <ul className="mb-6 space-y-2 text-sm text-gray-700">
                       {(displayPlan.features || []).map((feature) => (

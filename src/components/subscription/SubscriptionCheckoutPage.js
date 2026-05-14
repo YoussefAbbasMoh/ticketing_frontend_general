@@ -6,6 +6,7 @@ import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { SubscriptionPageSkeleton, ButtonBusyDots } from '../ui/LoadingSkeletons';
 import { getStoredLanguage, t } from '../../i18n';
+import { mergeSubscriptionPlanForDisplay, resolveSubscriptionUiLang } from '../../utils/subscriptionPlanUi';
 
 const KNOWN_PLAN_IDS = ['free', 'basic', 'pro', 'enterprise'];
 
@@ -15,16 +16,9 @@ const normalizePlanId = (raw) => {
   return KNOWN_PLAN_IDS.includes(s) ? s : 'free';
 };
 
-const formatCurrency = (value, currency = 'EGP') =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Number(value || 0));
-
-const formatDate = (value, lang) => {
+const formatDate = (value, uiLang) => {
   if (!value) return null;
-  const locale = lang === 'ar' ? 'ar-EG' : 'en-GB';
+  const locale = uiLang === 'ar' ? 'ar-EG' : 'en-GB';
   return new Date(value).toLocaleDateString(locale, {
     day: 'numeric',
     month: 'short',
@@ -43,9 +37,9 @@ const estimateNextRenewalFromNow = (billingPeriod) => {
   return d;
 };
 
-const localizeBillingPeriod = (value, lang) => {
+const localizeBillingPeriod = (value, uiLang) => {
   const raw = String(value || '').toLowerCase();
-  if (lang === 'ar') {
+  if (uiLang === 'ar') {
     if (raw === 'monthly') return 'شهريًا';
     if (raw === 'yearly') return 'سنويًا';
   }
@@ -90,6 +84,7 @@ const SubscriptionCheckoutPage = () => {
   const requestedPlanId = normalizePlanId(searchParams.get('planId'));
 
   const [lang, setLang] = useState(getStoredLanguage());
+  const uiLang = resolveSubscriptionUiLang(lang);
   const [plans, setPlans] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -134,10 +129,30 @@ const SubscriptionCheckoutPage = () => {
     [plans, requestedPlanId]
   );
 
+  const displaySelectedPlan = useMemo(
+    () => (selectedPlan ? mergeSubscriptionPlanForDisplay(lang, selectedPlan) : null),
+    [lang, selectedPlan]
+  );
+
   const currentPlanId = normalizePlanId(subscription?.planId);
   const currentPlan = useMemo(
     () => plans.find((p) => p.id === currentPlanId) || null,
     [plans, currentPlanId]
+  );
+
+  const displayCurrentPlan = useMemo(
+    () => (currentPlan ? mergeSubscriptionPlanForDisplay(lang, currentPlan) : null),
+    [lang, currentPlan]
+  );
+
+  const formatMoney = useCallback(
+    (value, currency = 'EGP') =>
+      new Intl.NumberFormat(uiLang === 'ar' ? 'ar-EG' : 'en-US', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+      }).format(Number(value || 0)),
+    [uiLang]
   );
 
   const nextRenewalDate = useMemo(() => {
@@ -168,7 +183,7 @@ const SubscriptionCheckoutPage = () => {
     }
   };
 
-  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const dir = uiLang === 'ar' ? 'rtl' : 'ltr';
 
   if (loading || requestedPlanId === 'free') {
     return <SubscriptionPageSkeleton />;
@@ -256,15 +271,17 @@ const SubscriptionCheckoutPage = () => {
                 <p className="text-xs font-semibold uppercase tracking-wider text-app-text-secondary">
                   {t(lang, 'plan')}
                 </p>
-                <h2 className="mt-1 break-words text-xl font-bold text-app-text sm:text-2xl">{selectedPlan.name}</h2>
-                {selectedPlan.description ? (
+                <h2 className="mt-1 break-words text-xl font-bold text-app-text sm:text-2xl">
+                  {displaySelectedPlan?.name}
+                </h2>
+                {displaySelectedPlan?.description ? (
                   <p className="mt-2 text-sm leading-relaxed text-app-text-secondary sm:text-[15px]">
-                    {selectedPlan.description}
+                    {displaySelectedPlan.description}
                   </p>
                 ) : null}
               </div>
-              <span className="inline-flex w-fit shrink-0 rounded-app border border-orange/35 bg-orange-soft/50 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-orange-dark">
-                {selectedPlan.id}
+              <span className="inline-flex w-fit shrink-0 rounded-app border border-orange/35 bg-orange-soft/50 px-3 py-1.5 text-xs font-semibold tracking-wide text-orange-dark">
+                {localizeBillingPeriod(displaySelectedPlan?.billingPeriod ?? selectedPlan.billingPeriod, uiLang)}
               </span>
             </div>
           </Card.Header>
@@ -281,7 +298,7 @@ const SubscriptionCheckoutPage = () => {
                 <div className="flex min-h-[88px] flex-col justify-center rounded-app border border-app-divider bg-app-surface-variant/50 p-4 sm:min-h-0">
                   <p className="text-xs font-medium text-app-text-secondary">{t(lang, 'fromPlan')}</p>
                   <p className="mt-1 truncate text-base font-semibold text-app-text sm:text-lg">
-                    {currentPlan?.name || currentPlanId}
+                    {displayCurrentPlan?.name || currentPlanId}
                   </p>
                 </div>
                 <div className="flex items-center justify-center py-1 sm:flex-col sm:justify-center sm:py-0">
@@ -297,7 +314,7 @@ const SubscriptionCheckoutPage = () => {
                 <div className="flex min-h-[88px] flex-col justify-center rounded-app border border-orange/35 bg-orange-soft/40 p-4 sm:min-h-0">
                   <p className="text-xs font-medium text-app-text-secondary">{t(lang, 'toPlan')}</p>
                   <p className="mt-1 truncate text-base font-semibold text-orange-dark sm:text-lg">
-                    {selectedPlan.name}
+                    {displaySelectedPlan?.name}
                   </p>
                 </div>
               </div>
@@ -313,7 +330,7 @@ const SubscriptionCheckoutPage = () => {
                     {t(lang, 'amountDueToday')}
                   </p>
                   <p className="mt-1 break-words text-2xl font-bold tabular-nums text-app-text sm:text-3xl">
-                    {formatCurrency(selectedPlan.price, selectedPlan.currency)}
+                    {formatMoney(selectedPlan.price, selectedPlan.currency)}
                   </p>
                 </div>
               </div>
@@ -326,7 +343,10 @@ const SubscriptionCheckoutPage = () => {
                     {t(lang, 'billingCycleLabel')}
                   </p>
                   <p className="mt-1 text-xl font-bold text-app-text sm:text-2xl">
-                    {localizeBillingPeriod(selectedPlan.billingPeriod, lang)}
+                    {localizeBillingPeriod(
+                      displaySelectedPlan?.billingPeriod ?? selectedPlan.billingPeriod,
+                      uiLang
+                    )}
                   </p>
                 </div>
               </div>
@@ -340,7 +360,7 @@ const SubscriptionCheckoutPage = () => {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-app-text">{t(lang, 'nextRenewalTitle')}</p>
                   <p className="mt-2 text-2xl font-bold tabular-nums text-orange-dark sm:text-3xl">
-                    {nextRenewalDate ? formatDate(nextRenewalDate, lang) : '—'}
+                    {nextRenewalDate ? formatDate(nextRenewalDate, uiLang) : '—'}
                   </p>
                   <p className="mt-3 text-xs leading-relaxed text-app-text-secondary sm:text-sm">
                     {t(lang, 'nextRenewalHint')}
@@ -352,7 +372,7 @@ const SubscriptionCheckoutPage = () => {
             {subscription?.expiresAt && currentPlanId === selectedPlan.id ? (
               <p className="rounded-app border border-app-divider bg-app-surface-variant/30 px-4 py-3 text-center text-sm text-app-text-secondary sm:text-start">
                 <span className="font-medium text-app-text">{t(lang, 'expiresAt')}:</span>{' '}
-                <span className="tabular-nums text-app-text">{formatDate(subscription.expiresAt, lang)}</span>
+                <span className="tabular-nums text-app-text">{formatDate(subscription.expiresAt, uiLang)}</span>
               </p>
             ) : null}
 

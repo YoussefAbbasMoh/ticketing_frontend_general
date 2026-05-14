@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { getStoredLanguage } from '../../i18n';
+import { getStoredLanguage, t } from '../../i18n';
 import { attendanceAPI } from '../../services/api';
+import { isSubstantiveCheckoutNote } from '../../utils/checkoutNoteClient';
 import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import Skeleton from '../ui/Skeleton';
@@ -38,6 +39,7 @@ const TEXT = {
         checkoutNoteHint: 'Example: Fixed checkout bug, reviewed 3 PRs…',
         checkoutSkipNote: 'Skip for now',
         checkoutSubmitting: 'Checking out…',
+        cancel: 'Cancel',
     },
     ar: {
         failedCheckIn: 'فشل تسجيل الحضور',
@@ -71,6 +73,7 @@ const TEXT = {
         checkoutNoteHint: 'مثال: أصلحت خطأ في النظام، وراجعت 3 طلبات دمج…',
         checkoutSkipNote: 'تخطي الآن',
         checkoutSubmitting: 'جارٍ تسجيل الانصراف…',
+        cancel: 'إلغاء',
     },
 };
 
@@ -206,8 +209,14 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
     const handleCheckIn = async () => {
         try {
             setLoading(true);
+            setError('');
             const loc = await getCurrentPositionCoords();
-            await attendanceAPI.checkIn(loc ? { latitude: loc.latitude, longitude: loc.longitude } : {});
+            if (!loc) {
+                setError(t(lang, 'locationRequiredAttendance'));
+                setLoading(false);
+                return;
+            }
+            await attendanceAPI.checkIn({ latitude: loc.latitude, longitude: loc.longitude });
             await fetchStatus();
         } catch (err) {
             setError(err.response?.data?.message || tx('failedCheckIn'));
@@ -226,14 +235,25 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
             setCheckoutSubmitting(true);
             setLoading(true);
             setError('');
-            const loc = await getCurrentPositionCoords();
-            const body = {};
             const trimmed = noteText != null ? String(noteText).trim() : '';
-            if (trimmed) body.tasksDone = trimmed;
-            if (loc) {
-                body.latitude = loc.latitude;
-                body.longitude = loc.longitude;
+            if (!trimmed || !isSubstantiveCheckoutNote(trimmed)) {
+                setError(t(lang, 'checkoutNoteInvalid'));
+                setLoading(false);
+                setCheckoutSubmitting(false);
+                return;
             }
+            const loc = await getCurrentPositionCoords();
+            if (!loc) {
+                setError(t(lang, 'locationRequiredAttendance'));
+                setLoading(false);
+                setCheckoutSubmitting(false);
+                return;
+            }
+            const body = {
+                tasksDone: trimmed,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+            };
             await attendanceAPI.checkOut(body);
             setCheckoutDialogOpen(false);
             setCheckoutNote('');
@@ -480,10 +500,10 @@ const AttendanceWidget = ({ onAttendanceKindChange }) => {
                     type="button"
                     variant="outline"
                     disabled={checkoutSubmitting}
-                    onClick={() => submitCheckOut('')}
+                    onClick={closeCheckoutDialog}
                     className="w-full sm:w-auto"
                 >
-                    {tx('checkoutSkipNote')}
+                    {tx('cancel')}
                 </Button>
                 <Button
                     type="button"

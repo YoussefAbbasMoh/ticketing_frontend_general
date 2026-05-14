@@ -16,6 +16,7 @@ import CalendarToolbarButton from './CalendarToolbarButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { getStoredLanguage, setStoredLanguage, t } from '../../i18n';
 import { InlineSkeletonPulse } from '../ui/LoadingSkeletons';
+import { companyNameFromMembership, membershipCompanyId } from '../../utils/companyMembership';
 
 const AppBar = ({ onMenuClick }) => {
   const theme = useTheme();
@@ -29,12 +30,14 @@ const AppBar = ({ onMenuClick }) => {
     const list = user?.companies || [];
     return list
       .map((entry) => {
-        const idRaw = entry?.companyId ?? entry?.company?._id ?? entry?.company;
-        if (!idRaw) return null;
-        const companyId = String(idRaw);
+        const companyId = membershipCompanyId(entry);
+        if (!companyId) return null;
+        const name =
+          companyNameFromMembership(entry) ||
+          (companyId ? `Workspace ${companyId.slice(-4)}` : 'Workspace');
         return {
           companyId,
-          name: entry?.company?.name || `Company ${companyId.slice(-4)}`,
+          name,
           companyRole: entry?.companyRole || 'user',
           isOwner: Boolean(entry?.isOwner),
         };

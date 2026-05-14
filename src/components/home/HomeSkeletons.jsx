@@ -69,11 +69,13 @@ export const HomeLoadingSkeleton = ({ tx }) => (
 
       <WorkspaceHomePanel
         title={tx('projects')}
-        subtitle={tx('projectsSummary', { active: 0, completed: 0 })}
+        subtitle={tx('projectsSummary', { active: 0, completed: 0, onHold: 0, cancelled: 0 })}
         headerRight={<Skeleton className="h-8 min-w-[5.5rem] rounded-full" />}
       >
         <div className="mb-4 flex flex-wrap gap-2 sm:gap-3">
           <Skeleton className="h-9 w-[5.5rem] rounded-full" />
+          <Skeleton className="h-9 w-[6.5rem] rounded-full" />
+          <Skeleton className="h-9 w-[6rem] rounded-full" />
           <Skeleton className="h-9 w-[6.5rem] rounded-full" />
           <Skeleton className="h-9 w-[7rem] rounded-full" />
         </div>

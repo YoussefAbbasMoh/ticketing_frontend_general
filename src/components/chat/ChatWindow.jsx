@@ -57,16 +57,18 @@ const ChatWindow = ({ conversation, onBack }) => {
 
   const txThread = (key) => THREAD_SUB[lang]?.[key] || THREAD_SUB.en[key] || key;
 
+  const conversationId = conversation?._id ?? conversation?.id ?? null;
+
   // Load messages when conversation changes
   useEffect(() => {
-    if (conversation?._id) {
+    if (conversationId) {
       setLoading(true);
       setReplyTo(null);
       setEditingMessage(null);
       if (markAsRead) {
-        markAsRead(conversation._id);
+        markAsRead(conversationId);
       }
-      loadMessages(conversation._id)
+      loadMessages(conversationId)
         .then(() => {
           setHasMore(true);
           // Scroll to bottom after messages are loaded
@@ -76,7 +78,26 @@ const ChatWindow = ({ conversation, onBack }) => {
         })
         .finally(() => setLoading(false));
     }
-  }, [conversation?._id, loadMessages, markAsRead]);
+  }, [conversationId, loadMessages, markAsRead]);
+
+  // REST + Socket.IO can land on different serverless instances (e.g. Vercel), so live emits may never
+  // arrive; poll lightly while this thread is open. Set VITE_CHAT_MESSAGE_POLL_MS=0 to disable.
+  useEffect(() => {
+    if (!conversationId) return undefined;
+    const raw = import.meta.env?.VITE_CHAT_MESSAGE_POLL_MS;
+    if (raw === '0') return undefined;
+    const ms =
+      raw != null && String(raw).trim() !== ''
+        ? parseInt(String(raw), 10)
+        : 4000;
+    if (!Number.isFinite(ms) || ms <= 0) return undefined;
+
+    const id = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      loadMessages(conversationId);
+    }, ms);
+    return () => clearInterval(id);
+  }, [conversationId, loadMessages]);
 
   // ... (keeping existing scroll logic) ...
   // Auto-scroll to bottom when conversation opens and messages are available

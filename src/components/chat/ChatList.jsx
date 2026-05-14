@@ -136,8 +136,14 @@ const ChatList = ({ onSelectConversation, onCreateNew }) => {
     if (!conversation.lastMessage) return tx('noMessagesYet');
     
     const message = conversation.lastMessage;
-    const isSentByMe = message.sender?._id?.toString() === user?._id?.toString() || 
-                        message.sender?.toString() === user?._id?.toString();
+    const uid = user?._id?.toString() || user?.id?.toString();
+    const isSentByMe =
+      (message.sender?._id != null && String(message.sender._id) === String(uid)) ||
+      (message.sender?.id != null && String(message.sender.id) === String(uid)) ||
+      (message.senderId != null && String(message.senderId) === String(uid)) ||
+      (message.sender != null &&
+        typeof message.sender !== 'object' &&
+        String(message.sender) === String(uid));
     const prefix = isSentByMe ? tx('youPrefix') : '';
 
     switch (message.type) {

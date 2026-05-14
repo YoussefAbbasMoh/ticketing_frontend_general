@@ -44,6 +44,16 @@ const normalizeMessageIdFromSocket = (message) => {
   return String(raw).trim();
 };
 
+/** Sender id for preview / unread (Mongo populate + Postgres map). */
+const messageSenderId = (msg) => {
+  if (!msg || typeof msg !== 'object') return '';
+  const s = msg.sender;
+  if (s && typeof s === 'object') return String(s._id ?? s.id ?? '').trim();
+  if (msg.senderId != null) return String(msg.senderId).trim();
+  if (typeof s === 'string') return String(s).trim();
+  return '';
+};
+
 export const ChatProvider = ({ children }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
@@ -69,14 +79,22 @@ export const ChatProvider = ({ children }) => {
     const cid = String(conversationId);
     try {
       const response = await chatAPI.getMessages(conversationId);
+      const msgs = response.data.messages || [];
       setMessages((prev) => ({
         ...prev,
-        [cid]: response.data.messages || [],
+        [cid]: msgs,
       }));
+      const newest = msgs.length ? msgs[msgs.length - 1] : null;
       setConversations((prev) =>
-        prev.map((c) =>
-          String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : c
-        )
+        prev.map((c) => {
+          if (String(c._id ?? c.id) !== cid) return c;
+          const next = { ...c, unreadCount: 0 };
+          if (newest) {
+            next.lastMessage = newest;
+            next.lastMessageAt = newest.createdAt || c.lastMessageAt;
+          }
+          return next;
+        })
       );
     } catch (error) {
       console.error('Load messages error:', error);
@@ -96,44 +114,83 @@ export const ChatProvider = ({ children }) => {
     loadConversations({ silent: true });
   }, [loadConversations]);
 
-  const handleNewMessage = useCallback((data) => {
-    const receivedConvId = normalizeConversationIdFromSocket(data);
-    const newMsgId = normalizeMessageIdFromSocket(data?.message);
-    if (!receivedConvId) return;
-    if (!newMsgId) {
+  const handleNewMessage = useCallback(
+    (data) => {
+      const receivedConvId = normalizeConversationIdFromSocket(data);
+      const newMsgId = normalizeMessageIdFromSocket(data?.message);
+      const incoming = data?.message;
+      if (!receivedConvId) return;
+      if (!newMsgId || !incoming) {
+        if (debugChatSocket) {
+          // eslint-disable-next-line no-console
+          console.warn('[SOCKET RECEIVED] new_chat_message missing message id — skip state merge', data);
+        }
+        return;
+      }
+
       if (debugChatSocket) {
         // eslint-disable-next-line no-console
-        console.warn('[SOCKET RECEIVED] new_chat_message missing message id — skip state merge', data);
+        console.log('[SOCKET RECEIVED] new_chat_message', {
+          conversationId: receivedConvId,
+          messageId: newMsgId,
+        });
       }
-      return;
-    }
 
-    if (debugChatSocket) {
-      // eslint-disable-next-line no-console
-      console.log('[SOCKET RECEIVED] new_chat_message', {
-        conversationId: receivedConvId,
-        messageId: newMsgId,
+      setMessages((prev) => {
+        const existingMessages = prev[receivedConvId] || [];
+        const messageExists = existingMessages.some((msg) => {
+          const msgId = normalizeMessageIdFromSocket(msg);
+          return msgId === newMsgId;
+        });
+        if (messageExists) {
+          return prev;
+        }
+        const newMessages = [...existingMessages, incoming];
+        return {
+          ...prev,
+          [receivedConvId]: newMessages,
+        };
       });
-    }
 
-    setMessages((prev) => {
-      const existingMessages = prev[receivedConvId] || [];
-      const messageExists = existingMessages.some((msg) => {
-        const msgId = normalizeMessageIdFromSocket(msg);
-        return msgId === newMsgId;
+      const myId = String(user?._id ?? user?.id ?? '').trim();
+      const senderId = messageSenderId(incoming);
+      const isFromMe = Boolean(myId && senderId && senderId === myId);
+      const activeId = activeConversation
+        ? String(activeConversation._id ?? activeConversation.id)
+        : '';
+      const isActiveChat = Boolean(activeId && activeId === receivedConvId);
+
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => String(c._id ?? c.id) === receivedConvId);
+        if (idx === -1) return prev;
+
+        const c = prev[idx];
+        const lastPrevId = normalizeMessageIdFromSocket(c.lastMessage);
+        const duplicateListPreview = lastPrevId === newMsgId;
+
+        let nextUnread = typeof c.unreadCount === 'number' ? c.unreadCount : Number(c.unreadCount) || 0;
+        if (isFromMe) {
+          /* keep */
+        } else if (isActiveChat) {
+          nextUnread = 0;
+        } else if (!duplicateListPreview) {
+          nextUnread = (Number(nextUnread) || 0) + 1;
+        }
+
+        const updated = {
+          ...c,
+          lastMessage: incoming,
+          lastMessageAt: incoming.createdAt || new Date().toISOString(),
+          unreadCount: nextUnread,
+        };
+        const rest = prev.filter((_, i) => i !== idx);
+        return [updated, ...rest];
       });
-      if (messageExists) {
-        return prev;
-      }
-      const newMessages = [...existingMessages, data.message];
-      return {
-        ...prev,
-        [receivedConvId]: newMessages,
-      };
-    });
 
-    loadConversations({ silent: true });
-  }, [loadConversations]);
+      loadConversations({ silent: true });
+    },
+    [loadConversations, user, activeConversation]
+  );
 
   const handleMessageUpdated = useCallback((data) => {
     const { conversationId, message } = data;

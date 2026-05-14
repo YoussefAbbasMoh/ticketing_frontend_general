@@ -21,42 +21,56 @@ export const ChatProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const loadConversations = useCallback(async () => {
+  const loadConversations = useCallback(async (opts) => {
+    const silent = opts && opts.silent === true;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await chatAPI.getConversations();
       setConversations(response.data.conversations || []);
     } catch (error) {
       console.error('Load conversations error:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   const loadMessages = useCallback(async (conversationId) => {
+    const cid = String(conversationId);
     try {
-      setLoading(true);
       const response = await chatAPI.getMessages(conversationId);
-      setMessages(prev => ({
+      setMessages((prev) => ({
         ...prev,
-        [conversationId]: response.data.messages || []
+        [cid]: response.data.messages || [],
       }));
+      // GET /messages marks read server-side; mirror in list state so badges clear without a full refetch.
+      setConversations((prev) =>
+        prev.map((c) =>
+          String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : c
+        )
+      );
     } catch (error) {
       console.error('Load messages error:', error);
-    } finally {
-      setLoading(false);
     }
+  }, []);
+
+  const markAsRead = useCallback((conversationId) => {
+    const cid = String(conversationId);
+    setConversations((prev) =>
+      prev.map((c) =>
+        String(c._id ?? c.id) === cid ? { ...c, unreadCount: 0 } : c
+      )
+    );
   }, []);
 
   const handleNewMessage = useCallback((data) => {
     const receivedConvId = data.conversationId?.toString();
-    if (!receivedConvId || !data?.message?._id) return;
+    const newMsgId = (data?.message?._id ?? data?.message?.id)?.toString();
+    if (!receivedConvId || !newMsgId) return;
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const existingMessages = prev[receivedConvId] || [];
-      const messageExists = existingMessages.some(msg => {
-        const msgId = msg._id?.toString();
-        const newMsgId = data.message._id?.toString();
+      const messageExists = existingMessages.some((msg) => {
+        const msgId = (msg._id ?? msg.id)?.toString();
         return msgId === newMsgId;
       });
       if (messageExists) {
@@ -65,28 +79,29 @@ export const ChatProvider = ({ children }) => {
       const newMessages = [...existingMessages, data.message];
       return {
         ...prev,
-        [receivedConvId]: newMessages
+        [receivedConvId]: newMessages,
       };
     });
 
-    // Keep conversation list fresh for unread counts + last message preview.
-    loadConversations();
+    // Refresh previews + unread without toggling global chat loading (avoids list flicker).
+    loadConversations({ silent: true });
   }, [loadConversations]);
 
 
   const handleMessageUpdated = useCallback((data) => {
     const { conversationId, message } = data;
     const convId = conversationId?.toString();
-    if (!convId || !message?._id) return;
+    const mid = (message?._id ?? message?.id)?.toString();
+    if (!convId || !mid) return;
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const existingMessages = prev[convId] || [];
-      const updatedMessages = existingMessages.map(msg =>
-        msg._id === message._id ? { ...msg, ...message } : msg
+      const updatedMessages = existingMessages.map((msg) =>
+        (msg._id ?? msg.id)?.toString() === mid ? { ...msg, ...message } : msg
       );
       return {
         ...prev,
-        [convId]: updatedMessages
+        [convId]: updatedMessages,
       };
     });
   }, []);
@@ -94,16 +109,26 @@ export const ChatProvider = ({ children }) => {
   const handleMessageDeleted = useCallback((data) => {
     const { conversationId, messageId } = data;
     const convId = conversationId?.toString();
-    if (!convId || !messageId) return;
+    const mid = messageId?.toString();
+    if (!convId || !mid) return;
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const existingMessages = prev[convId] || [];
-      const updatedMessages = existingMessages.map(msg =>
-        msg._id === messageId ? { ...msg, isDeleted: true, content: 'This message was deleted', type: 'text', fileUrl: null, reactions: [] } : msg
+      const updatedMessages = existingMessages.map((msg) =>
+        (msg._id ?? msg.id)?.toString() === mid
+          ? {
+              ...msg,
+              isDeleted: true,
+              content: 'This message was deleted',
+              type: 'text',
+              fileUrl: null,
+              reactions: [],
+            }
+          : msg
       );
       return {
         ...prev,
-        [convId]: updatedMessages
+        [convId]: updatedMessages,
       };
     });
   }, []);
@@ -111,16 +136,17 @@ export const ChatProvider = ({ children }) => {
   const handleReactionUpdated = useCallback((data) => {
     const { conversationId, messageId, reactions } = data;
     const convId = conversationId?.toString();
-    if (!convId || !messageId) return;
+    const mid = messageId?.toString();
+    if (!convId || !mid) return;
 
-    setMessages(prev => {
+    setMessages((prev) => {
       const existingMessages = prev[convId] || [];
-      const updatedMessages = existingMessages.map(msg =>
-        msg._id === messageId ? { ...msg, reactions } : msg
+      const updatedMessages = existingMessages.map((msg) =>
+        (msg._id ?? msg.id)?.toString() === mid ? { ...msg, reactions } : msg
       );
       return {
         ...prev,
-        [convId]: updatedMessages
+        [convId]: updatedMessages,
       };
     });
   }, []);
@@ -134,14 +160,14 @@ export const ChatProvider = ({ children }) => {
       const existingMessages = prev[convId] || [];
       if (!existingMessages.length) return prev;
 
-      const updatedMessages = existingMessages.map(msg => {
-        const msgId = msg?._id?.toString();
+      const updatedMessages = existingMessages.map((msg) => {
+        const msgId = (msg?._id ?? msg?.id)?.toString();
         if (msgId !== parentId) return msg;
 
         const previousReplies = Array.isArray(msg.threadReplies) ? msg.threadReplies : [];
-        const incomingReplyId = threadMessage?._id?.toString();
+        const incomingReplyId = (threadMessage?._id ?? threadMessage?.id)?.toString();
         const alreadyIncluded = incomingReplyId
-          ? previousReplies.some((r) => r?._id?.toString() === incomingReplyId)
+          ? previousReplies.some((r) => (r?._id ?? r?.id)?.toString() === incomingReplyId)
           : false;
 
         const nextReplies = alreadyIncluded
@@ -173,7 +199,7 @@ export const ChatProvider = ({ children }) => {
 
       const token = localStorage.getItem('token');
       if (token) {
-        const socket = socketService.connect(token);
+        socketService.connect(token);
 
         const setupListener = () => {
           socketService.on('new_chat_message', handleNewMessage);
@@ -184,13 +210,6 @@ export const ChatProvider = ({ children }) => {
         };
 
         setupListener();
-
-        if (socket) {
-          socket.on('connect', () => {
-            console.log('Chat socket connected');
-            setupListener();
-          });
-        }
       }
 
       return () => {
@@ -213,16 +232,17 @@ export const ChatProvider = ({ children }) => {
     try {
       const response = await chatAPI.sendMessage(conversationId, content, replyTo, mentions);
       const newMessage = response.data.message;
+      const cid = String(conversationId);
 
       // Add message to local state
-      setMessages(prev => ({
+      setMessages((prev) => ({
         ...prev,
-        [conversationId]: [...(prev[conversationId] || []), newMessage]
+        [cid]: [...(prev[cid] || []), newMessage],
       }));
 
       // Update conversation preview locally to avoid full-list refetch on each send.
       setConversations(prev => prev.map((conv) => {
-        if (conv._id?.toString() !== conversationId?.toString()) return conv;
+        if (conv._id?.toString() !== cid) return conv;
         return {
           ...conv,
           lastMessage: newMessage,
@@ -241,15 +261,16 @@ export const ChatProvider = ({ children }) => {
     try {
       const response = await chatAPI.sendFileMessage(conversationId, type, file, replyTo);
       const newMessage = response.data.message;
+      const cid = String(conversationId);
 
       // Add message to local state
-      setMessages(prev => ({
+      setMessages((prev) => ({
         ...prev,
-        [conversationId]: [...(prev[conversationId] || []), newMessage]
+        [cid]: [...(prev[cid] || []), newMessage],
       }));
 
       setConversations(prev => prev.map((conv) => {
-        if (conv._id?.toString() !== conversationId?.toString()) return conv;
+        if (conv._id?.toString() !== cid) return conv;
         return {
           ...conv,
           lastMessage: newMessage,
@@ -265,19 +286,20 @@ export const ChatProvider = ({ children }) => {
   }, []);
 
   const selectConversation = useCallback(async (conversation) => {
-    // Ensure we have the full conversation object with _id
-    if (conversation && conversation._id) {
-      setActiveConversation(conversation);
-
-      // Load messages if not already loaded
-      const convId = conversation._id.toString();
-      if (!messages[convId] || messages[convId].length === 0) {
-        await loadMessages(conversation._id);
-      }
-    } else {
+    const rawId = conversation?._id ?? conversation?.id;
+    if (!conversation || rawId == null || rawId === '') {
       console.error('Invalid conversation object:', conversation);
+      return;
     }
-  }, [messages, loadMessages]);
+    const convId = String(rawId);
+    setActiveConversation(conversation);
+    markAsRead(convId);
+
+    // Load messages if not already loaded (ChatWindow also loads on open — avoids empty state flash).
+    if (!messages[convId] || messages[convId].length === 0) {
+      await loadMessages(rawId);
+    }
+  }, [messages, loadMessages, markAsRead]);
 
   const getOrCreateConversation = useCallback(async (participantId) => {
     try {
@@ -285,8 +307,9 @@ export const ChatProvider = ({ children }) => {
       const conversation = response.data.conversation;
 
       // Add to conversations if not exists
-      setConversations(prev => {
-        const exists = prev.find(c => c._id === conversation._id);
+      setConversations((prev) => {
+        const nid = String(conversation._id ?? conversation.id);
+        const exists = prev.some((c) => String(c._id ?? c.id) === nid);
         if (exists) return prev;
         return [conversation, ...prev];
       });
@@ -304,8 +327,9 @@ export const ChatProvider = ({ children }) => {
       const conversation = response.data.conversation;
 
       // Add to conversations if not exists
-      setConversations(prev => {
-        const exists = prev.find(c => c._id === conversation._id);
+      setConversations((prev) => {
+        const nid = String(conversation._id ?? conversation.id);
+        const exists = prev.some((c) => String(c._id ?? c.id) === nid);
         if (exists) return prev;
         return [conversation, ...prev];
       });
@@ -320,20 +344,11 @@ export const ChatProvider = ({ children }) => {
     }
   }, [selectConversation]);
 
-  // Get messages for active conversation - use useMemo to ensure reference changes when messages update
-  // Create a key based on the messages array length and last message ID to detect changes
-  const messagesKey = useMemo(() => {
-    if (!activeConversation?._id) return '';
-    const convId = activeConversation._id.toString();
-    const convMessages = messages[convId] || [];
-    return `${convId}-${convMessages.length}-${convMessages[convMessages.length - 1]?._id?.toString() || ''}`;
-  }, [activeConversation?._id, messages]);
-
   const activeMessages = useMemo(() => {
     if (!activeConversation?._id) return [];
     const convId = activeConversation._id.toString();
     return messages[convId] || [];
-  }, [activeConversation?._id, messagesKey]);
+  }, [activeConversation?._id, messages]);
 
   const contextValue = useMemo(() => ({
     conversations,
@@ -344,6 +359,7 @@ export const ChatProvider = ({ children }) => {
     setIsOpen,
     loadConversations,
     loadMessages,
+    markAsRead,
     sendMessage,
     sendFileMessage,
     selectConversation,
@@ -359,6 +375,7 @@ export const ChatProvider = ({ children }) => {
     isOpen,
     loadConversations,
     loadMessages,
+    markAsRead,
     sendMessage,
     sendFileMessage,
     selectConversation,

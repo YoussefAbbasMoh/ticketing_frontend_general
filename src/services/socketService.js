@@ -2,6 +2,24 @@ import { io } from 'socket.io-client';
 
 const isDev = import.meta.env?.DEV;
 
+/** Same host as REST API by default; override with VITE_SOCKET_URL if socket is on another origin. */
+function resolveSocketBaseUrl() {
+  const explicit = typeof import.meta !== 'undefined' && import.meta.env?.VITE_SOCKET_URL;
+  if (explicit && String(explicit).trim()) {
+    return String(explicit).trim().replace(/\/$/, '');
+  }
+  const api = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL;
+  if (api && String(api).trim()) {
+    try {
+      const u = new URL(String(api).trim().replace(/\/api\/?$/i, ''));
+      return u.origin;
+    } catch {
+      /* fall through */
+    }
+  }
+  return 'https://tickets.absai.dev';
+}
+
 class SocketService {
   constructor() {
     this.socket = null;
@@ -21,7 +39,7 @@ class SocketService {
 
     if (isDev) console.log('Attempting socket connection…');
 
-    const SOCKET_URL = 'https://tickets.absai.dev';
+    const SOCKET_URL = resolveSocketBaseUrl();
 
     this.socket = io(SOCKET_URL, {
       path: '/socket.io/',

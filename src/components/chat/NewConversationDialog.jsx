@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { chatAPI } from '../../services/api';
 import { useChat } from '../../contexts/ChatContext';
 import { getStoredLanguage } from '../../i18n';
@@ -76,6 +76,21 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
 
   const rtlMirror = isRtl ? '-scale-x-100' : '';
 
+  const loadUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await chatAPI.getUsers();
+      setUsers(response.data.users || []);
+    } catch (err) {
+      console.error('Load users error:', err);
+      const dict = TEXT[lang] || TEXT.en;
+      setError(dict.loadUsersError);
+    } finally {
+      setLoading(false);
+    }
+  }, [lang]);
+
   useEffect(() => {
     const onLanguageChanged = () => setLang(getStoredLanguage());
     window.addEventListener('language-changed', onLanguageChanged);
@@ -93,7 +108,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
     };
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
+  }, [onClose, loadUsers]);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -112,26 +127,13 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
     };
   }, [onClose]);
 
-  const loadUsers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await chatAPI.getUsers();
-      setUsers(response.data.users || []);
-    } catch (err) {
-      console.error('Load users error:', err);
-      setError(tx('loadUsersError'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSelectUser = async (user) => {
     if (creating) return;
 
     try {
       setCreating(true);
-      const conversation = await getOrCreateConversation(user._id);
+      const uid = user._id ?? user.id;
+      const conversation = await getOrCreateConversation(uid);
       onSelect(conversation);
       onClose();
     } catch (err) {
@@ -141,12 +143,16 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
     }
   };
 
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.title?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchLower = searchQuery.trim().toLowerCase();
+  const filteredUsers = useMemo(() => {
+    if (!searchLower) return users;
+    return users.filter((u) => {
+      const name = (u.name || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const title = (u.title || '').toLowerCase();
+      return name.includes(searchLower) || email.includes(searchLower) || title.includes(searchLower);
+    });
+  }, [users, searchLower]);
 
   const groupedUsers = filteredUsers.reduce((acc, user) => {
     const group = user.role || user.department || tx('othersGroup');
@@ -311,7 +317,7 @@ const NewConversationDialog = ({ onClose, onSelect }) => {
                   <div className="space-y-1">
                     {groupUsers.map((user) => (
                       <button
-                        key={user._id}
+                        key={user._id ?? user.id}
                         type="button"
                         onClick={() => handleSelectUser(user)}
                         disabled={creating}

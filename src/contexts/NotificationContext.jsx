@@ -123,6 +123,8 @@ export const NotificationProvider = ({ children }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const audioRef = useRef(null);
   const chatAudioRef = useRef(null);
+  /** Must `off` with the same function reference — never `off('new_chat_message')` without handler (that strips ChatProvider listeners too). */
+  const chatMessageSocketHandlerRef = useRef(null);
 
   useEffect(() => {
     // Create audio element for notification sound (tickets)
@@ -405,13 +407,21 @@ export const NotificationProvider = ({ children }) => {
           }
         });
 
-        // Listen for new chat message notifications
-        socketService.on('new_chat_message', (data) => {
-          // Don't notify if user sent the message themselves (shouldn't happen, but just in case)
+        // Listen for new chat message notifications (scoped off so ChatProvider handlers stay registered)
+        const onNewChatMessageNotification = (data) => {
+          const currentUserId = user?._id != null ? String(user._id) : user?.id != null ? String(user.id) : '';
+          const senderId = data.message?.sender?._id != null
+            ? String(data.message.sender._id)
+            : data.message?.sender?.id != null
+              ? String(data.message.sender.id)
+              : '';
+          if (currentUserId && senderId && currentUserId === senderId) {
+            return;
+          }
           const currentUserEmail = user?.email?.toLowerCase();
           const senderEmail = data.message?.sender?.email?.toLowerCase();
           if (currentUserEmail && senderEmail === currentUserEmail) {
-            return; // Don't notify for own messages
+            return;
           }
 
           const localized = getLocalizedChatMessage(data.message);
@@ -429,13 +439,10 @@ export const NotificationProvider = ({ children }) => {
 
           setNotifications(prev => [notification, ...prev]);
           setUnreadCount(prev => prev + 1);
-          
-          // Play chat notification sound (different from ticket sound)
+
           playChatNotificationSound();
 
-          // Show browser notification
           if ('Notification' in window && Notification.permission === 'granted') {
-            // Use service worker registration if available (for background notifications)
             if ('serviceWorker' in navigator && navigator.serviceWorker.ready) {
               navigator.serviceWorker.ready.then((registration) => {
                 registration.showNotification(notification.title, {
@@ -452,7 +459,6 @@ export const NotificationProvider = ({ children }) => {
                 });
               });
             } else {
-              // Fallback to regular notification
               new Notification(notification.title, {
                 body: notification.message,
                 icon: '/logo4.webp',
@@ -462,7 +468,13 @@ export const NotificationProvider = ({ children }) => {
               });
             }
           }
-        });
+        };
+
+        if (chatMessageSocketHandlerRef.current) {
+          socketService.off('new_chat_message', chatMessageSocketHandlerRef.current);
+        }
+        chatMessageSocketHandlerRef.current = onNewChatMessageNotification;
+        socketService.on('new_chat_message', onNewChatMessageNotification);
       }
     }
 
@@ -479,7 +491,10 @@ export const NotificationProvider = ({ children }) => {
       socketService.off('ticket_reply');
       socketService.off('ticket_assigned');
       socketService.off('ticket_cc');
-      socketService.off('new_chat_message');
+      if (chatMessageSocketHandlerRef.current) {
+        socketService.off('new_chat_message', chatMessageSocketHandlerRef.current);
+        chatMessageSocketHandlerRef.current = null;
+      }
     };
   }, [user]);
 

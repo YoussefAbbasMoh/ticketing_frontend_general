@@ -63,6 +63,9 @@ const ChatWindow = ({ conversation, onBack }) => {
       setLoading(true);
       setReplyTo(null);
       setEditingMessage(null);
+      if (markAsRead) {
+        markAsRead(conversation._id);
+      }
       loadMessages(conversation._id)
         .then(() => {
           setHasMore(true);
@@ -72,13 +75,8 @@ const ChatWindow = ({ conversation, onBack }) => {
           }, 100);
         })
         .finally(() => setLoading(false));
-
-      // Mark messages as read when opening conversation
-      if (markAsRead) {
-        markAsRead(conversation._id);
-      }
     }
-  }, [conversation?._id]);
+  }, [conversation?._id, loadMessages, markAsRead]);
 
   // ... (keeping existing scroll logic) ...
   // Auto-scroll to bottom when conversation opens and messages are available

@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 
 const EmojiPicker = lazy(() => import('emoji-picker-react'));
 import VoiceRecorder from './VoiceRecorder';
@@ -18,6 +19,7 @@ const MessageInput = ({
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [showOptions, setShowOptions] = useState(false);
+  const [attachMenuPosition, setAttachMenuPosition] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -27,6 +29,7 @@ const MessageInput = ({
   const videoInputRef = useRef(null);
   const textareaRef = useRef(null);
   const optionsRef = useRef(null);
+  const attachMenuRef = useRef(null);
   const emojiRef = useRef(null);
 
   // Auto-resize textarea
@@ -55,9 +58,10 @@ const MessageInput = ({
   // Close options/emoji when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (optionsRef.current && !optionsRef.current.contains(event.target)) {
-        setShowOptions(false);
+      if (optionsRef.current?.contains(event.target) || attachMenuRef.current?.contains(event.target)) {
+        return;
       }
+      setShowOptions(false);
       if (emojiRef.current && !emojiRef.current.contains(event.target)) {
         setShowEmojiPicker(false);
       }
@@ -68,6 +72,33 @@ const MessageInput = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showOptions, showEmojiPicker]);
+
+  useLayoutEffect(() => {
+    if (!showOptions) {
+      setAttachMenuPosition(null);
+      return undefined;
+    }
+    const el = optionsRef.current;
+    if (!el) return undefined;
+    const updatePosition = () => {
+      const r = el.getBoundingClientRect();
+      const menuH = 200;
+      let top = r.top - menuH - 8;
+      if (top < 8) top = r.bottom + 8;
+      let left = r.left;
+      const menuW = 200;
+      if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+      if (left < 8) left = 8;
+      setAttachMenuPosition({ top, left });
+    };
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [showOptions]);
 
   useEffect(() => {
     if (!attachmentsAllowed) setShowOptions(false);
@@ -292,62 +323,69 @@ const MessageInput = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </button>
-
-            {/* File Options Menu */}
-            {showOptions && (
-              <div className="absolute bottom-full left-0 z-50 mb-2 min-w-[160px] animate-slideUp rounded-app-input border border-app-divider bg-app-surface py-2 shadow-app-card">
-                <div className="flex flex-col">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      imageInputRef.current?.click();
-                      setShowOptions(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange/10">
-                      <svg className="h-5 w-5 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-app-text">Photo</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      videoInputRef.current?.click();
-                      setShowOptions(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-primary/10">
-                      <svg className="h-5 w-5 text-app-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-app-text">Video</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      fileInputRef.current?.click();
-                      setShowOptions(false);
-                    }}
-                    className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-surface-variant">
-                      <svg className="h-5 w-5 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    </div>
-                    <span className="font-medium text-app-text">Document</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+
+          {showOptions && attachMenuPosition && typeof document !== 'undefined'
+            ? createPortal(
+                <div
+                  ref={attachMenuRef}
+                  role="menu"
+                  className="fixed z-[10000] min-w-[180px] animate-slideUp rounded-app-input border border-app-divider bg-app-surface py-2 shadow-app-card"
+                  style={{ top: attachMenuPosition.top, left: attachMenuPosition.left }}
+                >
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        imageInputRef.current?.click();
+                        setShowOptions(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange/10">
+                        <svg className="h-5 w-5 text-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="font-medium text-app-text">Photo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        videoInputRef.current?.click();
+                        setShowOptions(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-primary/10">
+                        <svg className="h-5 w-5 text-app-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <span className="font-medium text-app-text">Video</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        fileInputRef.current?.click();
+                        setShowOptions(false);
+                      }}
+                      className="flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-app-surface-variant"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-app-surface-variant">
+                        <svg className="h-5 w-5 text-app-text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <span className="font-medium text-app-text">Document</span>
+                    </button>
+                  </div>
+                </div>,
+                document.body
+              )
+            : null}
 
           {/* Emoji Button */}
           <div className="relative" ref={emojiRef}>

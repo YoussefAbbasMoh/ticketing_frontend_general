@@ -20,6 +20,19 @@ function resolveSocketBaseUrl() {
   return 'https://tickets.absai.dev';
 }
 
+/** Polling first breaks on multi-instance/serverless APIs (400 Session ID unknown). */
+function resolveSocketTransports() {
+  const raw =
+    typeof import.meta !== 'undefined' && import.meta.env?.VITE_SOCKET_TRANSPORTS;
+  if (raw && String(raw).trim()) {
+    return String(raw)
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return ['websocket', 'polling'];
+}
+
 class SocketService {
   constructor() {
     this.socket = null;
@@ -70,7 +83,7 @@ class SocketService {
       auth: {
         token: token,
       },
-      transports: ['polling', 'websocket'],
+      transports: resolveSocketTransports(),
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,

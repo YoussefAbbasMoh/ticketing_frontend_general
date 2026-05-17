@@ -1,30 +1,33 @@
 /* eslint-disable react/prop-types -- props are stable primitives from parent Kanban card */
 import { memo, useMemo } from 'react';
+import { Play } from 'lucide-react';
 import { t } from '../../i18n';
 import { usePersonalTaskTimer } from '../../hooks/usePersonalTaskTimer';
-import { estimatedMinutesToMs } from '../../utils/personalTaskTimerStorage';
+import { estimatedMinutesToMs, formatTimerHms } from '../../utils/personalTaskTimerStorage';
 
-/** @param {number} ms */
-function formatRemaining(ms) {
-  const sec = Math.round(ms / 1000);
-  const neg = sec < 0;
-  const a = Math.abs(sec);
-  const m = Math.floor(a / 60);
-  const s2 = a % 60;
-  const mm = String(m).padStart(2, '0');
-  return `${neg ? '-' : ''}${mm}:${String(s2).padStart(2, '0')}`;
-}
-
-function PersonalTaskTimerInner({ taskId, estimatedMinutes, column, lang }) {
+function PersonalTaskTimerInner({
+  taskId,
+  estimatedMinutes,
+  column,
+  lang,
+  isFocusOpen,
+  onOpenFocus,
+}) {
   const totalMs = useMemo(() => estimatedMinutesToMs(estimatedMinutes), [estimatedMinutes]);
-  const { remainingMs, isRunning, isIdle, start, pause, reset } = usePersonalTaskTimer(
-    taskId,
-    totalMs,
-    column
-  );
+  const { remainingMs, isRunning, isIdle, start, pause } = usePersonalTaskTimer(taskId, totalMs, column);
 
   const over = remainingMs < 0;
-  const display = formatRemaining(remainingMs);
+  const display = formatTimerHms(remainingMs);
+  const active = isRunning || !isIdle;
+
+  const handleStartFocus = () => {
+    onOpenFocus?.();
+  };
+
+  const handleToggle = () => {
+    if (isRunning) pause();
+    else start();
+  };
 
   return (
     <div
@@ -32,53 +35,53 @@ function PersonalTaskTimerInner({ taskId, estimatedMinutes, column, lang }) {
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-app-text-tertiary">
-          {t(lang, 'taskCardTimerLabel')}
-        </span>
-        {column === 'done' && (
-          <span className="text-[10px] font-semibold text-app-text-tertiary">{t(lang, 'taskTimerStoppedDone')}</span>
-        )}
-      </div>
-      <div
-        className={`mt-1 font-mono text-xl font-bold tabular-nums sm:text-2xl ${over ? 'text-app-error' : 'text-app-text'}`}
-        aria-live="polite"
-      >
-        {display}
-        {over && (
-          <span className="ms-1 text-[10px] font-semibold normal-case text-app-error sm:text-xs">
-            ({t(lang, 'tasksTimerOverrun')})
-          </span>
-        )}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {!isRunning && (
-          <button
-            type="button"
-            onClick={start}
-            disabled={column === 'done'}
-            className="rounded-md bg-app-primary px-2.5 py-1 text-[11px] font-semibold text-app-on-primary hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {isIdle ? t(lang, 'tasksTimerStart') : t(lang, 'tasksTimerResume')}
-          </button>
-        )}
-        {isRunning && (
-          <button
-            type="button"
-            onClick={pause}
-            className="rounded-md border border-app-border bg-app-surface-variant px-2.5 py-1 text-[11px] font-semibold text-app-text hover:bg-app-primary/[0.06]"
-          >
-            {t(lang, 'tasksTimerPause')}
-          </button>
-        )}
+      {active && !isFocusOpen ? (
         <button
           type="button"
-          onClick={reset}
-          className="rounded-md border border-app-divider px-2.5 py-1 text-[11px] font-semibold text-app-text-secondary hover:bg-app-surface-variant"
+          onClick={onOpenFocus}
+          className="mb-2 flex w-full items-center justify-between gap-2 rounded-app-input border border-app-primary/25 bg-app-primary/[0.08] px-2 py-1.5 text-start transition-colors hover:bg-app-primary/[0.12]"
         >
-          {t(lang, 'tasksTimerReset')}
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-app-primary">
+            {isRunning ? t(lang, 'tasksFocusRunning') : t(lang, 'tasksFocusPaused')}
+          </span>
+          <span
+            className={`font-mono text-sm font-bold tabular-nums ${over ? 'text-app-error' : 'text-app-text'}`}
+          >
+            {display}
+          </span>
         </button>
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        {!isFocusOpen && (
+          <button
+            type="button"
+            onClick={handleStartFocus}
+            disabled={column === 'done'}
+            className="inline-flex flex-1 items-center justify-center gap-1 rounded-md bg-app-primary px-2.5 py-1.5 text-[11px] font-semibold text-app-on-primary hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Play className="h-3 w-3" aria-hidden />
+            {t(lang, 'tasksFocusBlitz')}
+          </button>
+        )}
+        {active && (
+          <button
+            type="button"
+            onClick={handleToggle}
+            disabled={column === 'done'}
+            className="rounded-md border border-app-border bg-app-surface-variant px-2.5 py-1.5 text-[11px] font-semibold text-app-text hover:bg-app-primary/[0.06] disabled:opacity-40"
+          >
+            {isRunning ? t(lang, 'tasksTimerPause') : t(lang, 'tasksTimerResume')}
+          </button>
+        )}
+        {isFocusOpen && (
+          <span className="text-[10px] font-medium text-app-text-tertiary">{t(lang, 'tasksFocusWindowOpen')}</span>
+        )}
       </div>
+
+      {column === 'done' && (
+        <p className="mt-1.5 text-[10px] text-app-text-tertiary">{t(lang, 'taskTimerStoppedDone')}</p>
+      )}
     </div>
   );
 }
@@ -88,8 +91,10 @@ const PersonalTaskTimer = memo(PersonalTaskTimerInner, (prev, next) => {
     prev.taskId === next.taskId &&
     prev.estimatedMinutes === next.estimatedMinutes &&
     prev.column === next.column &&
-    prev.lang === next.lang
+    prev.lang === next.lang &&
+    prev.isFocusOpen === next.isFocusOpen
   );
 });
 
 export default PersonalTaskTimer;
+

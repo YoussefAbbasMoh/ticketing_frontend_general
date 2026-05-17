@@ -4,6 +4,7 @@ import {
   defaultTimerState,
   loadTimerState,
   personalTaskTimerStorageKey,
+  PERSONAL_TASK_TIMER_SYNC,
   saveTimerState,
 } from '../utils/personalTaskTimerStorage';
 
@@ -61,7 +62,11 @@ export function usePersonalTaskTimer(taskId, totalDurationMs, column) {
     });
   }, [column, taskId]);
 
-  /* Cross-tab: reload when same key changes elsewhere */
+  const reloadFromStorage = useCallback(() => {
+    setState(loadTimerState(taskId, totalDurationMs));
+  }, [taskId, totalDurationMs]);
+
+  /* Same-tab + cross-tab sync */
   useEffect(() => {
     const onStorage = (e) => {
       if (e.key !== personalTaskTimerStorageKey(taskId) || !e.newValue) return;
@@ -72,9 +77,16 @@ export function usePersonalTaskTimer(taskId, totalDurationMs, column) {
         /* ignore */
       }
     };
+    const onSync = (e) => {
+      if (e.detail?.taskId === String(taskId)) reloadFromStorage();
+    };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [taskId]);
+    window.addEventListener(PERSONAL_TASK_TIMER_SYNC, onSync);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(PERSONAL_TASK_TIMER_SYNC, onSync);
+    };
+  }, [taskId, reloadFromStorage]);
 
   /* One-second UI tick only while running */
   useEffect(() => {

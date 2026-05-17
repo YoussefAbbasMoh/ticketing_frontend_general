@@ -28,6 +28,9 @@ const Settings = lazy(() => import('./components/settings/Settings'));
 const Chat = lazy(() => import('./components/chat/Chat'));
 const AttendancePage = lazy(() => import('./components/attendance/AttendancePage'));
 const PersonalTasksPage = lazy(() => import('./components/personal-tasks/PersonalTasksPage'));
+const PersonalTaskFocusWindowPage = lazy(() =>
+  import('./components/personal-tasks/PersonalTaskFocusWindowPage')
+);
 const SubscriptionPage = lazy(() => import('./components/subscription/SubscriptionPage'));
 const SubscriptionCheckoutPage = lazy(() =>
   import('./components/subscription/SubscriptionCheckoutPage')
@@ -187,6 +190,15 @@ function AppRoutes() {
           </Layout>
         </ProtectedRoute>
       } />
+
+      <Route
+        path="/personal-tasks/focus"
+        element={
+          <ProtectedRoute>
+            <PersonalTaskFocusWindowPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/workspace-calendar" element={
         <ProtectedRoute>

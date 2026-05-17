@@ -66,13 +66,36 @@ export const loadTimerState = (taskId, totalDurationMs) => {
   }
 };
 
+export const PERSONAL_TASK_TIMER_SYNC = 'personal-task-timer-sync';
+
+/** Notify other components on the same tab (storage event is cross-tab only). */
+export const notifyTimerStateChanged = (taskId) => {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent(PERSONAL_TASK_TIMER_SYNC, { detail: { taskId: String(taskId) } })
+  );
+};
+
 /** @param {string} taskId @param {PersonalTaskTimerPersisted} state */
 export const saveTimerState = (taskId, state) => {
   try {
     localStorage.setItem(personalTaskTimerStorageKey(taskId), JSON.stringify(state));
+    notifyTimerStateChanged(taskId);
   } catch {
     /* quota / private mode */
   }
+};
+
+/** @param {number} ms — Blitzit-style HH:MM:SS (supports negative overrun) */
+export const formatTimerHms = (ms) => {
+  const sec = Math.round(ms / 1000);
+  const neg = sec < 0;
+  const a = Math.abs(sec);
+  const h = Math.floor(a / 3600);
+  const m = Math.floor((a % 3600) / 60);
+  const s = a % 60;
+  const core = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return neg ? `-${core}` : core;
 };
 
 export const removeTimerState = (taskId) => {

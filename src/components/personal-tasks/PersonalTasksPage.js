@@ -5,7 +5,15 @@ import Button from '../ui/Button';
 import Alert from '../ui/Alert';
 import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import PersonalTaskTimer from './PersonalTaskTimer';
+import PersonalTaskFocusDock from './PersonalTaskFocusDock';
+import PersonalTaskFocusPill from './PersonalTaskFocusPill';
 import { removeTimerState } from '../../utils/personalTaskTimerStorage';
+import {
+  clearFocusSessionPayload,
+  FOCUS_BROADCAST_CHANNEL,
+  openPersonalTaskFocusWindow,
+  watchPersonalTaskFocusWindowClosed,
+} from '../../utils/personalTaskFocusWindow';
 
 const COLUMNS = ['backlog', 'this_week', 'today', 'done'];
 
@@ -39,6 +47,60 @@ const PersonalTasksPage = () => {
   const [editMinutes, setEditMinutes] = useState(30);
   const [editSaving, setEditSaving] = useState(false);
 
+  /** @type {[{ task: object, column: string, autoStart?: boolean } | null, Function]} */
+  const [focusSession, setFocusSession] = useState(null);
+  const [focusWindowOpen, setFocusWindowOpen] = useState(false);
+  const [focusDockFallback, setFocusDockFallback] = useState(false);
+  const [markingFocusDone, setMarkingFocusDone] = useState(false);
+
+  const todayStats = useMemo(() => {
+    const todayList = tasks.filter((tk) => tk.column === 'today');
+    const est = todayList.reduce((s, tk) => s + (Number(tk.estimated_minutes) || 0), 0);
+    const done = tasks.filter((tk) => tk.column === 'done').length;
+    return { est, done, total: todayList.length };
+  }, [tasks]);
+
+  const buildFocusPayload = (task, column, autoStart = true) => ({
+    taskId: taskId(task),
+    taskTitle: task.title || '',
+    estimatedMinutes: Number(task.estimated_minutes) || 30,
+    column,
+    lang,
+    autoStart,
+    todayEstMinutes: todayStats.est,
+    todayDoneCount: todayStats.done,
+    todayTotalCount: todayStats.total,
+  });
+
+  const openFocus = (task, column, { autoStart = true } = {}) => {
+    setError('');
+    const payload = buildFocusPayload(task, column, autoStart);
+    const win = openPersonalTaskFocusWindow(payload);
+    setFocusSession({ task, column, autoStart });
+    if (!win) {
+      setFocusWindowOpen(false);
+      setFocusDockFallback(true);
+      setError(t(lang, 'tasksFocusPopupBlocked'));
+      return;
+    }
+    setFocusDockFallback(false);
+    setFocusWindowOpen(true);
+  };
+
+  const retryExternalFocusWindow = () => {
+    if (!focusSession) return;
+    setError('');
+    const win = openPersonalTaskFocusWindow(
+      buildFocusPayload(focusSession.task, focusSession.column, focusSession.autoStart !== false)
+    );
+    if (!win) {
+      setError(t(lang, 'tasksFocusPopupBlocked'));
+      return;
+    }
+    setFocusDockFallback(false);
+    setFocusWindowOpen(true);
+  };
+
   const byColumn = useMemo(() => {
     const m = Object.fromEntries(COLUMNS.map((c) => [c, []]));
     tasks.forEach((tk) => {
@@ -71,10 +133,43 @@ const PersonalTasksPage = () => {
     return () => window.removeEventListener('language-changed', onLang);
   }, []);
 
+  useEffect(() => {
+    return watchPersonalTaskFocusWindowClosed(() => {
+      setFocusWindowOpen(false);
+      setFocusSession(null);
+      setFocusDockFallback(false);
+      clearFocusSessionPayload();
+    });
+  }, []);
+
   const showToast = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2500);
   };
+
+  useEffect(() => {
+    let bc;
+    try {
+      bc = new BroadcastChannel(FOCUS_BROADCAST_CHANNEL);
+      bc.onmessage = (e) => {
+        const data = e.data || {};
+        if (data.type === 'task-marked-done' || data.type === 'task-moved') {
+          loadTasks();
+          showToast(t(lang, 'taskMarkedDone'));
+          setFocusSession(null);
+          setFocusWindowOpen(false);
+        }
+        if (data.type === 'focus-window-closed') {
+          setFocusWindowOpen(false);
+          setFocusSession(null);
+          setFocusDockFallback(false);
+        }
+      };
+    } catch {
+      /* ignore */
+    }
+    return () => bc?.close();
+  }, [lang, loadTasks]);
 
   const openAdd = (column) => {
     setAddColumn(column);
@@ -146,6 +241,12 @@ const PersonalTasksPage = () => {
     try {
       await userAPI.deletePersonalTask(id);
       removeTimerState(id);
+      if (focusId === id) {
+        setFocusSession(null);
+        setFocusWindowOpen(false);
+        setFocusDockFallback(false);
+        clearFocusSessionPayload();
+      }
       setTasks((prev) => prev.filter((x) => taskId(x) !== id));
       showToast(t(lang, 'taskDeleted'));
     } catch (err) {
@@ -164,9 +265,27 @@ const PersonalTasksPage = () => {
       if (updated) {
         setTasks((p) => p.map((x) => (taskId(x) === id ? updated : x)));
       }
+      setFocusSession((prev) =>
+        prev && taskId(prev.task) === id ? { ...prev, column: newColumn, task: { ...prev.task, column: newColumn } } : prev
+      );
     } catch (err) {
       setTasks(prev);
       setError(getAxiosErrorMessage(err, t(lang, 'personalTasksLoadError')));
+    }
+  };
+
+  const handleMarkFocusDone = async () => {
+    if (!focusSession || focusSession.column === 'done' || markingFocusDone) return;
+    setMarkingFocusDone(true);
+    try {
+      await moveTaskToColumn(focusSession.task, 'done');
+      setFocusSession(null);
+      setFocusWindowOpen(false);
+      setFocusDockFallback(false);
+      clearFocusSessionPayload();
+      showToast(t(lang, 'taskMarkedDone'));
+    } finally {
+      setMarkingFocusDone(false);
     }
   };
 
@@ -208,6 +327,9 @@ const PersonalTasksPage = () => {
   };
 
   const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const focusId = focusSession ? taskId(focusSession.task) : null;
+  const focusOpenFor = (id) =>
+    focusId === id && (focusWindowOpen || focusDockFallback);
 
   if (loading) {
     return (
@@ -224,7 +346,11 @@ const PersonalTasksPage = () => {
         <p className="mt-1 text-sm text-app-text-secondary">{t(lang, 'personalTasksSubtitle')}</p>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 sm:p-6">
+      <div
+        className={`flex-1 overflow-auto p-4 sm:p-6 ${
+          focusDockFallback ? 'xl:pe-[min(320px,30vw)]' : ''
+        }`}
+      >
         {error && (
           <div className="mb-4 max-w-3xl">
             <Alert variant="error" onClose={() => setError('')}>
@@ -294,6 +420,8 @@ const PersonalTasksPage = () => {
                         estimatedMinutes={task.estimated_minutes}
                         column={col}
                         lang={lang}
+                        isFocusOpen={focusOpenFor(id)}
+                        onOpenFocus={() => openFocus(task, col)}
                       />
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
@@ -322,6 +450,40 @@ const PersonalTasksPage = () => {
           ))}
         </div>
       </div>
+
+      {focusSession && focusDockFallback && (
+        <PersonalTaskFocusDock
+          taskId={focusId}
+          taskTitle={focusSession.task.title}
+          estimatedMinutes={focusSession.task.estimated_minutes}
+          column={focusSession.column}
+          columnLabel={t(lang, columnLabelKey(focusSession.column))}
+          lang={lang}
+          todayEstMinutes={todayStats.est}
+          todayDoneCount={todayStats.done}
+          todayTotalCount={todayStats.total}
+          autoStart={Boolean(focusSession.autoStart)}
+          onMinimize={() => {
+            setFocusDockFallback(false);
+            setFocusSession(null);
+          }}
+          onMarkDone={handleMarkFocusDone}
+          markingDone={markingFocusDone}
+          onOpenExternal={retryExternalFocusWindow}
+          externalFallback
+        />
+      )}
+
+      {focusSession && !focusWindowOpen && !focusDockFallback && (
+        <PersonalTaskFocusPill
+          taskId={focusId}
+          taskTitle={focusSession.task.title}
+          estimatedMinutes={focusSession.task.estimated_minutes}
+          column={focusSession.column}
+          lang={lang}
+          onExpand={() => openFocus(focusSession.task, focusSession.column, { autoStart: false })}
+        />
+      )}
 
       {addOpen && (
         <div
@@ -417,3 +579,4 @@ const PersonalTasksPage = () => {
 };
 
 export default PersonalTasksPage;
+

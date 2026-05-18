@@ -66,6 +66,7 @@ const TEXT = {
     inProgress: 'In Progress',
     pending: 'Pending',
     resolved: 'Resolved',
+    closed: 'Closed',
     noTicketsFound: 'No tickets found',
     createFirstTicketHint: 'Create your first ticket to get started',
     noTicketsWithStatus: 'No tickets with status "{{status}}"',
@@ -161,6 +162,7 @@ const TEXT = {
     inProgress: 'قيد التنفيذ',
     pending: 'معلقة',
     resolved: 'تم الحل',
+    closed: 'مغلقة',
     noTicketsFound: 'لا توجد تذاكر',
     createFirstTicketHint: 'ابدأ بإنشاء أول تذكرة',
     noTicketsWithStatus: 'لا توجد تذاكر بحالة "{{status}}"',
@@ -423,6 +425,16 @@ const ProjectDetails = () => {
     if (s === 'on_hold') return tx('onHold');
     if (s === 'cancelled' || s === 'canceled') return tx('cancelled');
     return String(statusRaw || '').replace(/_/g, ' ');
+  };
+
+  const ticketStatusLabel = (statusRaw) => {
+    const s = String(statusRaw || '').toLowerCase().replace(/-/g, '_');
+    if (s === 'open') return tx('open');
+    if (s === 'in_progress') return tx('inProgress');
+    if (s === 'pending') return tx('pending');
+    if (s === 'resolved') return tx('resolved');
+    if (s === 'closed') return tx('closed');
+    return String(statusRaw || '').replace(/_/g, ' ') || tx('unknown');
   };
 
   const handleDeleteProject = async () => {
@@ -1098,7 +1110,7 @@ const ProjectDetails = () => {
                         </td>
                         <td className="px-4 py-4">
                           <Badge variant={getStatusColor(ticket.status)} size="sm">
-                            {ticket.status || tx('unknown')}
+                            {ticketStatusLabel(ticket.status)}
                           </Badge>
                         </td>
                         <td className="px-4 py-4 w-48 min-w-48">

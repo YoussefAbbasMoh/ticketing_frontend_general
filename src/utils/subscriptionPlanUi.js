@@ -54,7 +54,7 @@ export const SUBSCRIPTION_PLAN_UI_FALLBACK = {
       name: 'مجانية',
       description: 'الباقة الافتراضية للشركات الجديدة',
       features: [
-        'حتى 3 حسابات',
+        'من 1 إلى 3 أفراد',
         'حتى 3 مشاريع',
         'بدون صور أو فيديو أو ملفات في الشات',
         'بدون تعديل أو تحميل الحضور',
@@ -110,6 +110,20 @@ export const resolveSubscriptionUiLang = resolveLang;
 /**
  * Merge known plan rows so Arabic UI never shows English titles/descriptions when feature lines are Arabic-only.
  */
+const normalizeArPlanFeatures = (planId, features, fallbackFeatures) => {
+  const base = Array.isArray(features) && features.length ? features : fallbackFeatures;
+  if (!Array.isArray(base)) return fallbackFeatures;
+  return base.map((line, index) => {
+    const s = String(line || '').trim();
+    if (planId === 'free' && index === 0) {
+      if (/حتى\s*3\s*حسابات?/i.test(s) || /من\s*3\s*إلى\s*10/i.test(s)) {
+        return 'من 1 إلى 3 أفراد';
+      }
+    }
+    return line;
+  });
+};
+
 export const mergeSubscriptionPlanForDisplay = (lang, plan) => {
   if (!plan?.id) return plan;
   const L = resolveLang(lang);
@@ -117,17 +131,18 @@ export const mergeSubscriptionPlanForDisplay = (lang, plan) => {
   if (!fb) return plan;
 
   if (L === 'ar') {
+    const rawFeatures =
+      Array.isArray(plan.features) &&
+      plan.features.length > 0 &&
+      plan.features.every((f) => subscriptionPlanTextHasArabic(String(f)))
+        ? plan.features
+        : fb.features;
     return {
       ...plan,
       name: subscriptionPlanTextHasArabic(plan.name) ? plan.name : fb.name,
       description: subscriptionPlanTextHasArabic(plan.description) ? plan.description : fb.description,
       billingPeriod: subscriptionPlanTextHasArabic(plan.billingPeriod) ? plan.billingPeriod : fb.billingPeriod,
-      features:
-        Array.isArray(plan.features) &&
-        plan.features.length > 0 &&
-        plan.features.every((f) => subscriptionPlanTextHasArabic(String(f)))
-          ? plan.features
-          : fb.features,
+      features: normalizeArPlanFeatures(plan.id, rawFeatures, fb.features),
     };
   }
 

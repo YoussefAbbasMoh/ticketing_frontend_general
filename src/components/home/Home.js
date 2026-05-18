@@ -29,6 +29,7 @@ import WorkspaceHomePanel from './WorkspaceHomePanel';
 import { HomeLoadingSkeleton, ActiveTicketsLoadingRail } from './HomeSkeletons';
 import { getStoredLanguage } from '../../i18n';
 import { activeCompanyDisplayName } from '../../utils/companyMembership';
+import { projectStatusLabel } from '../../utils/projectStatusLabel';
 
 const TEXT = {
   en: {
@@ -583,7 +584,7 @@ const Home = () => {
                     {/* Header with Status and Admin Actions */}
                     <div className="flex justify-between items-start mb-4">
                       <Badge variant={getStatusColor(project.status)} size="md">
-                        {project.status || tx('unknown')}
+                        {projectStatusLabel(project.status, lang) || tx('unknown')}
                       </Badge>
                       {isAdmin() && (
                         <button

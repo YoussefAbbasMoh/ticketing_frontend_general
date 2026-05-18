@@ -25,6 +25,7 @@ const TEXT = {
     projectsForCompany: 'Projects (this company)',
     projectsUnlimited: 'Unlimited',
     projectsUpToN: 'Up to {{n}} projects',
+    available: 'Available',
   },
   ar: {
     na: 'غير متاح',
@@ -42,6 +43,7 @@ const TEXT = {
     projectsForCompany: 'المشاريع (لهذه الشركة)',
     projectsUnlimited: 'غير محدود',
     projectsUpToN: 'حتى {{n}} مشروعًا',
+    available: 'متاح',
   },
 };
 
@@ -154,6 +156,7 @@ const SubscriptionPage = () => {
   }, [loadData]);
 
   const currentPlanId = normalizePlanId(subscription?.planId);
+  const isFreePlan = currentPlanId === 'free';
   const hasExpired = subscription?.status === 'expired';
   const noticeMessage = subscription?.notice || '';
 
@@ -300,14 +303,28 @@ const SubscriptionPage = () => {
                     {subscriptionStatusLabel(subscription?.status)}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-500">{t(lang, 'expiresAt')}</p>
-                  <p className="text-gray-800">{formatDateUi(subscription?.expiresAt) || tx('na')}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">{t(lang, 'graceEndsAt')}</p>
-                  <p className="text-gray-800">{formatDateUi(subscription?.graceEndsAt) || tx('na')}</p>
-                </div>
+                {isFreePlan ? (
+                  <div className="md:col-span-2">
+                    <p className="text-lg font-semibold text-emerald-700">{tx('available')}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-gray-500">{t(lang, 'expiresAt')}</p>
+                      <p className="text-gray-800">{formatDateUi(subscription?.expiresAt) || tx('na')}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">{t(lang, 'graceEndsAt')}</p>
+                      <p className="text-gray-800">{formatDateUi(subscription?.graceEndsAt) || tx('na')}</p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-sm text-gray-500">{t(lang, 'paymobSubscriptionId')}</p>
+                      <p className="text-gray-800 break-all">
+                        {subscription?.paymobSubscriptionId || tx('na')}
+                      </p>
+                    </div>
+                  </>
+                )}
                 {subscription?.limits && (
                   <div>
                     <p className="text-sm text-gray-500">{tx('projectsForCompany')}</p>
@@ -318,10 +335,6 @@ const SubscriptionPage = () => {
                     </p>
                   </div>
                 )}
-                <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500">{t(lang, 'paymobSubscriptionId')}</p>
-                  <p className="text-gray-800 break-all">{subscription?.paymobSubscriptionId || tx('na')}</p>
-                </div>
               </div>
               {confirmingPayment && (
                 <div className="mt-5 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-700">

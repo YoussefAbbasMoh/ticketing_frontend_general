@@ -12,6 +12,7 @@ import Modal from '../ui/Modal';
 import RoleDragDropSelect, { ROLE_ORDER } from './RoleDragDropSelect';
 import { getStoredLanguage, t as i18nT } from '../../i18n';
 import { companyNameFromMembership, membershipCompanyId } from '../../utils/companyMembership';
+import { isValidPersonFullName } from '../../utils/personNameValidation';
 
 const ASSIGNABLE_ROLES = ROLE_ORDER;
 
@@ -85,7 +86,7 @@ const TEXT = {
     userUpdateFailed: 'Failed to update user.',
     userDeleteFailed: 'Failed to delete user.',
     userDeletedSuccess: 'User "{{name}}" deleted successfully!',
-    nameValidation: 'Name must contain at least two words.',
+    nameValidation: 'Enter at least two names; each name must be at least 2 letters.',
     titleValidation: 'Title must be at least 2 characters.',
     fieldRequired: 'This field is required.',
     emailInvalid: 'Enter a valid email address.',
@@ -104,6 +105,9 @@ const TEXT = {
     workspaceDeleteAction: 'Delete',
     workspaceActive: 'Active',
     workspaceSaveName: 'Save name',
+    workspaceDeleteOnlyOne: 'You cannot delete your only workspace.',
+    workspaceDeleteActiveHint: 'Switching workspace before delete…',
+    subscriptionAvailable: 'Available',
   },
   ar: {
     settings: 'الإعدادات',
@@ -174,7 +178,10 @@ const TEXT = {
     userUpdateFailed: 'فشل تحديث المستخدم.',
     userDeleteFailed: 'فشل حذف المستخدم.',
     userDeletedSuccess: 'تم حذف المستخدم "{{name}}" بنجاح!',
-    nameValidation: 'الاسم لازم يكون كلمتين على الأقل.',
+    nameValidation: 'أدخل اسمين على الأقل؛ كل اسم حرفان على الأقل.',
+    workspaceDeleteOnlyOne: 'لا يمكن حذف مساحة العمل الوحيدة.',
+    workspaceDeleteActiveHint: 'جاري التبديل قبل الحذف…',
+    subscriptionAvailable: 'متاح',
     titleValidation: 'المسمى الوظيفي لازم يكون حرفين على الأقل.',
     fieldRequired: 'هذا الحقل مطلوب.',
     emailInvalid: 'أدخل بريدًا إلكترونيًا صالحًا.',
@@ -205,6 +212,7 @@ const Settings = () => {
     canInviteUsersToCompany,
     canSeeSubscriptionNav,
     updateUser,
+    switchActiveCompany,
   } = useAuth();
 
   const showTeamSection = () => isAdmin() || canManageCompanyTeam();
@@ -214,8 +222,10 @@ const Settings = () => {
     return Boolean(entry?.isOwner) || r === 'owner' || r === 'admin';
   };
 
+  const normalizeCompanyRole = (role) => String(role || '').trim().toLowerCase();
+
   const workspaceIsOwner = (entry) =>
-    Boolean(entry?.isOwner) || String(entry?.companyRole || '').toLowerCase() === 'owner';
+    Boolean(entry?.isOwner) || normalizeCompanyRole(entry?.companyRole) === 'owner';
 
   const handleWorkspaceRenameOpen = (entry) => {
     const id = membershipCompanyId(entry);
@@ -252,6 +262,17 @@ const Settings = () => {
     setWsLoading(true);
     setError('');
     try {
+      if (String(user?.activeCompanyId || '') === String(companyId)) {
+        const fallback = (user?.companies || []).find(
+          (entry) => membershipCompanyId(entry) && membershipCompanyId(entry) !== String(companyId)
+        );
+        const nextId = membershipCompanyId(fallback);
+        if (!nextId) {
+          setError(tx('workspaceDeleteOnlyOne'));
+          return;
+        }
+        await switchActiveCompany(nextId);
+      }
       const res = await userAPI.deleteWorkspace(companyId);
       const list = res?.data?.companies;
       if (Array.isArray(list)) updateUser({ ...user, companies: list });
@@ -295,7 +316,9 @@ const Settings = () => {
   };
 
   const memberRoleForRow = (u) =>
-    u?.companyMemberRole || u?.companies?.[0]?.companyRole || u?.role || 'user';
+    normalizeCompanyRole(
+      u?.companyMemberRole || u?.companies?.[0]?.companyRole || u?.role || 'user'
+    );
 
   const rolesAssignableByInviter =
     user && (Boolean(user.companyIsOwner) || memberRoleForRow(user) === 'owner')
@@ -310,7 +333,7 @@ const Settings = () => {
 
     if (!nameTrim) {
       errors.name = tx('fieldRequired');
-    } else if (nameTrim.split(/\s+/).filter(Boolean).length < 2) {
+    } else if (!isValidPersonFullName(nameTrim)) {
       errors.name = tx('nameValidation');
     }
 
@@ -386,6 +409,29 @@ const Settings = () => {
     }
     fetchSubscriptionInfo();
   }, [user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    userAPI
+      .getProfile()
+      .then((res) => {
+        if (cancelled) return;
+        const list = res?.data?.user?.companies;
+        if (!Array.isArray(list) || !list.length) return;
+        try {
+          const raw = localStorage.getItem('user');
+          const base = raw ? JSON.parse(raw) : user;
+          if (base) updateUser({ ...base, companies: list });
+        } catch {
+          if (user) updateUser({ ...user, companies: list });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh workspace names once on mount
+  }, []);
 
   useEffect(() => {
     const onLanguageChanged = () => setLang(getStoredLanguage());
@@ -626,14 +672,20 @@ const Settings = () => {
                       {getSubscriptionStatusDisplay(subscriptionInfo?.status)}
                     </span>
                   </p>
-                  {!isFreeSubscriptionPlan && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      {tx('expires')}: {formatDate(subscriptionInfo?.expiresAt)} · {tx('graceEnds')}: {formatDate(subscriptionInfo?.graceEndsAt)}
-                    </p>
+                  {isFreeSubscriptionPlan ? (
+                    <p className="text-xs font-medium text-emerald-700 mt-1">{tx('subscriptionAvailable')}</p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {tx('expires')}: {formatDate(subscriptionInfo?.expiresAt)} · {tx('graceEnds')}:{' '}
+                        {formatDate(subscriptionInfo?.graceEndsAt)}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {tx('paymobSubscriptionId')}:{' '}
+                        {subscriptionInfo?.paymobSubscriptionId || tx('notApplicable')}
+                      </p>
+                    </>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {tx('paymobSubscriptionId')}: {subscriptionInfo?.paymobSubscriptionId || tx('notApplicable')}
-                  </p>
                   <div className="mt-2">
                     <p className="text-xs font-medium text-gray-700">
                       {tx('membersLimit')}:{' '}
@@ -850,7 +902,8 @@ const Settings = () => {
                           variant="outline"
                           size="sm"
                           type="button"
-                          disabled={wsLoading || isActive}
+                          disabled={wsLoading}
+                          title={isActive ? tx('workspaceDeleteActiveHint') : undefined}
                           onClick={() => handleWorkspaceDelete(cid)}
                         >
                           {tx('workspaceDeleteAction')}
@@ -1154,8 +1207,26 @@ const Settings = () => {
                     title: values.title,
                     email: values.email,
                   };
-                  if (!roleLocked) payload.role = values.role;
-                  await userAPI.updateUser(targetId, payload);
+                  if (!roleLocked) payload.role = String(values.role || '').toLowerCase();
+                  const res = await userAPI.updateUser(targetId, payload);
+                  const updated = res?.data?.user;
+                  const appliedRole = payload.role || memberRoleForRow(editingUser);
+                  setUsers((prev) =>
+                    prev.map((row) => {
+                      const rid = String(row._id || row.id);
+                      if (rid !== String(targetId)) return row;
+                      return {
+                        ...row,
+                        name: payload.name ?? row.name,
+                        title: payload.title ?? row.title,
+                        email: payload.email ?? row.email,
+                        role: updated?.role ?? appliedRole ?? row.role,
+                        companyMemberRole: appliedRole,
+                        companyIsOwner: appliedRole === 'owner',
+                        companies: updated?.companies ?? row.companies,
+                      };
+                    })
+                  );
                   setSuccess(tx('userUpdated'));
                   setOpenEditDialog(false);
                   if (targetId === user?._id || targetId === user?.id) {

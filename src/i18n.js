@@ -321,7 +321,7 @@ const dictionaries = {
     logout: 'تسجيل الخروج',
     loadingPlans: 'جاري تحميل باقات الاشتراك...',
     managePlan: 'إدارة خطتك وتجديدها عبر Paymob.',
-    newWorkspace: 'مساحة عمل جديدة',
+    newWorkspace: 'اضافة شركة جديدة',
     addWorkspaceTitle: 'إنشاء مساحة عمل',
     addWorkspaceSubtitle: 'أضف شركة أخرى تملكها. يمكنك التبديل بين مساحات العمل في أي وقت.',
     addWorkspaceOwnerHint:

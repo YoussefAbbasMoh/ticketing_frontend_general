@@ -1,5 +1,7 @@
 import React from 'react';
 import FolderRounded from '@mui/icons-material/FolderRounded';
+import { getStoredLanguage } from '../../i18n';
+import { projectStatusLabel } from '../../utils/projectStatusLabel';
 
 const palette = ['bg-app-info/15 text-app-info', 'bg-app-primary/12 text-app-primary', 'bg-orange/12 text-orange'];
 
@@ -12,8 +14,9 @@ const formatShort = (d) => {
  * Horizontal project card — mirrors Flutter WorkspaceProjectCard (~225px).
  */
 const WorkspaceProjectPreviewCard = ({ project, index, onClick }) => {
+  const lang = getStoredLanguage();
   const isDone = project.status?.toLowerCase() === 'completed';
-  const label = project.status || 'Active';
+  const label = projectStatusLabel(project.status || 'active', lang);
   const tone = palette[index % palette.length];
   const dateRange =
     project.start_date && project.estimated_end_date

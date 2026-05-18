@@ -9,8 +9,12 @@ export const membershipCompanyId = (entry) => {
 
 /** Display name from populated `company` object (not raw id string). */
 export const companyNameFromMembership = (entry) => {
+  if (entry?.companyName) return String(entry.companyName).trim();
   const c = entry?.company;
   if (c && typeof c === 'object' && c.name) return String(c.name).trim();
+  if (typeof c === 'string' && c.length > 0 && !/^[a-f0-9]{24}$/i.test(c)) {
+    return c.trim();
+  }
   return '';
 };
 

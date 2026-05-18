@@ -274,6 +274,10 @@ const dictionaries = {
     tasksFocusOpenExternal: 'Open in separate window',
     tasksFocusUsingSidePanel: 'Side panel (allow pop-ups for a separate window)',
     tasksFocusWindowOpen: 'Focus window open',
+    taskCompletionTitle: 'Task complete!',
+    taskCompletionContinue: 'Nice!',
+    taskCompletionDismiss: 'Close',
+    taskCompletionGifAlt: 'Celebration',
   },
   ar: {
     appTitle: 'نظام إدارة التذاكر',
@@ -551,6 +555,10 @@ const dictionaries = {
     tasksFocusOpenExternal: 'فتح في نافذة منفصلة',
     tasksFocusUsingSidePanel: 'لوحة جانبية (اسمحي بالنوافذ المنبثقة لنافذة مستقلة)',
     tasksFocusWindowOpen: 'نافذة التركيز مفتوحة',
+    taskCompletionTitle: 'تم إنجاز المهمة!',
+    taskCompletionContinue: 'رائع!',
+    taskCompletionDismiss: 'إغلاق',
+    taskCompletionGifAlt: 'احتفال',
     enterYourPassword: 'أدخل كلمة المرور',
     confirmYourPassword: 'تأكيد كلمة المرور',
   }

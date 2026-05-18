@@ -8,6 +8,7 @@ import PersonalTaskTimer from './PersonalTaskTimer';
 import PersonalTaskFocusDock from './PersonalTaskFocusDock';
 import PersonalTaskFocusPill from './PersonalTaskFocusPill';
 import { removeTimerState } from '../../utils/personalTaskTimerStorage';
+import { useTaskCompletionCelebration } from '../../hooks/useTaskCompletionCelebration';
 import {
   clearFocusSessionPayload,
   FOCUS_BROADCAST_CHANNEL,
@@ -52,6 +53,7 @@ const PersonalTasksPage = () => {
   const [focusWindowOpen, setFocusWindowOpen] = useState(false);
   const [focusDockFallback, setFocusDockFallback] = useState(false);
   const [markingFocusDone, setMarkingFocusDone] = useState(false);
+  const { celebrate, overlay: completionOverlay } = useTaskCompletionCelebration(lang);
 
   const todayStats = useMemo(() => {
     const todayList = tasks.filter((tk) => tk.column === 'today');
@@ -158,6 +160,7 @@ const PersonalTasksPage = () => {
           showToast(t(lang, 'taskMarkedDone'));
           setFocusSession(null);
           setFocusWindowOpen(false);
+          setFocusDockFallback(false);
         }
         if (data.type === 'focus-window-closed') {
           setFocusWindowOpen(false);
@@ -254,7 +257,7 @@ const PersonalTasksPage = () => {
     }
   };
 
-  const moveTaskToColumn = async (task, newColumn) => {
+  const moveTaskToColumn = async (task, newColumn, { celebrateOnDone = true } = {}) => {
     const id = taskId(task);
     if (!id || task.column === newColumn) return;
     const prev = tasks;
@@ -268,6 +271,9 @@ const PersonalTasksPage = () => {
       setFocusSession((prev) =>
         prev && taskId(prev.task) === id ? { ...prev, column: newColumn, task: { ...prev.task, column: newColumn } } : prev
       );
+      if (newColumn === 'done' && celebrateOnDone) {
+        await celebrate(task.title || '');
+      }
     } catch (err) {
       setTasks(prev);
       setError(getAxiosErrorMessage(err, t(lang, 'personalTasksLoadError')));
@@ -278,12 +284,14 @@ const PersonalTasksPage = () => {
     if (!focusSession || focusSession.column === 'done' || markingFocusDone) return;
     setMarkingFocusDone(true);
     try {
-      await moveTaskToColumn(focusSession.task, 'done');
+      const title = focusSession.task.title || '';
+      await moveTaskToColumn(focusSession.task, 'done', { celebrateOnDone: false });
       setFocusSession(null);
       setFocusWindowOpen(false);
       setFocusDockFallback(false);
       clearFocusSessionPayload();
       showToast(t(lang, 'taskMarkedDone'));
+      await celebrate(title);
     } finally {
       setMarkingFocusDone(false);
     }
@@ -574,6 +582,8 @@ const PersonalTasksPage = () => {
           </form>
         </div>
       )}
+
+      {completionOverlay}
     </div>
   );
 };

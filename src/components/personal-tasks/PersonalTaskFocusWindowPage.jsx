@@ -9,6 +9,8 @@ import {
   loadFocusSessionPayload,
   FOCUS_BROADCAST_CHANNEL,
 } from '../../utils/personalTaskFocusWindow';
+import { useTaskCompletionCelebration } from '../../hooks/useTaskCompletionCelebration';
+import TaskCompletionCelebration from './TaskCompletionCelebration';
 
 const columnLabelKey = (col) => {
   if (col === 'backlog') return 'colBacklog';
@@ -29,6 +31,7 @@ export default function PersonalTaskFocusWindowPage() {
   });
   const [markingDone, setMarkingDone] = useState(false);
   const [error, setError] = useState('');
+  const { celebrate, dismiss, gif, taskTitle, handleGifError } = useTaskCompletionCelebration(lang);
 
   const taskIdFromUrl = searchParams.get('taskId');
   const taskId = String(session?.taskId || taskIdFromUrl || '');
@@ -91,15 +94,25 @@ export default function PersonalTaskFocusWindowPage() {
     window.close();
   };
 
+  const handleCelebrationDismiss = () => {
+    dismiss();
+    clearFocusSessionPayload();
+    window.close();
+  };
+
   const handleMarkDone = async () => {
     if (!taskId || session?.column === 'done' || markingDone) return;
     setMarkingDone(true);
     setError('');
+    const title = session.taskTitle || '';
     try {
       await userAPI.updatePersonalTask(taskId, { column: 'done' });
-      broadcastFocusEvent({ type: 'task-marked-done', taskId });
-      clearFocusSessionPayload();
-      window.close();
+      broadcastFocusEvent({ type: 'task-marked-done', taskId, taskTitle: title });
+      const showed = await celebrate(title);
+      if (!showed) {
+        clearFocusSessionPayload();
+        window.close();
+      }
     } catch (e) {
       setError(getAxiosErrorMessage(e, t(lang, 'personalTasksLoadError')));
     } finally {
@@ -141,6 +154,15 @@ export default function PersonalTaskFocusWindowPage() {
         onMarkDone={handleMarkDone}
         markingDone={markingDone}
       />
+      {gif ? (
+        <TaskCompletionCelebration
+          gif={gif}
+          taskTitle={taskTitle}
+          lang={lang}
+          onDismiss={handleCelebrationDismiss}
+          onGifError={handleGifError}
+        />
+      ) : null}
     </div>
   );
 }

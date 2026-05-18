@@ -292,6 +292,14 @@ export const userAPI = {
   deleteWorkspace: (companyId) => api.delete(`/users/workspaces/${companyId}`),
 };
 
+export const completionGifAPI = {
+  getRandom: (excludeId) =>
+    api.get('/completion-gifs/random', {
+      params: excludeId ? { exclude: excludeId, _t: Date.now() } : { _t: Date.now() },
+    }),
+  list: () => api.get('/completion-gifs', { params: { _t: Date.now() } }),
+};
+
 // Project API
 export const projectAPI = {
   addProject: (projectData) => api.post('/projects/add-project', projectData),

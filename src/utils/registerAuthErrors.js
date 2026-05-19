@@ -55,6 +55,9 @@ export function localizeRegisterSubmitError(lang, status, data) {
   const code = data?.code;
   const message = data?.message;
 
+  if (code === 'OWNER_NAME_INVALID_CHARS') {
+    return t(lang, 'valOwnerNameLettersOnly');
+  }
   if (code === 'OWNER_NAME_NOT_FULL' || code === 'OWNER_NAME_WORD_TOO_SHORT') {
     return t(lang, 'valOwnerNameFullName');
   }

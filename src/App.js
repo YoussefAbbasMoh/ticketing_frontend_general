@@ -78,6 +78,12 @@ function SubscriptionCheckoutRouteGate() {
   return <SubscriptionCheckoutPage />;
 }
 
+function LoginRouteGate() {
+  const { user } = useAuth();
+  if (!user) return <Login />;
+  return <Navigate to="/" replace />;
+}
+
 function AppRoutes() {
   const { user, loading } = useAuth();
   const activeCompanyKey = user?.activeCompanyId ? String(user.activeCompanyId) : 'no-company';
@@ -85,7 +91,7 @@ function AppRoutes() {
   return (
     <Suspense fallback={<RouteFallback />}>
     <Routes key={activeCompanyKey}>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={<LoginRouteGate />} />
       <Route
         path="/register-company"
         element={

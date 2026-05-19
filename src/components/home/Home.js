@@ -23,7 +23,6 @@ import Alert from '../ui/Alert';
 import Badge from '../ui/Badge';
 import WorkspaceWelcome from './WorkspaceWelcome';
 import WorkspaceTicketPreviewCard from './WorkspaceTicketPreviewCard';
-import WorkspaceProjectPreviewCard from './WorkspaceProjectPreviewCard';
 import StatChip from './StatChip';
 import WorkspaceHomePanel from './WorkspaceHomePanel';
 import { HomeLoadingSkeleton, ActiveTicketsLoadingRail } from './HomeSkeletons';
@@ -470,7 +469,7 @@ const Home = () => {
             <StatChip label={tx('cancelled')} count={stats.cancelled} tone="danger" icon="cancelled" />
             <StatChip label={tx('totalProjects')} count={stats.total} tone="primary" icon="total" />
           </div>
-          {projects.length === 0 ? (
+          {projects.length === 0 && (
             <div className="flex min-h-[150px] flex-col items-center justify-center rounded-app-input border border-dashed border-app-border bg-app-background/60 px-4 py-10 text-center">
               <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-app-primary/10 text-app-primary">
                 <FolderOffOutlined sx={{ fontSize: 36 }} />
@@ -484,19 +483,6 @@ const Home = () => {
                   {tx('createFirstProject')}
                 </Button>
               )}
-            </div>
-          ) : (
-            <div className="min-h-[150px]">
-              <div className="-mx-1 flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-app-border">
-                {filteredProjects.slice(0, 10).map((project, index) => (
-                  <WorkspaceProjectPreviewCard
-                    key={project._id}
-                    project={project}
-                    index={index}
-                    onClick={() => navigate(`/project/${project._id}`)}
-                  />
-                ))}
-              </div>
             </div>
           )}
         </WorkspaceHomePanel>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ticketAPI, projectAPI, uploadAPI, getImageUrl, uploadTicketImagesViaBunny } from '../../services/api';
+import { resolveProjectId } from '../../utils/resolveProjectId';
 import { useBunnyUpload } from '../../hooks/useBunnyUpload';
 import { useIsRtl } from '../../hooks/useIsRtl';
 import { useAuth } from '../../contexts/AuthContext';
@@ -159,6 +160,7 @@ const EditTicket = () => {
   });
   
   const [ticket, setTicket] = useState(null);
+  const [linkedProjectId, setLinkedProjectId] = useState('');
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
@@ -255,7 +257,9 @@ const EditTicket = () => {
       const response = await ticketAPI.getTicket(ticketId);
       const ticketData = response.data.ticket || response.data;
       setTicket(ticketData);
-      
+      const pid = resolveProjectId(ticketData.projectId ?? ticketData.project);
+      setLinkedProjectId(pid);
+
       setFormData({
         status: ticketData.status || 'open',
         end_date: ticketData.end_date ? ticketData.end_date.split('T')[0] : '',
@@ -267,9 +271,9 @@ const EditTicket = () => {
         setExistingImages(ticketData.images);
       }
 
-      if (ticketData.project) {
+      if (pid) {
         try {
-          const projectResponse = await projectAPI.getProject(ticketData.project);
+          const projectResponse = await projectAPI.getProject(pid);
           const project = projectResponse.data.project || projectResponse.data;
           const assignedUsers = project?.assigned_users || [];
           setUsers(Array.isArray(assignedUsers) ? assignedUsers : []);
@@ -429,7 +433,8 @@ const EditTicket = () => {
       
       setSuccess(true);
       setTimeout(() => {
-        navigate(`/project/${ticket.project}`);
+        if (linkedProjectId) navigate(`/project/${linkedProjectId}`);
+        else navigate('/');
       }, 1500);
     } catch (error) {
       console.error('Error updating ticket:', error);
@@ -494,7 +499,7 @@ const EditTicket = () => {
         <div className="mb-6">
           <Button
             variant="ghost"
-            onClick={() => navigate(`/project/${ticket.project}`)}
+            onClick={() => (linkedProjectId ? navigate(`/project/${linkedProjectId}`) : navigate('/'))}
             className="mb-4 text-gray-600 hover:text-secondary"
             icon={
               <svg
@@ -910,7 +915,7 @@ const EditTicket = () => {
                           <select
                             onChange={handleCCAdd}
                             disabled={users.length === 0}
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent hover:border-gray-400 transition-all appearance-none bg-white disabled:bg-gray-100"
+                            className="w-full py-3 ps-4 pe-10 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent hover:border-gray-400 transition-all appearance-none bg-white bg-none disabled:bg-gray-100"
                             defaultValue=""
                           >
                             <option value="" disabled>{tx('selectToAdd')}</option>
@@ -922,8 +927,14 @@ const EditTicket = () => {
                                 </option>
                               ))}
                           </select>
-                          <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          <svg
+                            className="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10l4 4 4-4" />
                           </svg>
                         </div>
                       </div>
@@ -989,7 +1000,7 @@ const EditTicket = () => {
                       <Button
                         variant="outline"
                         size="lg"
-                        onClick={() => navigate(`/project/${ticket.project}`)}
+                        onClick={() => (linkedProjectId ? navigate(`/project/${linkedProjectId}`) : navigate('/'))}
                         disabled={loading}
                         className="w-full"
                       >

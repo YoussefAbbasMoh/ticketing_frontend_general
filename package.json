@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node scripts/generate-firebase-config.js",
+    "prebuild": "node scripts/generate-firebase-config.js",
     "dev": "vite",
     "start": "vite",
     "build": "vite build",
@@ -23,6 +25,7 @@
     "axios": "^1.12.2",
     "date-fns": "^4.1.0",
     "emoji-picker-react": "^4.16.1",
+    "firebase": "^11.10.0",
     "formik": "^2.4.6",
     "framer-motion": "^11.11.17",
     "lucide-react": "^0.548.0",

@@ -22,3 +22,10 @@ export const authLinkSecondaryClass =
 /** Subtle nav link on auth pages */
 export const authLinkMutedClass =
   'text-sm font-medium text-app-text-secondary transition-colors hover:text-app-text disabled:opacity-50';
+
+/** Inline validation under auth inputs */
+export const authFieldErrorClass = 'mt-s8 text-[12px] font-medium leading-snug text-app-error';
+
+/** Prominent resend OTP — visible within first screen on verify flows */
+export const authResendButtonClass =
+  'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-app-btn border-2 border-app-primary bg-app-primary/10 px-s16 py-3 text-[15px] font-bold text-app-primary shadow-none transition-colors hover:bg-app-primary/15 focus:outline-none focus:ring-2 focus:ring-app-primary focus:ring-offset-2 focus:ring-offset-app-background disabled:cursor-not-allowed disabled:border-app-border disabled:bg-app-surface-variant disabled:text-app-text-tertiary disabled:opacity-100';

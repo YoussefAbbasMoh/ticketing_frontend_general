@@ -102,7 +102,7 @@ const dictionaries = {
     chooseWorkspace: 'Choose Workspace',
     multiCompanySelect: 'This account belongs to multiple companies. Select one to continue.',
     needNewCompany: 'Need a new company?',
-    openRegistrationHelp: 'Open company registration flow and create your next workspace.',
+    openRegistrationHelp: 'Opens the create workspace form (company name only).',
     back: 'Back',
     continue: 'Continue',
     pleaseWait: 'Please wait...',
@@ -117,7 +117,8 @@ const dictionaries = {
     placeholderOwnerSignup: 'John Doe',
     placeholderCompanySignup: 'Acme Logistics',
     placeholderWorkEmailSignup: 'you@company.com',
-    placeholderPasswordMin8: 'At least 8 characters',
+    placeholderPasswordMin8:
+      'At least 8 characters including uppercase, lowercase, numbers, and special characters',
     createFreeAccount: 'Create Free Account →',
     creatingFreeAccount: 'Creating account...',
     verifyEmailTitle: 'Check your email',
@@ -126,6 +127,9 @@ const dictionaries = {
     verifyEmailConfirm: 'Verify & continue',
     verifyingCode: 'Verifying...',
     resendCode: 'Resend code',
+    resendVerificationCode: 'Resend verification code',
+    didntReceiveCode: "Didn't receive the code?",
+    loginChangeAccount: 'Use a different email',
     resendCooldownSec: 'Resend in {n}s',
     verifyEmailSuccessHint: 'Did not get an email? Check spam or resend the code.',
     verifyEmailBackToLogin: 'Back to sign in',
@@ -136,6 +140,7 @@ const dictionaries = {
     valOwnerNameRequired: 'Owner name is required',
     valOwnerNameFullName:
       'Enter your first and last name: at least two words, each at least 2 characters (letters).',
+    valOwnerNameLettersOnly: 'Please enter a valid full name containing letters only.',
     valCompanyNameRequired: 'Company name is required',
     valCompanyNameMin2: 'Company name must be at least 2 characters.',
     valPasswordRequired: 'Password is required',
@@ -144,8 +149,10 @@ const dictionaries = {
     valEmailInvalidSignup: 'Enter a valid email',
     registerUseLoginInstead:
       'This email already has an account. Sign in below. You can add another company from your account after signing in if your plan allows it.',
+    registerAccountExists:
+      'An account with this email already exists. Sign in to continue, or use a different email.',
     valPasswordStrongPolicy:
-      'Password must be at least 8 characters and include uppercase, lowercase, and a special character.',
+      'Password must be at least 8 characters and include uppercase, lowercase, numbers, and a special character.',
     errRegisterEmailPasswordRequired: 'Email and password are required.',
     errRegisterProvideCompanyOrOwnerName:
       'Enter company name and owner name (or one name to fill both), plus email and password.',
@@ -383,7 +390,7 @@ const dictionaries = {
     chooseWorkspace: 'اختر مساحة العمل',
     multiCompanySelect: 'هذا الحساب تابع لأكثر من شركة. اختر شركة للمتابعة.',
     needNewCompany: 'تحتاج شركة جديدة؟',
-    openRegistrationHelp: 'افتح صفحة تسجيل شركة جديدة وأنشئ مساحة عمل إضافية.',
+    openRegistrationHelp: 'يفتح نموذج إنشاء مساحة عمل (اسم الشركة فقط).',
     back: 'رجوع',
     continue: 'متابعة',
     pleaseWait: 'يرجى الانتظار...',
@@ -398,7 +405,8 @@ const dictionaries = {
     placeholderOwnerSignup: 'مثال: أحمد محمد',
     placeholderCompanySignup: 'مثال: أكمي للخدمات اللوجستية',
     placeholderWorkEmailSignup: 'you@company.com',
-    placeholderPasswordMin8: '8 أحرف على الأقل',
+    placeholderPasswordMin8:
+      '8 أحرف على الأقل: حرف كبير وصغير ورقم ورمز خاص',
     createFreeAccount: 'إنشاء حساب مجاني ←',
     creatingFreeAccount: 'جارٍ إنشاء الحساب...',
     verifyEmailTitle: 'تحقق من بريدك',
@@ -407,6 +415,9 @@ const dictionaries = {
     verifyEmailConfirm: 'تحقق ومتابعة',
     verifyingCode: 'جارٍ التحقق...',
     resendCode: 'إعادة إرسال الرمز',
+    resendVerificationCode: 'إعادة إرسال رمز التحقق',
+    didntReceiveCode: 'لم يصلك الرمز؟',
+    loginChangeAccount: 'استخدام بريد آخر',
     resendCooldownSec: 'إعادة الإرسال خلال {n} ث',
     verifyEmailSuccessHint: 'لم يصلك البريد؟ تحقق من الرسائل غير المرغوب فيها أو أعد إرسال الرمز.',
     verifyEmailBackToLogin: 'العودة لتسجيل الدخول',
@@ -417,6 +428,7 @@ const dictionaries = {
     valOwnerNameRequired: 'اسم المالك مطلوب',
     valOwnerNameFullName:
       'اكتب الاسم الكامل (مثال: الاسم الأول والأخير): كلمتان على الأقل، كل كلمة حرفان على الأقل.',
+    valOwnerNameLettersOnly: 'أدخل اسمًا صالحًا يحتوي على أحرف فقط (بدون أرقام أو رموز).',
     valCompanyNameRequired: 'اسم الشركة مطلوب',
     valCompanyNameMin2: 'اسم الشركة يجب أن يكون حرفين على الأقل.',
     valPasswordRequired: 'كلمة المرور مطلوبة',
@@ -424,8 +436,10 @@ const dictionaries = {
     valEmailInvalidSignup: 'أدخل بريدًا إلكترونيًا صالحًا',
     registerUseLoginInstead:
       'هذا البريد مسجّل بالفعل. سجّل الدخول أدناه. يمكنك إضافة شركة أخرى من حسابك بعد تسجيل الدخول إذا كانت خطتك تسمح بذلك.',
+    registerAccountExists:
+      'يوجد حساب بهذا البريد بالفعل. سجّل الدخول للمتابعة، أو استخدم بريدًا آخر.',
     valPasswordStrongPolicy:
-      'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتتضمن حرفًا كبيرًا وحرفًا صغيرًا ورمزًا خاصًا.',
+      'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتتضمن حرفًا كبيرًا وصغيرًا ورقمًا ورمزًا خاصًا.',
     errRegisterEmailPasswordRequired: 'البريد الإلكتروني وكلمة المرور مطلوبان.',
     errRegisterProvideCompanyOrOwnerName:
       'أدخل اسم الشركة واسم المالك (أو أحدهما ليُستخدم للاثنين) مع البريد وكلمة المرور.',

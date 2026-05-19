@@ -27,6 +27,7 @@ import ProjectDetailsSkeleton from './ProjectDetailsSkeleton';
 import Modal from '../ui/Modal';
 import AssignUsersDialog from '../admin/AssignUsersDialog';
 import { getStoredLanguage } from '../../i18n';
+import { resolveProjectId } from '../../utils/resolveProjectId';
 
 const TEXT = {
   en: {
@@ -370,7 +371,8 @@ function PersonalNotesPanelBody({
 }
 
 const ProjectDetails = () => {
-  const { projectId } = useParams();
+  const { projectId: projectIdParam } = useParams();
+  const projectId = resolveProjectId(projectIdParam);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, isCompanyOwner } = useAuth();
@@ -460,6 +462,12 @@ const ProjectDetails = () => {
       setError('');
       setProject(null);
       setTickets([]);
+
+      if (!projectId) {
+        setFatalError(tx('failedProjectDetails'));
+        setLoading(false);
+        return;
+      }
 
       const [pRes, tRes] = await Promise.allSettled([
         projectAPI.getProject(projectId),

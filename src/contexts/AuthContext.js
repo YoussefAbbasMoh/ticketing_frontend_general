@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { authAPI, refreshAccessToken } from '../services/api';
+import { authAPI, refreshAccessToken, userAPI } from '../services/api';
 import { decodeJwtPayload, getJwtExpiresAtMs, isJwtExpired } from '../utils/jwt';
+import {
+  patchUserCompanyMembership,
+  resolveCompanyMemberRole,
+} from '../utils/companyMembership';
+import { registerFcmWithBackend, unregisterFcmFromBackend } from '../services/fcmClient';
 
 const AuthContext = createContext();
 
@@ -40,15 +45,6 @@ function readInitialAuth() {
   return { user: null, loading: false };
 }
 
-/** Login sends `companyId`; profile/DB may use `company` or populated `{ _id }`. */
-const memberCompanyId = (entry) => {
-  if (!entry) return '';
-  const raw = entry.companyId ?? entry.company;
-  if (raw == null) return '';
-  if (typeof raw === 'object' && raw._id != null) return String(raw._id);
-  return String(raw);
-};
-
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -63,10 +59,46 @@ export const AuthProvider = ({ children }) => {
   const loading = initialAuth.loading;
 
   const logout = useCallback(() => {
+    unregisterFcmFromBackend().catch(() => {});
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
   }, []);
+
+  /** Refresh workspace membership from server (role changes, invites, etc.). */
+  useEffect(() => {
+    const uid = user?._id || user?.id;
+    if (!uid) return undefined;
+
+    let cancelled = false;
+    userAPI
+      .getProfile()
+      .then((res) => {
+        if (cancelled) return;
+        const list = res?.data?.user?.companies;
+        if (!Array.isArray(list) || !list.length) return;
+        const activeId =
+          res?.data?.activeCompanyId || user?.activeCompanyId || readTokenCompanyId(localStorage.getItem('token'));
+        const role =
+          res?.data?.companyMemberRole ||
+          resolveCompanyMemberRole({ ...user, companies: list }, activeId);
+        const next = patchUserCompanyMembership({ ...user, companies: list }, activeId, role);
+        setUser(next);
+        localStorage.setItem('user', JSON.stringify(next));
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?._id, user?.id]);
+
+  /** Register device for Firebase push when session is restored. */
+  useEffect(() => {
+    if (!user) return undefined;
+    registerFcmWithBackend().catch(() => {});
+    return undefined;
+  }, [user?._id, user?.id]);
 
   /** Proactive refresh before short-lived JWTs expire (requires `POST /auth/refresh` on backend). */
   useEffect(() => {
@@ -104,6 +136,7 @@ export const AuthProvider = ({ children }) => {
     setUser(merged);
     localStorage.setItem('user', JSON.stringify(merged));
     localStorage.setItem('token', token);
+    registerFcmWithBackend().catch(() => {});
   };
 
   const updateUser = (userData) => {
@@ -132,7 +165,7 @@ export const AuthProvider = ({ children }) => {
         ? response.data.userName.trim()
         : null;
 
-    const nextUser = user
+    let nextUser = user
       ? {
           ...user,
           activeCompanyId: nextCompanyId,
@@ -141,6 +174,8 @@ export const AuthProvider = ({ children }) => {
         }
       : user;
     if (nextUser) {
+      const role = resolveCompanyMemberRole(nextUser, nextCompanyId);
+      nextUser = patchUserCompanyMembership(nextUser, nextCompanyId, role);
       setUser(nextUser);
       localStorage.setItem('user', JSON.stringify(nextUser));
     }
@@ -159,20 +194,13 @@ export const AuthProvider = ({ children }) => {
   /** Owner or company admin/manager for the active company (JWT companyId). */
   const canManageCompanyTeam = () => {
     const activeId = resolveActiveCompanyId();
-    if (!user?.companies?.length || !activeId) return false;
-    const m = user.companies.find((c) => memberCompanyId(c) === activeId);
-    if (!m) return false;
-    return Boolean(m.isOwner) || ['admin', 'manager'].includes(m.companyRole);
+    if (!user || !activeId) return false;
+    const role = resolveCompanyMemberRole(user, activeId);
+    return role === 'owner' || ['admin', 'manager'].includes(role);
   };
 
-  /**
-   * Workspace-level admin UI (owner / company admin|manager, or legacy global `manager` role).
-   * Platform console uses `isPlatformAdmin`, not this.
-   */
-  const isAdmin = () => {
-    if (user?.role === 'manager') return true;
-    return canManageCompanyTeam();
-  };
+  /** Workspace-level admin UI (owner / company admin|manager). Platform console uses `isPlatformAdmin`. */
+  const isAdmin = () => canManageCompanyTeam();
 
   /** Platform dashboard at `/admin` — only JWT `role: super_admin`. */
   const isPlatformAdmin = () => user?.role === 'super_admin';
@@ -182,9 +210,8 @@ export const AuthProvider = ({ children }) => {
 
   const isCompanyOwner = () => {
     const activeId = resolveActiveCompanyId();
-    if (!user?.companies?.length || !activeId) return false;
-    const m = user.companies.find((c) => memberCompanyId(c) === activeId);
-    return Boolean(m?.isOwner) || String(m?.companyRole || '').toLowerCase() === 'owner';
+    if (!user || !activeId) return false;
+    return resolveCompanyMemberRole(user, activeId) === 'owner';
   };
 
   /** Same rules as API: owner or company admin/manager in the active workspace. */

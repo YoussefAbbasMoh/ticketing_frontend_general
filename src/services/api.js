@@ -28,14 +28,13 @@ const AUTH_REFRESH_PATH =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_AUTH_REFRESH_PATH) || '/auth/refresh';
 
 const getApiBaseUrl = () => {
+  let base;
   if (import.meta?.env?.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
+    base = import.meta.env.VITE_API_BASE_URL;
+  } else {
+    base = 'https://api.tik.absai.dev/api';
   }
-/*   const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return 'http://localhost:9091/api';
-  } */
-  return 'https://api.tik.absai.dev/api';
+  return String(base).replace(/\/+$/, '');
 };
 
 const API_BASE_URL = getApiBaseUrl();
@@ -248,12 +247,13 @@ loginApi.interceptors.request.use(
 // Auth API - use loginApi for login to avoid 401 redirect
 export const authAPI = {
   /** @param {boolean} [platformAdminLogin] - admin console only; server accepts `super_admin` users only */
-  login: (email, password, companyId, platformAdminLogin) =>
+  login: (email, password, companyId, platformAdminLogin, fcmToken) =>
     loginApi.post('/auth/login', {
       email,
       password,
       ...(companyId ? { companyId } : {}),
       ...(platformAdminLogin ? { platformAdminLogin: true } : {}),
+      ...(fcmToken ? { token: fcmToken } : {}),
     }),
   switchCompany: (companyId) => api.post('/auth/switch-company', { companyId }),
   registerCompany: (payload) => loginApi.post('/auth/register-company', payload),
@@ -290,6 +290,9 @@ export const userAPI = {
   createWorkspace: (payload) => api.post('/users/workspaces', payload),
   updateWorkspaceName: (companyId, payload) => api.patch(`/users/workspaces/${companyId}`, payload),
   deleteWorkspace: (companyId) => api.delete(`/users/workspaces/${companyId}`),
+  registerFcmToken: (token) => api.post('/users/register-fcm-token', { token }),
+  unregisterFcmToken: (token) => api.post('/users/unregister-fcm-token', { token }),
+  testPushNotification: () => api.post('/users/test-push'),
 };
 
 export const completionGifAPI = {

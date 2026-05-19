@@ -17,8 +17,9 @@ import {
   authLinkMutedClass,
   authLinkSecondaryClass,
   authPrimaryButtonClass,
+  authResendButtonClass,
 } from './authFieldClasses';
-
+import { getOptionalFcmTokenForLogin } from '../../services/fcmClient';
 const RESEND_COOLDOWN_SEC = 60;
 
 const Login = () => {
@@ -70,19 +71,75 @@ const Login = () => {
     }
   };
 
-  const finishLogin = (response) => {
-    const u = response.data.user;
-    const activeId = response.data.activeCompanyId;
-    login(
-      activeId ? { ...u, activeCompanyId: String(activeId) } : u,
-      response.data.token
-    );
+  const establishSession = (data) => {
+    const u = data.user;
+    const activeId = data.activeCompanyId;
+    login(activeId ? { ...u, activeCompanyId: String(activeId) } : u, data.token);
     setCompanyChoices(null);
     setSelectedCompanyId('');
     setCompanyModalOpen(false);
     setCompanyActionError('');
     setPendingLoginData(null);
+  };
+
+  const finishLogin = (response) => {
+    establishSession(response.data);
     navigate('/', { replace: true });
+  };
+
+  const handleOpenAddWorkspace = async () => {
+    if (companyActionLoading) return;
+
+    const goToAddWorkspace = (data) => {
+      const u = data.user;
+      const activeId = data.activeCompanyId;
+      const merged = activeId ? { ...u, activeCompanyId: String(activeId) } : u;
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(merged));
+      setCompanyChoices(null);
+      setSelectedCompanyId('');
+      setCompanyModalOpen(false);
+      setCompanyActionError('');
+      setPendingLoginData(null);
+      window.location.assign('/workspaces/new');
+    };
+
+    if (pendingLoginData?.token && pendingLoginData?.user) {
+      goToAddWorkspace(pendingLoginData);
+      return;
+    }
+
+    const companyId =
+      selectedCompanyId ||
+      (companyChoices?.[0]?.companyId != null ? String(companyChoices[0].companyId) : '');
+    if (!companyId) {
+      setCompanyActionError(t(lang, 'multiCompanySelect'));
+      return;
+    }
+
+    setCompanyActionLoading(true);
+    setCompanyActionError('');
+    try {
+      const fcmToken = await getOptionalFcmTokenForLogin();
+      const response = await authAPI.login(
+        formData.email,
+        formData.password,
+        companyId,
+        false,
+        fcmToken
+      );
+      if (response?.data?.token) {
+        goToAddWorkspace(response.data);
+      } else {
+        setCompanyActionError('Unable to start session.');
+      }
+    } catch (apiError) {
+      setCompanyActionError(
+        apiError?.response?.data?.message || 'Unable to open add workspace.'
+      );
+    } finally {
+      setCompanyActionLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -96,7 +153,14 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await authAPI.login(formData.email, formData.password);
+      const fcmToken = await getOptionalFcmTokenForLogin();
+      const response = await authAPI.login(
+        formData.email,
+        formData.password,
+        undefined,
+        false,
+        fcmToken
+      );
 
       if (response && response.data && response.status === 200) {
         const companiesFromSuccess = response?.data?.user?.companies || [];
@@ -181,9 +245,11 @@ const Login = () => {
     setVerifyError('');
     setVerifyInfo('');
     try {
+      const fcmToken = await getOptionalFcmTokenForLogin();
       const response = await authAPI.verifyRegistrationOtp({
         email: formData.email.trim().toLowerCase(),
         otp: trimmed,
+        token: fcmToken || undefined,
       });
       if (response?.data?.token && response?.data?.user && response.status === 200) {
         setLoginPhase('credentials');
@@ -273,10 +339,13 @@ const Login = () => {
     setCompanyActionLoading(true);
     setCompanyActionError('');
     try {
+      const fcmToken = await getOptionalFcmTokenForLogin();
       const response = await authAPI.login(
         formData.email,
         formData.password,
-        selectedCompanyId
+        selectedCompanyId,
+        false,
+        fcmToken
       );
       if (response && response.data && response.status === 200) {
         finishLogin(response);
@@ -412,62 +481,135 @@ const Login = () => {
             onSubmit={loginPhase === 'verify_email' ? handleVerifyFromLogin : handleSubmit}
             className="space-y-s24"
           >
-            <div>
-              <label htmlFor="email" className={authLabelClass}>
-                {t(lang, 'emailAddress')}
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-                autoFocus={loginPhase === 'credentials'}
-                disabled={loading || verifyLoading || resendLoading}
-                className={authInputClass}
-                placeholder={t(lang, 'emailAddress')}
-              />
-            </div>
+            {loginPhase === 'verify_email' ? (
+              <>
+                <div className="rounded-app-input border border-app-border bg-app-surface-variant/60 px-s16 py-s12 text-center">
+                  <p className="text-[12px] font-medium uppercase tracking-wide text-app-text-tertiary">
+                    {t(lang, 'emailAddress')}
+                  </p>
+                  <p className="mt-s8 truncate text-[15px] font-semibold text-app-text" dir="ltr">
+                    {formData.email.trim() || '—'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginPhase('credentials');
+                      setVerifyOtp('');
+                      setVerifyError('');
+                      setVerifyInfo('');
+                      setResendCooldown(0);
+                    }}
+                    disabled={verifyLoading || resendLoading}
+                    className="mt-s8 text-[13px] font-semibold text-app-primary hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t(lang, 'loginChangeAccount')}
+                  </button>
+                </div>
 
-            <div>
-              <label htmlFor="password" className={authLabelClass}>
-                {t(lang, 'password')}
-              </label>
-              <AuthPasswordInput
-                lang={lang}
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                autoComplete="current-password"
-                disabled={loading || verifyLoading || resendLoading}
-                placeholder={t(lang, 'password')}
-              />
-            </div>
+                <div>
+                  <label htmlFor="login-verify-otp" className={authLabelClass}>
+                    {t(lang, 'verificationCode')}
+                  </label>
+                  <input
+                    id="login-verify-otp"
+                    name="verify_otp"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    maxLength={6}
+                    value={verifyOtp}
+                    onChange={handleVerifyOtpChange}
+                    disabled={verifyLoading}
+                    className={`${authInputClass} text-center font-mono text-[22px] tracking-[0.35em]`}
+                    placeholder="000000"
+                  />
+                </div>
 
-            {loginPhase === 'verify_email' && (
-              <div>
-                <label htmlFor="login-verify-otp" className={authLabelClass}>
-                  {t(lang, 'verificationCode')}
-                </label>
-                <input
-                  id="login-verify-otp"
-                  name="verify_otp"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  autoFocus={loginPhase === 'verify_email'}
-                  maxLength={6}
-                  value={verifyOtp}
-                  onChange={handleVerifyOtpChange}
-                  disabled={verifyLoading}
-                  className={authInputClass}
-                  placeholder="000000"
-                />
-              </div>
+                <div
+                  className="rounded-app border-2 border-app-primary/35 bg-gradient-to-b from-app-primary/12 to-app-primary/5 px-s16 py-s16"
+                  role="region"
+                  aria-label={t(lang, 'resendVerificationCode')}
+                >
+                  <p className="text-center text-[14px] font-semibold text-app-text">
+                    {t(lang, 'didntReceiveCode')}
+                  </p>
+                  <p className="mt-s8 text-center text-[12px] leading-relaxed text-app-text-secondary">
+                    {t(lang, 'verifyEmailSuccessHint')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleResendFromLogin}
+                    disabled={verifyLoading || resendLoading || resendCooldown > 0}
+                    className={`${authResendButtonClass} mt-s16`}
+                  >
+                    {resendLoading ? (
+                      <>
+                        <ButtonBusyDots className="text-app-primary" />
+                        <span className="ms-2">{t(lang, 'pleaseWait')}</span>
+                      </>
+                    ) : resendCooldown > 0 ? (
+                      t(lang, 'resendCooldownSec').replace('{n}', String(resendCooldown))
+                    ) : (
+                      <>
+                        <svg
+                          className="h-5 w-5 shrink-0"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          aria-hidden
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                          />
+                        </svg>
+                        {t(lang, 'resendVerificationCode')}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <label htmlFor="email" className={authLabelClass}>
+                    {t(lang, 'emailAddress')}
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    autoComplete="email"
+                    autoFocus
+                    disabled={loading || verifyLoading || resendLoading}
+                    className={authInputClass}
+                    placeholder={t(lang, 'emailAddress')}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="password" className={authLabelClass}>
+                    {t(lang, 'password')}
+                  </label>
+                  <AuthPasswordInput
+                    lang={lang}
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    autoComplete="current-password"
+                    disabled={loading || verifyLoading || resendLoading}
+                    placeholder={t(lang, 'password')}
+                  />
+                </div>
+              </>
             )}
 
             {companyChoices && companyChoices.length > 0 && loginPhase === 'credentials' && (
@@ -522,48 +664,20 @@ const Login = () => {
             </div>
 
             {loginPhase === 'verify_email' ? (
-              <div className="flex flex-col gap-s16">
-                <button
-                  type="submit"
-                  disabled={verifyLoading || resendLoading}
-                  className={authPrimaryButtonClass}
-                >
-                  {verifyLoading ? (
-                    <>
-                      <ButtonBusyDots className="text-white" />
-                      <span className="ml-2">{t(lang, 'verifyingCode')}</span>
-                    </>
-                  ) : (
-                    t(lang, 'verifyEmailConfirm')
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResendFromLogin}
-                  disabled={verifyLoading || resendLoading || resendCooldown > 0}
-                  className="w-full rounded-app-input border border-app-border bg-app-surface py-3 text-[14px] font-semibold text-app-text shadow-none transition-colors hover:bg-app-surface-variant disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {resendLoading
-                    ? t(lang, 'pleaseWait')
-                    : resendCooldown > 0
-                      ? t(lang, 'resendCooldownSec').replace('{n}', String(resendCooldown))
-                      : t(lang, 'resendCode')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginPhase('credentials');
-                    setVerifyOtp('');
-                    setVerifyError('');
-                    setVerifyInfo('');
-                    setResendCooldown(0);
-                  }}
-                  disabled={verifyLoading || resendLoading}
-                  className={`${authLinkSecondaryClass} text-center disabled:cursor-not-allowed`}
-                >
-                  {t(lang, 'loginBackToCredentials')}
-                </button>
-              </div>
+              <button
+                type="submit"
+                disabled={verifyLoading || resendLoading}
+                className={authPrimaryButtonClass}
+              >
+                {verifyLoading ? (
+                  <>
+                    <ButtonBusyDots className="text-white" />
+                    <span className="ml-2">{t(lang, 'verifyingCode')}</span>
+                  </>
+                ) : (
+                  t(lang, 'verifyEmailConfirm')
+                )}
+              </button>
             ) : (
               <button type="submit" disabled={loading} className={authPrimaryButtonClass}>
                 {loading ? (
@@ -576,6 +690,7 @@ const Login = () => {
                 )}
               </button>
             )}
+
           </form>
 
           <div className="mt-s24 flex flex-col gap-s16 text-center">
@@ -649,16 +764,11 @@ const Login = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate('/register-company', {
-                      state: {
-                        prefillEmail: formData.email,
-                        prefillPassword: formData.password,
-                      },
-                    })
-                  }
-                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-orange text-app-on-secondary hover:opacity-95"
-                  title="Go to register company page"
+                  onClick={handleOpenAddWorkspace}
+                  disabled={companyActionLoading}
+                  className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-orange text-app-on-secondary hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  title={t(lang, 'addWorkspaceTitle')}
+                  aria-label={t(lang, 'addWorkspaceTitle')}
                 >
                   +
                 </button>

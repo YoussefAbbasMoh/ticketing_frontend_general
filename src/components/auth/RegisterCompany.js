@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authAPI } from '../../services/api';
@@ -13,11 +13,38 @@ import {
 import AuthPageLayout from './AuthPageLayout';
 import AuthPasswordInput from './AuthPasswordInput';
 import {
+  authFieldErrorClass,
   authInputClass,
   authLabelClass,
   authLinkSecondaryClass,
   authPrimaryButtonClass,
 } from './authFieldClasses';
+import {
+  getPersonNameFieldError,
+  isStrongPassword,
+} from '../../utils/personNameValidation';
+
+const EMPTY_FIELD_ERRORS = {
+  ownerName: '',
+  companyName: '',
+  email: '',
+  password: '',
+  otp: '',
+};
+
+function AuthFieldError({ message }) {
+  if (!message) return null;
+  return (
+    <p className={authFieldErrorClass} role="alert">
+      {message}
+    </p>
+  );
+}
+
+const inputClassFor = (hasError) =>
+  hasError
+    ? `${authInputClass} border-app-error focus:border-app-error focus:ring-app-error/25`
+    : authInputClass;
 
 const TIK_REGISTER_PREFILL_KEY = 'tik_register_prefill';
 const TIK_SELECTED_PLAN_KEY = 'tik_selected_plan';
@@ -42,6 +69,8 @@ const RegisterCompany = () => {
   const [otp, setOtp] = useState('');
   const [pendingActiveCompanyId, setPendingActiveCompanyId] = useState(null);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
+  const [emailExistsOfferLogin, setEmailExistsOfferLogin] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -53,39 +82,35 @@ const RegisterCompany = () => {
     }
   }, [authLoading, user, navigate]);
 
-  const isValidOwnerFullName = (name) => {
-    const parts = String(name || '')
-      .trim()
-      .split(/\s+/)
-      .filter(Boolean);
-    if (parts.length < 2) return false;
-    return parts.every((w) => w.length >= 2);
+  const collectRegisterFieldErrors = () => {
+    const next = { ...EMPTY_FIELD_ERRORS };
+    const ownerErr = getPersonNameFieldError(formData.ownerName, (key) => t(lang, key));
+    if (ownerErr) next.ownerName = ownerErr;
+    if (!formData.companyName.trim()) next.companyName = t(lang, 'valCompanyNameRequired');
+    else if (formData.companyName.trim().length < 2) next.companyName = t(lang, 'valCompanyNameMin2');
+    if (!formData.email.trim()) next.email = t(lang, 'valEmailRequired');
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) next.email = t(lang, 'valEmailInvalidSignup');
+    if (!formData.password) next.password = t(lang, 'valPasswordRequired');
+    else if (!isStrongPassword(formData.password)) next.password = t(lang, 'valPasswordStrongPolicy');
+    return next;
   };
 
-  const validationError = useMemo(() => {
-    if (!formData.ownerName.trim()) return t(lang, 'valOwnerNameRequired');
-    if (!isValidOwnerFullName(formData.ownerName)) return t(lang, 'valOwnerNameFullName');
-    if (!formData.companyName.trim()) return t(lang, 'valCompanyNameRequired');
-    if (formData.companyName.trim().length < 2) return t(lang, 'valCompanyNameMin2');
-    if (!formData.email.trim()) return t(lang, 'valEmailRequired');
-    if (!/\S+@\S+\.\S+/.test(formData.email)) return t(lang, 'valEmailInvalidSignup');
-    if (!formData.password) return t(lang, 'valPasswordRequired');
-    if (formData.password.length < 8) return t(lang, 'valPasswordMin8');
-    return '';
-  }, [formData, lang]);
-
-  const otpValidationError = useMemo(() => {
+  const collectOtpFieldError = () => {
     const trimmed = otp.trim();
     if (!trimmed) return t(lang, 'valOtpRequired');
     if (!/^\d{6}$/.test(trimmed)) return t(lang, 'valOtpInvalid');
     return '';
-  }, [otp, lang]);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (error) setError('');
     if (infoMessage) setInfoMessage('');
+    if (emailExistsOfferLogin) setEmailExistsOfferLogin(false);
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
   const startResendCooldown = () => {
@@ -107,16 +132,48 @@ const RegisterCompany = () => {
     navigate('/', { replace: true });
   };
 
+  const mapRegisterApiErrorToFields = (status, data) => {
+    const code = data?.code;
+    const msg = localizeRegisterSubmitError(lang, status, data);
+    const next = { ...EMPTY_FIELD_ERRORS };
+    if (code === 'ACCOUNT_EXISTS_USE_LOGIN') {
+      next.email = t(lang, 'registerAccountExists');
+      return { fields: next, offerLogin: true, banner: '' };
+    }
+    if (
+      code === 'OWNER_NAME_INVALID_CHARS' ||
+      code === 'OWNER_NAME_NOT_FULL' ||
+      code === 'OWNER_NAME_WORD_TOO_SHORT'
+    ) {
+      next.ownerName = msg;
+      return { fields: next, offerLogin: false, banner: '' };
+    }
+    if (code === 'COMPANY_NAME_TOO_SHORT' || code === 'DUPLICATE_COMPANY_NAME') {
+      next.companyName = msg;
+      return { fields: next, offerLogin: false, banner: '' };
+    }
+    if (String(msg).toLowerCase().includes('password')) {
+      next.password = msg;
+      return { fields: next, offerLogin: false, banner: '' };
+    }
+    return { fields: EMPTY_FIELD_ERRORS, offerLogin: false, banner: msg };
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (loading) return;
-    if (validationError) {
-      setError(validationError);
+    const nextFieldErrors = collectRegisterFieldErrors();
+    if (Object.values(nextFieldErrors).some(Boolean)) {
+      setFieldErrors(nextFieldErrors);
+      setError('');
+      setEmailExistsOfferLogin(false);
       return;
     }
 
     setLoading(true);
     setError('');
+    setFieldErrors(EMPTY_FIELD_ERRORS);
+    setEmailExistsOfferLogin(false);
     setInfoMessage('');
 
     try {
@@ -157,16 +214,10 @@ const RegisterCompany = () => {
       }
       const st = apiError?.response?.status;
       const data = apiError?.response?.data || {};
-      if (st === 409 && data?.code === 'ACCOUNT_EXISTS_USE_LOGIN') {
-        navigate('/login', {
-          replace: true,
-          state: {
-            prefillEmail: data.email || formData.email.trim().toLowerCase(),
-          },
-        });
-        return;
-      }
-      setError(localizeRegisterSubmitError(lang, st, data));
+      const mapped = mapRegisterApiErrorToFields(st, data);
+      setFieldErrors(mapped.fields);
+      setEmailExistsOfferLogin(mapped.offerLogin);
+      setError(mapped.banner);
     } finally {
       setLoading(false);
     }
@@ -175,13 +226,16 @@ const RegisterCompany = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (loading) return;
-    if (otpValidationError) {
-      setError(otpValidationError);
+    const otpErr = collectOtpFieldError();
+    if (otpErr) {
+      setFieldErrors({ ...EMPTY_FIELD_ERRORS, otp: otpErr });
+      setError('');
       return;
     }
 
     setLoading(true);
     setError('');
+    setFieldErrors(EMPTY_FIELD_ERRORS);
     setInfoMessage('');
 
     try {
@@ -202,13 +256,13 @@ const RegisterCompany = () => {
         setError(netMsg);
         return;
       }
-      setError(
-        localizeVerifyRegistrationOtpError(
-          lang,
-          apiError?.response?.status,
-          apiError?.response?.data || {}
-        )
+      const otpMsg = localizeVerifyRegistrationOtpError(
+        lang,
+        apiError?.response?.status,
+        apiError?.response?.data || {}
       );
+      setFieldErrors({ ...EMPTY_FIELD_ERRORS, otp: otpMsg });
+      setError('');
     } finally {
       setLoading(false);
     }
@@ -248,6 +302,7 @@ const RegisterCompany = () => {
     const v = e.target.value.replace(/\D/g, '').slice(0, 6);
     setOtp(v);
     if (error) setError('');
+    if (fieldErrors.otp) setFieldErrors((prev) => ({ ...prev, otp: '' }));
     if (infoMessage) setInfoMessage('');
   };
 
@@ -312,11 +367,11 @@ const RegisterCompany = () => {
     <AuthPageLayout>
       <div className="w-full max-w-app-form">
         <div className="mb-s36 flex justify-center">
-          <div className="rounded-full bg-app-primary p-s16 shadow-none">
+          <div className="rounded-full bg-app-primary p-s12 shadow-app-soft ring-4 ring-app-primary/15">
             <img
               src="/logo4.webp"
               alt=""
-              className="h-[72px] w-[72px] object-contain sm:h-[90px] sm:w-[90px]"
+              className="h-[80px] w-[80px] rounded-full object-contain sm:h-[96px] sm:w-[96px]"
             />
           </div>
         </div>
@@ -330,7 +385,7 @@ const RegisterCompany = () => {
           </p>
         </div>
 
-        <div className="mt-s36 w-full">
+        <div className="mt-s36 w-full rounded-app border border-app-divider bg-app-surface p-s24 shadow-app-card">
           {error && (
             <div className="mb-s24 rounded-app-input border border-app-error/40 bg-app-error/10 p-s16">
               <p className="text-[13px] text-app-error">{error}</p>
@@ -344,7 +399,7 @@ const RegisterCompany = () => {
           )}
 
           {phase === 'register' ? (
-            <form onSubmit={handleSubmit} className="space-y-s20">
+            <form onSubmit={handleSubmit} className="space-y-s20" noValidate>
               <div>
                 <label htmlFor="ownerName" className={authLabelClass}>
                   {t(lang, 'signupOwnerName')}
@@ -356,11 +411,12 @@ const RegisterCompany = () => {
                   autoComplete="name"
                   value={formData.ownerName}
                   onChange={handleChange}
-                  required
                   disabled={loading}
-                  className={authInputClass}
+                  aria-invalid={Boolean(fieldErrors.ownerName)}
+                  className={inputClassFor(Boolean(fieldErrors.ownerName))}
                   placeholder={t(lang, 'placeholderOwnerSignup')}
                 />
+                <AuthFieldError message={fieldErrors.ownerName} />
               </div>
 
               <div>
@@ -374,11 +430,12 @@ const RegisterCompany = () => {
                   autoComplete="organization"
                   value={formData.companyName}
                   onChange={handleChange}
-                  required
                   disabled={loading}
-                  className={authInputClass}
+                  aria-invalid={Boolean(fieldErrors.companyName)}
+                  className={inputClassFor(Boolean(fieldErrors.companyName))}
                   placeholder={t(lang, 'placeholderCompanySignup')}
                 />
+                <AuthFieldError message={fieldErrors.companyName} />
               </div>
 
               <div>
@@ -392,11 +449,25 @@ const RegisterCompany = () => {
                   autoComplete="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required
                   disabled={loading}
-                  className={authInputClass}
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  className={inputClassFor(Boolean(fieldErrors.email))}
                   placeholder={t(lang, 'placeholderWorkEmailSignup')}
                 />
+                <AuthFieldError message={fieldErrors.email} />
+                {emailExistsOfferLogin && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate('/login', {
+                        state: { prefillEmail: formData.email.trim().toLowerCase() },
+                      })
+                    }
+                    className={`${authLinkSecondaryClass} mt-s8 text-[13px]`}
+                  >
+                    {t(lang, 'signIn')} →
+                  </button>
+                )}
               </div>
 
               <div>
@@ -410,10 +481,12 @@ const RegisterCompany = () => {
                   autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
-                  required
                   disabled={loading}
+                  aria-invalid={Boolean(fieldErrors.password)}
+                  inputClassName={inputClassFor(Boolean(fieldErrors.password))}
                   placeholder={t(lang, 'placeholderPasswordMin8')}
                 />
+                <AuthFieldError message={fieldErrors.password} />
               </div>
 
               <button type="submit" disabled={loading} className={authPrimaryButtonClass}>

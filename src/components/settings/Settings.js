@@ -11,7 +11,14 @@ import { ButtonBusyDots } from '../ui/LoadingSkeletons';
 import Modal from '../ui/Modal';
 import RoleDragDropSelect, { ROLE_ORDER } from './RoleDragDropSelect';
 import { getStoredLanguage, t as i18nT } from '../../i18n';
-import { companyNameFromMembership, membershipCompanyId } from '../../utils/companyMembership';
+import {
+  companyNameFromMembership,
+  firstOtherWorkspaceId,
+  membershipCompanyId,
+  normalizeCompanyRole,
+  patchUserCompanyMembership,
+  resolveCompanyMemberRole,
+} from '../../utils/companyMembership';
 import { isValidPersonFullName } from '../../utils/personNameValidation';
 
 const ASSIGNABLE_ROLES = ROLE_ORDER;
@@ -106,7 +113,7 @@ const TEXT = {
     workspaceActive: 'Active',
     workspaceSaveName: 'Save name',
     workspaceDeleteOnlyOne: 'You cannot delete your only workspace.',
-    workspaceDeleteActiveHint: 'Switching workspace before delete…',
+    workspaceDeleteActiveHint: 'Your first workspace will become active after delete.',
     subscriptionAvailable: 'Available',
   },
   ar: {
@@ -180,7 +187,7 @@ const TEXT = {
     userDeletedSuccess: 'تم حذف المستخدم "{{name}}" بنجاح!',
     nameValidation: 'أدخل اسمين على الأقل؛ كل اسم حرفان على الأقل.',
     workspaceDeleteOnlyOne: 'لا يمكن حذف مساحة العمل الوحيدة.',
-    workspaceDeleteActiveHint: 'جاري التبديل قبل الحذف…',
+    workspaceDeleteActiveHint: 'بعد الحذف ستنتقل تلقائياً إلى أول مساحة عمل في القائمة.',
     subscriptionAvailable: 'متاح',
     titleValidation: 'المسمى الوظيفي لازم يكون حرفين على الأقل.',
     fieldRequired: 'هذا الحقل مطلوب.',
@@ -259,26 +266,97 @@ const Settings = () => {
   const handleWorkspaceDelete = async (companyId) => {
     if (!companyId) return;
     if (!window.confirm(i18nT(lang, 'workspaceDeleteConfirm'))) return;
+
+    const isDeletingActive = String(user?.activeCompanyId || '') === String(companyId);
+    const otherCount = (user?.companies || []).filter(
+      (entry) => membershipCompanyId(entry) && membershipCompanyId(entry) !== String(companyId)
+    ).length;
+    if (otherCount === 0) {
+      setError(tx('workspaceDeleteOnlyOne'));
+      return;
+    }
+
     setWsLoading(true);
     setError('');
     try {
-      if (String(user?.activeCompanyId || '') === String(companyId)) {
-        const fallback = (user?.companies || []).find(
-          (entry) => membershipCompanyId(entry) && membershipCompanyId(entry) !== String(companyId)
-        );
-        const nextId = membershipCompanyId(fallback);
-        if (!nextId) {
+      let nextActiveId = String(user?.activeCompanyId || '');
+
+      if (isDeletingActive) {
+        nextActiveId = firstOtherWorkspaceId(user?.companies, companyId);
+        if (!nextActiveId) {
           setError(tx('workspaceDeleteOnlyOne'));
           return;
         }
-        await switchActiveCompany(nextId);
+        const switchRes = await switchActiveCompany(nextActiveId);
+        nextActiveId = String(switchRes?.data?.activeCompanyId || nextActiveId);
       }
+
       const res = await userAPI.deleteWorkspace(companyId);
       const list = res?.data?.companies;
-      if (Array.isArray(list)) updateUser({ ...user, companies: list });
+
+      if (res?.data?.token) {
+        localStorage.setItem('token', res.data.token);
+      }
+      if (res?.data?.activeCompanyId) {
+        nextActiveId = String(res.data.activeCompanyId);
+      } else if (isDeletingActive && Array.isArray(list)) {
+        nextActiveId = firstOtherWorkspaceId(list, companyId) || nextActiveId;
+      }
+
+      if (Array.isArray(list)) {
+        updateUser({
+          ...(user || {}),
+          companies: list,
+          activeCompanyId: nextActiveId || membershipCompanyId(list[0]) || '',
+        });
+      }
+
+      if (isDeletingActive && nextActiveId) {
+        window.dispatchEvent(
+          new CustomEvent('active-company-changed', {
+            detail: { companyId: nextActiveId },
+          })
+        );
+      }
+
       setSuccess(tx('workspaceDeleted'));
     } catch (e) {
-      setError(e?.response?.data?.message || tx('userDeleteFailed'));
+      const apiMsg = e?.response?.data?.message || '';
+      const needsSwitchRetry =
+        e?.response?.status === 400 &&
+        /switch to another workspace before deleting/i.test(String(apiMsg));
+
+      if (needsSwitchRetry && isDeletingActive) {
+        try {
+          const fallbackId = firstOtherWorkspaceId(user?.companies, companyId);
+          if (!fallbackId) {
+            setError(tx('workspaceDeleteOnlyOne'));
+            return;
+          }
+          await switchActiveCompany(fallbackId);
+          const retryRes = await userAPI.deleteWorkspace(companyId);
+          const list = retryRes?.data?.companies;
+          let activeId = String(retryRes?.data?.activeCompanyId || fallbackId);
+          if (retryRes?.data?.token) localStorage.setItem('token', retryRes.data.token);
+          if (Array.isArray(list)) {
+            updateUser({
+              ...(user || {}),
+              companies: list,
+              activeCompanyId: activeId || membershipCompanyId(list[0]) || '',
+            });
+          }
+          window.dispatchEvent(
+            new CustomEvent('active-company-changed', { detail: { companyId: activeId } })
+          );
+          setSuccess(tx('workspaceDeleted'));
+          return;
+        } catch (retryErr) {
+          setError(retryErr?.response?.data?.message || tx('userDeleteFailed'));
+          return;
+        }
+      }
+
+      setError(apiMsg || tx('userDeleteFailed'));
     } finally {
       setWsLoading(false);
     }
@@ -315,10 +393,7 @@ const Settings = () => {
     );
   };
 
-  const memberRoleForRow = (u) =>
-    normalizeCompanyRole(
-      u?.companyMemberRole || u?.companies?.[0]?.companyRole || u?.role || 'user'
-    );
+  const memberRoleForRow = (u) => resolveCompanyMemberRole(u, user?.activeCompanyId);
 
   const rolesAssignableByInviter =
     user && (Boolean(user.companyIsOwner) || memberRoleForRow(user) === 'owner')
@@ -421,9 +496,25 @@ const Settings = () => {
         try {
           const raw = localStorage.getItem('user');
           const base = raw ? JSON.parse(raw) : user;
-          if (base) updateUser({ ...base, companies: list });
+          if (base) {
+            const activeId = base.activeCompanyId || user?.activeCompanyId;
+            const activeRole = resolveCompanyMemberRole(
+              { ...base, companies: list },
+              activeId
+            );
+            updateUser(
+              patchUserCompanyMembership(
+                { ...base, companies: list },
+                activeId,
+                activeRole
+              )
+            );
+          }
         } catch {
-          if (user) updateUser({ ...user, companies: list });
+          if (user) {
+            const activeRole = resolveCompanyMemberRole({ ...user, companies: list }, user.activeCompanyId);
+            updateUser(patchUserCompanyMembership({ ...user, companies: list }, user.activeCompanyId, activeRole));
+          }
         }
       })
       .catch(() => {});
@@ -503,13 +594,16 @@ const Settings = () => {
           const nextOwner = Boolean(row.companyIsOwner);
           const prevOwner = Boolean(user.companyIsOwner);
           if (nextRole !== prevRole || nextOwner !== prevOwner) {
-            updateUser({
-              ...user,
-              companyMemberRole: row.companyMemberRole,
-              companyIsOwner: row.companyIsOwner,
-              companies: row.companies || user.companies,
-              role: row.role ?? nextRole,
-            });
+            updateUser(
+              patchUserCompanyMembership(
+                {
+                  ...user,
+                  companies: row.companies || user.companies,
+                },
+                user.activeCompanyId,
+                nextRole
+              )
+            );
           }
         }
       }
@@ -903,7 +997,6 @@ const Settings = () => {
                           size="sm"
                           type="button"
                           disabled={wsLoading}
-                          title={isActive ? tx('workspaceDeleteActiveHint') : undefined}
                           onClick={() => handleWorkspaceDelete(cid)}
                         >
                           {tx('workspaceDeleteAction')}
@@ -1210,27 +1303,34 @@ const Settings = () => {
                   if (!roleLocked) payload.role = String(values.role || '').toLowerCase();
                   const res = await userAPI.updateUser(targetId, payload);
                   const updated = res?.data?.user;
-                  const appliedRole = payload.role || memberRoleForRow(editingUser);
+                  const activeId = user?.activeCompanyId;
+                  const appliedRole = payload.role
+                    ? normalizeCompanyRole(payload.role)
+                    : resolveCompanyMemberRole(updated || editingUser, activeId);
                   setUsers((prev) =>
                     prev.map((row) => {
                       const rid = String(row._id || row.id);
                       if (rid !== String(targetId)) return row;
-                      return {
+                      const base = {
                         ...row,
-                        name: payload.name ?? row.name,
-                        title: payload.title ?? row.title,
-                        email: payload.email ?? row.email,
-                        role: updated?.role ?? appliedRole ?? row.role,
-                        companyMemberRole: appliedRole,
-                        companyIsOwner: appliedRole === 'owner',
-                        companies: updated?.companies ?? row.companies,
+                        ...(updated || {}),
+                        name: payload.name ?? updated?.name ?? row.name,
+                        title: payload.title ?? updated?.title ?? row.title,
+                        email: payload.email ?? updated?.email ?? row.email,
                       };
+                      return activeId
+                        ? patchUserCompanyMembership(base, activeId, appliedRole)
+                        : base;
                     })
                   );
                   setSuccess(tx('userUpdated'));
                   setOpenEditDialog(false);
-                  if (targetId === user?._id || targetId === user?.id) {
-                    const mergedUser = { ...user, ...payload };
+                  if (String(targetId) === String(user?._id || user?.id)) {
+                    const mergedUser = patchUserCompanyMembership(
+                      { ...user, ...payload, ...(updated || {}) },
+                      activeId,
+                      appliedRole
+                    );
                     setProfileData({
                       name: mergedUser.name || '',
                       title: mergedUser.title || '',
@@ -1239,7 +1339,7 @@ const Settings = () => {
                     updateUser(mergedUser);
                   }
                   setEditingUser(null);
-                  fetchUsers();
+                  await fetchUsers();
                 } catch (err) {
                   setStatus(err.response?.data?.message || tx('userUpdateFailed'));
                 } finally {

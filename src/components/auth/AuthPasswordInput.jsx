@@ -17,6 +17,8 @@ export default function AuthPasswordInput({
   autoComplete,
   placeholder,
   required,
+  inputClassName,
+  'aria-invalid': ariaInvalid = undefined,
 }) {
   const [visible, setVisible] = useState(false);
 
@@ -31,7 +33,8 @@ export default function AuthPasswordInput({
         required={required}
         autoComplete={autoComplete}
         disabled={disabled}
-        className={`${authInputClass} pe-11`}
+        aria-invalid={ariaInvalid}
+        className={`${inputClassName || authInputClass} pe-11`}
         placeholder={placeholder}
       />
       <button
